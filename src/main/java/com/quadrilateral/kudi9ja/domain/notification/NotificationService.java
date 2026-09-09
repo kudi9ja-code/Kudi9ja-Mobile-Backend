@@ -152,6 +152,11 @@ public class NotificationService {
                     .map(DeviceToken::getToken)
                     .toList();
             if (tokens.isEmpty()) {
+                // Worth a line. "No push arrived" and "no handset was
+                // registered to send it to" look identical from the outside,
+                // and the second is the far more common of the two.
+                log.debug("No registered handset for {}; \"{}\" was saved but not pushed",
+                        notification.getUserId(), notification.getTitle());
                 return;
             }
 
@@ -169,6 +174,10 @@ public class NotificationService {
                     // Amounts never reach a locked screen. See NotifyKind.
                     notification.getKind().lockScreenBody(notification.getBody()),
                     data);
+
+            log.debug("Pushed \"{}\" to {} of {} handset(s) for {}",
+                    notification.getTitle(), result.delivered(), tokens.size(),
+                    notification.getUserId());
 
             // A token the provider says is dead is deleted rather than retried
             // for ever — that is how a register becomes mostly dead handsets.
