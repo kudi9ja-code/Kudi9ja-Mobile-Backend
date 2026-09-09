@@ -2,6 +2,8 @@ package com.quadrilateral.kudi9ja.integration.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.URI;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -92,6 +94,48 @@ class ReceiptStorageTest {
 
             assertThat(CloudinaryReceiptStorage.signParameters(params, "abcd"))
                     .isNotEqualTo(CloudinaryReceiptStorage.signParameters(params, "abce"));
+        }
+
+        /**
+         * The signature was right and every receipt still came back "Invalid
+         * Signature", because the URL carrying it was encoded twice: it was
+         * handed to {@code RestClient.uri(String)}, which treats its argument
+         * as a template and encodes it again, so a public_id's {@code %2F} went
+         * out as {@code %252F}. Cloudinary decoded once, signed
+         * {@code kudi9ja%2Freceipts%2F…}, and disagreed.
+         *
+         * <p>Decoding the query value once must give the public_id back exactly
+         * — that is what "encoded once" means, and it is the property the live
+         * call depends on.
+         */
+        @Test
+        @DisplayName("a public_id with slashes is encoded exactly once")
+        void encodedExactlyOnce() {
+            String publicId = "kudi9ja/receipts/K9-255B9A/c1a7ce24-7ce0-4701-a8ae-9782967d20d1";
+            Map<String, String> params = new LinkedHashMap<>();
+            params.put("public_id", publicId);
+            params.put("format", "jpg");
+            params.put("type", "authenticated");
+
+            URI uri = CloudinaryReceiptStorage.downloadUri(
+                    "https://api.cloudinary.com/v1_1/demo/image/download", params, "sig", "key");
+
+            assertThat(queryValue(uri, "public_id")).isEqualTo(publicId);
+            assertThat(queryValue(uri, "signature")).isEqualTo("sig");
+            // The raw query still carries the escape — decoded once, not zero
+            // times, is the whole point.
+            assertThat(uri.getRawQuery()).contains("%2F").doesNotContain("%252F");
+        }
+
+        /** One decode of the raw query, which is what a server does. */
+        private static String queryValue(URI uri, String name) {
+            for (String pair : uri.getRawQuery().split("&")) {
+                int equals = pair.indexOf('=');
+                if (pair.substring(0, equals).equals(name)) {
+                    return URLDecoder.decode(pair.substring(equals + 1), StandardCharsets.UTF_8);
+                }
+            }
+            throw new AssertionError(name + " is not in " + uri);
         }
     }
 

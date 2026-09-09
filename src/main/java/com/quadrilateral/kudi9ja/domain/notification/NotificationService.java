@@ -155,7 +155,10 @@ public class NotificationService {
                 // Worth a line. "No push arrived" and "no handset was
                 // registered to send it to" look identical from the outside,
                 // and the second is the far more common of the two.
-                log.debug("No registered handset for {}; \"{}\" was saved but not pushed",
+                // INFO, not DEBUG: a deployment runs at INFO, and "was the
+                // customer actually told" is an operational question, not a
+                // debugging one. One line per notification is affordable.
+                log.info("No registered handset for {}; \"{}\" was saved but not pushed",
                         notification.getUserId(), notification.getTitle());
                 return;
             }
@@ -175,7 +178,7 @@ public class NotificationService {
                     notification.getKind().lockScreenBody(notification.getBody()),
                     data);
 
-            log.debug("Pushed \"{}\" to {} of {} handset(s) for {}",
+            log.info("Pushed \"{}\" to {} of {} handset(s) for {}",
                     notification.getTitle(), result.delivered(), tokens.size(),
                     notification.getUserId());
 
@@ -237,6 +240,7 @@ public class NotificationService {
         if (token == null || token.isBlank()) {
             throw ApiException.validation("A device token is needed.");
         }
+        log.info("Registering a {} handset for push against {}", platform, userId);
         return devices.findByToken(token)
                 .map(existing -> {
                     existing.touch(userId, deviceLabel);

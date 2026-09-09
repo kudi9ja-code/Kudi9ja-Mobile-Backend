@@ -5,6 +5,7 @@ import com.quadrilateral.kudi9ja.common.error.ErrorCode;
 import com.quadrilateral.kudi9ja.config.Kudi9jaProperties;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -195,8 +196,11 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
     public boolean exists(String key) {
         try {
             http.get()
-                    .uri(API + config.cloudName() + "/resources/" + resourceTypeFor(key)
-                            + "/authenticated/" + encode(publicId(key)))
+                    // A URI, not a String, for the reason given on
+                    // privateDownloadUrl: the encoded public_id would be
+                    // encoded a second time on the way out.
+                    .uri(URI.create(API + config.cloudName() + "/resources/" + resourceTypeFor(key)
+                            + "/authenticated/" + encode(publicId(key))))
                     .header(HttpHeaders.AUTHORIZATION, basicAuth())
                     .retrieve()
                     .toBodilessEntity();
@@ -236,10 +240,21 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
     /**
      * Builds Cloudinary's private-download URL for one object.
      *
+     * <p>Returns a {@link URI} rather than a {@code String}, and that is the
+     * whole point of the type. {@code RestClient.uri(String)} takes its
+     * argument as a <i>template</i> and encodes it on the way out, so a URL
+     * that already carries {@code %2F} in a public_id went over the wire as
+     * {@code %252F}; Cloudinary decoded it once, signed
+     * {@code kudi9ja%2Freceipts%2F…} and refused every receipt with "Invalid
+     * Signature". The signature was right the whole time — the transport
+     * encoded it a second time. {@code uri(URI)} is passed through untouched,
+     * so handing this back as a URI makes that mistake unavailable rather than
+     * merely fixed.
+     *
      * <p>Visible for testing: the signature is the part worth checking, and it
      * cannot be checked through a live call.
      */
-    String privateDownloadUrl(String key) {
+    URI privateDownloadUrl(String key) {
         long now = Instant.now().getEpochSecond();
 
         // Sorted, because the signature is defined over the parameters in
@@ -252,19 +267,30 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
         params.put("timestamp", Long.toString(now));
         params.put("expires_at", Long.toString(now + DOWNLOAD_WINDOW.toSeconds()));
 
-        String signature = signParameters(params);
+        return downloadUri(
+                API + config.cloudName() + "/" + resourceTypeFor(key) + "/download",
+                params,
+                signParameters(params),
+                config.apiKey());
+    }
 
-        StringBuilder url = new StringBuilder(API)
-                .append(config.cloudName())
-                .append('/')
-                .append(resourceTypeFor(key))
-                .append("/download?");
+    /**
+     * The signed parameters, as one URI.
+     *
+     * <p>Separate and static so it can be tested without a Cloudinary account
+     * or a whole properties tree. The signature had a test and the URL carrying
+     * it did not, which is exactly where the encoding went wrong.
+     */
+    static URI downloadUri(
+            String base, Map<String, String> params, String signature, String apiKey) {
+
+        StringBuilder url = new StringBuilder(base).append('?');
         for (Map.Entry<String, String> entry : params.entrySet()) {
             url.append(encode(entry.getKey())).append('=').append(encode(entry.getValue())).append('&');
         }
-        return url.append("signature=").append(encode(signature))
-                .append("&api_key=").append(encode(config.apiKey()))
-                .toString();
+        return URI.create(url.append("signature=").append(encode(signature))
+                .append("&api_key=").append(encode(apiKey))
+                .toString());
     }
 
     /**
