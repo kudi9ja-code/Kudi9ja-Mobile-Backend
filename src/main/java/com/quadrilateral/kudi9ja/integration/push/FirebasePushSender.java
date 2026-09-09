@@ -83,20 +83,30 @@ public class FirebasePushSender implements PushSender {
 
     public FirebasePushSender(Kudi9jaProperties properties) {
         this.properties = properties;
+        String inline = properties.push().serviceAccountJson();
+        boolean fromEnvironment = inline != null && !inline.isBlank();
+        String where = fromEnvironment
+                ? "the FIREBASE_SERVICE_ACCOUNT_JSON environment variable"
+                : properties.push().serviceAccountFile();
         try {
-            JsonNode key = json.readTree(
-                    Files.readString(Path.of(properties.push().serviceAccountFile()),
-                            StandardCharsets.UTF_8));
+            // The key as text, from wherever it was put. A managed host often
+            // has no writable disk to hold a file, so the whole JSON can be
+            // pasted into an environment variable instead.
+            String raw = fromEnvironment
+                    ? inline
+                    : Files.readString(Path.of(properties.push().serviceAccountFile()),
+                            StandardCharsets.UTF_8);
+            JsonNode key = json.readTree(raw);
             this.projectId = key.get("project_id").asText();
             this.clientEmail = key.get("client_email").asText();
             this.privateKey = readPrivateKey(key.get("private_key").asText());
         } catch (Exception e) {
             throw new IllegalStateException(
-                    "Could not read the Firebase service account at "
-                            + properties.push().serviceAccountFile()
+                    "Could not read the Firebase service account from " + where
                             + ". Push is configured but cannot start.", e);
         }
-        log.info("Push notifications will be delivered through Firebase project {}", projectId);
+        log.info("Push notifications will be delivered through Firebase project {} (key from {})",
+                projectId, where);
     }
 
     @Override

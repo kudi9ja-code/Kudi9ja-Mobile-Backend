@@ -266,6 +266,11 @@ kudi9ja:
   push:
     provider: ${PUSH_PROVIDER:}
     service-account-file: ${FIREBASE_SERVICE_ACCOUNT:./var/firebase-service-account.json}
+    # The same key, pasted in whole. Hosts that give a service no writable disk
+    # — Render among them — have nowhere to put the file, and push was
+    # unreachable there however the provider was set. Set this and the file is
+    # not looked for.
+    service-account-json: ${FIREBASE_SERVICE_ACCOUNT_JSON:}
     # The Android channel the app creates. Money notifications go to a
     # high-importance channel so they are not silently collapsed.
     android-channel-id: kudi9ja-money

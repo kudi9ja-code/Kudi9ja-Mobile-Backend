@@ -3,6 +3,8 @@ package com.quadrilateral.kudi9ja.domain.user;
 import com.quadrilateral.kudi9ja.common.error.ApiException;
 import com.quadrilateral.kudi9ja.common.error.ErrorCode;
 import com.quadrilateral.kudi9ja.config.Kudi9jaProperties;
+import com.quadrilateral.kudi9ja.domain.admin.AdminRole;
+import com.quadrilateral.kudi9ja.domain.admin.AdminUser;
 import com.quadrilateral.kudi9ja.domain.admin.AdminUserRepository;
 import com.quadrilateral.kudi9ja.domain.kyc.OtpPurpose;
 import com.quadrilateral.kudi9ja.domain.kyc.OtpService;
@@ -128,7 +130,12 @@ public class AuthService {
     @Transactional
     public Signed openSession(User user, String device, String ipAddress) {
         UserSession session = UserSession.open(user.getId(), device, ipAddress);
-        boolean isAdmin = admins.findByEmailIgnoreCaseAndActiveTrue(user.getEmail()).isPresent();
+        // One lookup, read twice: whether the panel is drawn, and what it may
+        // show. The app is told the role here because it draws the entrance the
+        // moment it signs in, and the flag alone left an owner labelled
+        // "Viewer" until they had opened the panel once.
+        AdminUser grant = admins.findByEmailIgnoreCaseAndActiveTrue(user.getEmail()).orElse(null);
+        boolean isAdmin = grant != null;
 
         TokenService.Issued refresh = tokens.issueRefresh(user.getId(), session.getId());
         TokenService.Parsed refreshClaims = tokens.parse(refresh.token(), TokenType.REFRESH);
@@ -139,14 +146,12 @@ public class AuthService {
         TokenService.Issued access = tokens.issueAccess(
                 user.getId(), user.getEmail(), user.getKycTier().name(), session.getId(), isAdmin);
 
-        if (isAdmin) {
-            admins.findByEmailIgnoreCaseAndActiveTrue(user.getEmail()).ifPresent(admin -> {
-                admin.setLastActiveAt(Instant.now());
-                admins.save(admin);
-            });
+        if (grant != null) {
+            grant.setLastActiveAt(Instant.now());
+            admins.save(grant);
         }
 
-        return new Signed(user, session, access, refresh, isAdmin);
+        return new Signed(user, session, access, refresh, roleOf(grant));
     }
 
     /**
@@ -193,7 +198,8 @@ public class AuthService {
             throw new ApiException(ErrorCode.ACCOUNT_CLOSED, "That account has been closed.");
         }
 
-        boolean isAdmin = admins.findByEmailIgnoreCaseAndActiveTrue(user.getEmail()).isPresent();
+        AdminUser grant = admins.findByEmailIgnoreCaseAndActiveTrue(user.getEmail()).orElse(null);
+        boolean isAdmin = grant != null;
 
         TokenService.Issued nextRefresh = tokens.issueRefresh(user.getId(), session.getId());
         TokenService.Parsed nextClaims = tokens.parse(nextRefresh.token(), TokenType.REFRESH);
@@ -205,7 +211,7 @@ public class AuthService {
         TokenService.Issued access = tokens.issueAccess(
                 user.getId(), user.getEmail(), user.getKycTier().name(), session.getId(), isAdmin);
 
-        return new Signed(user, session, access, nextRefresh, isAdmin);
+        return new Signed(user, session, access, nextRefresh, roleOf(grant));
     }
 
     @Transactional
@@ -435,12 +441,21 @@ public class AuthService {
     private static final String DUMMY_HASH =
             "$argon2id$v=19$m=16384,t=3,p=1$c29tZXNhbHR2YWx1ZXM$xUUyMEOEHF7HFvpNEIQxUKM8zLKGSEP5UWNIZC9CBmA";
 
+    private static AdminRole roleOf(AdminUser grant) {
+        return grant == null ? null : grant.getRole();
+    }
+
     /** What a successful sign-in produced. */
     public record Signed(
             User user,
             UserSession session,
             TokenService.Issued access,
             TokenService.Issued refresh,
-            boolean admin) {
+            AdminRole adminRole) {
+
+        /** Whether the panel is drawn at all. */
+        public boolean admin() {
+            return adminRole != null;
+        }
     }
 }

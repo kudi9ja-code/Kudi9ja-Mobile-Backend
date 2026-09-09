@@ -148,9 +148,15 @@ public record Kudi9jaProperties(
      * before push existed. That is a working state, not a broken one, so an
      * unconfigured deployment starts rather than refusing to.
      */
+    /**
+     * @param serviceAccountJson the key itself, for hosts with no writable disk
+     *                           to put a file on. Takes precedence over
+     *                           {@code serviceAccountFile} when set.
+     */
     public record Push(
             String provider,
             String serviceAccountFile,
+            String serviceAccountJson,
             String androidChannelId,
             int staleDeviceDays) {
     }

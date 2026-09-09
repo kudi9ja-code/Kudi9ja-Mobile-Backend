@@ -3,6 +3,8 @@ package com.quadrilateral.kudi9ja.domain.user;
 import com.quadrilateral.kudi9ja.common.error.ApiException;
 import com.quadrilateral.kudi9ja.common.error.ErrorCode;
 import com.quadrilateral.kudi9ja.common.util.Money;
+import com.quadrilateral.kudi9ja.domain.admin.AdminRole;
+import com.quadrilateral.kudi9ja.domain.admin.AdminUser;
 import com.quadrilateral.kudi9ja.domain.admin.AdminUserRepository;
 import com.quadrilateral.kudi9ja.domain.audit.AuditCategory;
 import com.quadrilateral.kudi9ja.domain.audit.AuditService;
@@ -93,7 +95,7 @@ public class ProfileService {
     @Transactional(readOnly = true)
     public UserDtos.ProfileResponse profile(UUID userId) {
         User user = require(userId);
-        return UserDtos.ProfileResponse.from(user, holdsPanelAccess(user));
+        return UserDtos.ProfileResponse.from(user, panelRole(user));
     }
 
     /**
@@ -105,7 +107,22 @@ public class ProfileService {
      */
     @Transactional(readOnly = true)
     public boolean holdsPanelAccess(User user) {
-        return admins.findByEmailIgnoreCaseAndActiveTrue(user.getEmail()).isPresent();
+        return panelRole(user) != null;
+    }
+
+    /**
+     * What this account may do in the panel, or null if it holds no grant.
+     *
+     * <p>Read on the same terms as {@link #holdsPanelAccess}, and for the same
+     * reason: the app needs it to label the entrance and hide controls, and the
+     * server re-reads it on every admin request regardless of what the app was
+     * told here.
+     */
+    @Transactional(readOnly = true)
+    public AdminRole panelRole(User user) {
+        return admins.findByEmailIgnoreCaseAndActiveTrue(user.getEmail())
+                .map(AdminUser::getRole)
+                .orElse(null);
     }
 
     /**
@@ -179,7 +196,7 @@ public class ProfileService {
                     saved.getId(),
                     saved.getCustomerRef());
         }
-        return UserDtos.ProfileResponse.from(saved, holdsPanelAccess(saved));
+        return UserDtos.ProfileResponse.from(saved, panelRole(saved));
     }
 
     /** Sends the code that a payout-account change is confirmed with. */
@@ -243,7 +260,7 @@ public class ProfileService {
                         + describeAccount(saved.getPayoutBank(), saved.getPayoutAccountNumber())
                         + ". If this was not you, contact support@kudi9ja.com immediately.");
 
-        return UserDtos.ProfileResponse.from(saved, holdsPanelAccess(saved));
+        return UserDtos.ProfileResponse.from(saved, panelRole(saved));
     }
 
     /**

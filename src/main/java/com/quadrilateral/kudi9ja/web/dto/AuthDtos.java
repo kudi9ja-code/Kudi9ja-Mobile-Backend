@@ -126,7 +126,7 @@ public final class AuthDtos {
                     signed.access().expiresAt(),
                     signed.session().getId(),
                     signed.admin(),
-                    UserDtos.ProfileResponse.from(signed.user(), signed.admin()));
+                    UserDtos.ProfileResponse.from(signed.user(), signed.adminRole()));
         }
     }
 

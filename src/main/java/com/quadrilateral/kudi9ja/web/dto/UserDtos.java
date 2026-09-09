@@ -1,6 +1,7 @@
 package com.quadrilateral.kudi9ja.web.dto;
 
 import com.quadrilateral.kudi9ja.common.util.Masks;
+import com.quadrilateral.kudi9ja.domain.admin.AdminRole;
 import com.quadrilateral.kudi9ja.domain.user.AccountStatus;
 import com.quadrilateral.kudi9ja.domain.user.KycTier;
 import com.quadrilateral.kudi9ja.domain.user.ThemeMode;
@@ -55,9 +56,20 @@ public final class UserDtos {
             boolean autoDebit,
             AccountStatus accountStatus,
             boolean admin,
+            AdminRole adminRole,
             Instant createdAt) {
 
-        public static ProfileResponse from(User user, boolean admin) {
+        /**
+         * @param adminRole what this account may do in the panel, or null if it
+         *                  holds no grant. It travels with the flag because the
+         *                  app draws the panel entrance the moment it signs in,
+         *                  and a flag on its own left it labelling an owner
+         *                  "Viewer" until they had opened the panel once and
+         *                  come back. Hiding a control is all it is used for —
+         *                  the role is re-read from the database and enforced
+         *                  again on every admin request.
+         */
+        public static ProfileResponse from(User user, AdminRole adminRole) {
             return new ProfileResponse(
                     user.getId(),
                     user.getCustomerRef(),
@@ -84,7 +96,8 @@ public final class UserDtos {
                     user.isHideBalance(),
                     user.isAutoDebit(),
                     user.getAccountStatus(),
-                    admin,
+                    adminRole != null,
+                    adminRole,
                     user.getCreatedAt());
         }
     }

@@ -579,6 +579,73 @@ class CustomerJourneyTest {
         return getJson("/api/v1/wallet", session).get("balance").decimalValue();
     }
 
+    // ── What the app is told about the panel ───────────────────────────────
+
+    @Test
+    @DisplayName("signing in says what the panel allows, not merely that it exists")
+    void signInCarriesTheRole() throws Exception {
+        owner();
+
+        MvcResult result = mvc.perform(post("/api/v1/auth/signin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(java.util.Map.of(
+                                "email", "owner@kudi9ja.test",
+                                "password", SignUpFlow.PASSWORD))))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode profile = read(result).get("profile");
+        assertThat(read(result).get("admin").asBoolean()).isTrue();
+        // The flag on its own was all the app got, so it assumed the narrowest
+        // role until the panel had been opened once and told an owner on their
+        // own dashboard that they were signed in as a Viewer.
+        assertThat(profile.get("adminRole").asText()).isEqualTo("OWNER");
+    }
+
+    @Test
+    @DisplayName("an account with no grant is given no role, which is not the same as Viewer")
+    void aCustomerHasNoRole() throws Exception {
+        SignUpFlow.Session customer = flow.signUp(customerEmail);
+
+        JsonNode profile = getJson("/api/v1/me", customer);
+        assertThat(profile.get("admin").asBoolean()).isFalse();
+        // Absent rather than null: nulls are dropped from every response here.
+        // Either way it is not the string "VIEWER", which is the distinction
+        // that matters — no grant at all is not the narrowest grant there is.
+        assertThat(profile.hasNonNull("adminRole")).isFalse();
+    }
+
+    @Test
+    @DisplayName("the audit log answers with every filter set at once")
+    void auditSearchAcceptsEveryFilter() throws Exception {
+        SignUpFlow.Session admin = owner();
+
+        // Every optional filter supplied together, which is the shape that took
+        // the whole panel's history out: a nullable instant compared against
+        // null gives Postgres a parameter with no type to infer, and it refuses
+        // the statement rather than the parameter. H2 infers it, so this guards
+        // the query still runs and returns — the type itself has to be said out
+        // loud in the query for the deployed database to accept it.
+        JsonNode page = getJson("/api/v1/admin/audit"
+                + "?category=CUSTOMER"
+                + "&from=2020-01-01T00:00:00Z"
+                + "&to=2100-01-01T00:00:00Z"
+                + "&q=account"
+                + "&size=5", admin);
+
+        assertThat(page.get("items")).isNotNull();
+    }
+
+    @Test
+    @DisplayName("the audit log answers with no filters at all")
+    void auditSearchAcceptsNoFilters() throws Exception {
+        SignUpFlow.Session admin = owner();
+
+        JsonNode page = getJson("/api/v1/admin/audit?size=5", admin);
+
+        assertThat(page.get("items")).isNotNull();
+    }
+
     private JsonNode getJson(String path, SignUpFlow.Session session) throws Exception {
         return read(mvc.perform(get(path)
                         .header("Authorization", "Bearer " + session.accessToken()))
