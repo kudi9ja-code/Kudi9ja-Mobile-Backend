@@ -22,24 +22,6 @@ public final class LoanDtos {
     private LoanDtos() {
     }
 
-    public record RequestLoanRequest(
-            @NotNull(message = "How much do you need?")
-            @DecimalMin(value = "0.01", message = "An amount must be above zero.")
-            BigDecimal amount,
-
-            @NotNull(message = "Over how many months?")
-            @Min(value = 1, message = "A loan runs for at least a month.")
-            @Max(value = 60, message = "That tenure is not offered.")
-            Integer months,
-
-            @NotBlank(message = "What is the loan for?")
-            @Size(max = 200, message = "Keep the purpose under 200 characters.")
-            String purpose,
-
-            @NotBlank(message = "Your PIN is needed.")
-            String pin) {
-    }
-
     public record RepayRequest(
             @NotNull @DecimalMin(value = "0.01", message = "An amount must be above zero.")
             BigDecimal amount,

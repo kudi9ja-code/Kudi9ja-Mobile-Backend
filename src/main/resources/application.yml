@@ -48,7 +48,12 @@ spring:
       # on a modern phone, small enough that the endpoint is not a way to fill
       # the disk.
       max-file-size: 12MB
-      max-request-size: 16MB
+      # A loan application carries four of them in one request — a statement
+      # and three photographs of the premises — so the request cap has to be
+      # more than one file's worth. It was 16MB, which is one statement and two
+      # pictures from a modern phone: enough to refuse a perfectly ordinary
+      # application before it reached any code that could explain why.
+      max-request-size: 52MB
 
   mail:
     host: ${MAIL_HOST:localhost}

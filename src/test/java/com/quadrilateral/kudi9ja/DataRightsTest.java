@@ -15,6 +15,7 @@ import com.quadrilateral.kudi9ja.domain.user.AccountStatus;
 import com.quadrilateral.kudi9ja.domain.user.User;
 import com.quadrilateral.kudi9ja.domain.user.UserRepository;
 import com.quadrilateral.kudi9ja.domain.wallet.WalletTransactionRepository;
+import com.quadrilateral.kudi9ja.support.BorrowFlow;
 import com.quadrilateral.kudi9ja.support.CapturingMailer;
 import com.quadrilateral.kudi9ja.support.SignUpFlow;
 import java.time.Instant;
@@ -73,12 +74,14 @@ class DataRightsTest {
     private DataRightsService dataRights;
 
     private SignUpFlow flow;
+    private BorrowFlow borrowing;
     private String email;
 
     @BeforeEach
     void setUp() {
         mailer.clear();
         flow = new SignUpFlow(mvc, json, mailer);
+        borrowing = new BorrowFlow(mvc, json);
         email = SignUpFlow.freshEmail("subject");
     }
 
@@ -173,9 +176,7 @@ class DataRightsTest {
             postJson(customer, "/api/v1/savings/plans/fixed", """
                     {"title": "Rainy day", "principal": 200000, "days": 365, "pin": "%s"}
                     """.formatted(SignUpFlow.PIN));
-            postJson(customer, "/api/v1/loans", """
-                    {"amount": 100000, "months": 6, "purpose": "Stock", "pin": "%s"}
-                    """.formatted(SignUpFlow.PIN));
+            borrowing.borrow(customer, admin, "100000", 6, "Stock");
 
             JsonNode export = exportFor(customer);
 
@@ -259,9 +260,7 @@ class DataRightsTest {
             postJson(customer, "/api/v1/savings/plans/fixed", """
                     {"title": "Collateral", "principal": 300000, "days": 365, "pin": "%s"}
                     """.formatted(SignUpFlow.PIN));
-            postJson(customer, "/api/v1/loans", """
-                    {"amount": 100000, "months": 6, "purpose": "Stock", "pin": "%s"}
-                    """.formatted(SignUpFlow.PIN));
+            borrowing.borrow(customer, admin, "100000", 6, "Stock");
 
             JsonNode eligibility = getJson(customer, "/api/v1/me/closure");
 

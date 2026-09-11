@@ -189,31 +189,34 @@ public class LoanService {
                 eligible ? null : String.join(" ", reasons));
     }
 
-    // ── Request and disburse ───────────────────────────────────────────────
+    // -- Assess, then disburse ----------------------------------------------
 
     /**
-     * Grants a loan and disburses it.
+     * What the arithmetic makes of a request, before a person looks at it.
      *
-     * <p>Everything that decides the answer is re-derived here: the offer, the
+     * <p>Everything here is re-derived from the database: the offer, the
      * headroom, the score, the tier. The client's own view of any of them is
-     * not consulted.
+     * not consulted, and never was.
      *
-     * <p>A refusal records its reasons on a rejected row rather than vanishing,
-     * because an automated decision that goes against a customer has to be
-     * explainable and reviewable by a person.
+     * <p>The hard limits refuse outright, because no amount of evidence makes
+     * an unverified customer verified or brings an unpriced tenure into the
+     * rate card. The <b>offer</b> does not refuse, and that is the change: it
+     * is recorded on the application and shown to the admin as one input among
+     * the bank statement, the business and the guarantors. A thin automated
+     * offer is an argument against lending, not a veto over a person who has
+     * read the file — and turning somebody away before they have shown it is
+     * how a lender ends up declining its best customers.
      */
-    @Transactional
-    public Loan request(UUID userId, LoanDtos.RequestLoanRequest request) {
+    @Transactional(readOnly = true)
+    public Assessed assess(UUID userId, BigDecimal amount, int months) {
         settings.requireNotInMaintenance();
         settings.requireLendingEnabled();
-        auth.verifyPin(userId, request.pin());
 
         PlatformSettings s = settings.currentReadOnly();
         User user = users.findById(userId)
                 .orElseThrow(() -> ApiException.notFound("That account"));
 
-        BigDecimal principal = Money.of(request.amount());
-        int months = request.months();
+        BigDecimal principal = Money.of(amount);
 
         if (months < 1 || months > s.getMaxLoanTenureMonths()) {
             throw new ApiException(
@@ -247,21 +250,38 @@ public class LoanService {
         BigDecimal headroom = Finance.headroom(s, assessment.openPrincipal());
         BigDecimal offer = Finance.loanOffer(s, assessment.totalSaved(), assessment.score(), headroom);
 
-        if (Money.isZeroOrLess(offer)) {
-            throw recordRefusal(userId, principal, months, request.purpose(), assessment,
-                    "Not eligible for a loan at this time. Offer is nil on the current savings history "
-                            + "and score of " + assessment.score() + ".",
-                    ErrorCode.NOT_ELIGIBLE,
-                    "You are not eligible for a loan just yet. Saving with us builds your offer. "
-                            + "You can ask a person to look at this decision.");
-        }
-        if (Money.gt(principal, offer)) {
-            throw recordRefusal(userId, principal, months, request.purpose(), assessment,
-                    "Requested " + Money.naira(principal) + " against an offer of " + Money.naira(offer) + ".",
-                    ErrorCode.OFFER_EXCEEDED,
-                    "The most we can offer you right now is " + Money.naira(offer)
-                            + ". You can ask a person to look at this decision.");
-        }
+        return new Assessed(user, principal, months, assessment, offer);
+    }
+
+    /**
+     * What {@link #assess} found. Carried to whoever decides.
+     *
+     * @param offer the most the automated view would lend unaided. Advice to
+     *              the admin, not a ceiling on them.
+     */
+    public record Assessed(
+            User user,
+            BigDecimal principal,
+            int months,
+            CreditScoreService.Assessment assessment,
+            BigDecimal offer) {
+    }
+
+    /**
+     * Creates the loan and puts the money in the wallet.
+     *
+     * <p>Reached only from an approved application: this is the moment the
+     * money becomes the customer's, and nothing else in the system may call it.
+     *
+     * @param decidedBy the admin who approved it, by name — the loan records
+     *                  who lent, which "Automated assessment" no longer answers
+     */
+    @Transactional
+    public Loan disburse(UUID userId, Assessed assessed, String purpose, String decidedBy) {
+        PlatformSettings s = settings.currentReadOnly();
+        BigDecimal principal = assessed.principal();
+        int months = assessed.months();
+        CreditScoreService.Assessment assessment = assessed.assessment();
 
         Instant now = Instant.now();
         BigDecimal rate = s.loanRateFor(months);
@@ -275,7 +295,7 @@ public class LoanService {
         // Frozen here, for the life of the loan.
         loan.setFlatRate(rate);
         loan.setProcessingFee(fee);
-        loan.setPurpose(request.purpose().trim());
+        loan.setPurpose(purpose.trim());
         loan.setRequestedAt(now);
         loan.setDisbursedAt(now);
         loan.setDueDate(Dates.addMonths(now, months));
@@ -283,7 +303,7 @@ public class LoanService {
         loan.setRebateGranted(Money.zero());
         loan.setStatus(LoanStatus.ACTIVE);
         loan.setScoreAtDecision(assessment.score());
-        loan.setDecidedBy("Automated assessment");
+        loan.setDecidedBy(decidedBy);
         Loan saved = loans.save(loan);
 
         // Booked gross then netted, so the ledger shows both the loan and the
@@ -640,52 +660,6 @@ public class LoanService {
     private Loan require(UUID userId, UUID loanId) {
         return loans.findByIdAndUserId(loanId, userId)
                 .orElseThrow(() -> ApiException.notFound("That loan"));
-    }
-
-    /**
-     * Writes a rejected row before refusing, so the decision and its reasons
-     * survive the exception. An automated decision that goes against a customer
-     * must be explainable and open to human review, and it cannot be either if
-     * nothing was written down.
-     */
-    private ApiException recordRefusal(
-            UUID userId,
-            BigDecimal principal,
-            int months,
-            String purpose,
-            CreditScoreService.Assessment assessment,
-            String internalReason,
-            ErrorCode code,
-            String customerMessage) {
-
-        PlatformSettings s = settings.currentReadOnly();
-        Loan refused = new Loan();
-        refused.setId(UUID.randomUUID());
-        refused.setUserId(userId);
-        refused.setPrincipal(Money.of(principal));
-        refused.setTenureMonths(months);
-        refused.setFlatRate(s.loanRateFor(months));
-        refused.setProcessingFee(Money.zero());
-        refused.setPurpose(purpose == null ? "" : purpose.trim());
-        refused.setRequestedAt(Instant.now());
-        refused.setStatus(LoanStatus.REJECTED);
-        refused.setAmountRepaid(Money.zero());
-        refused.setRebateGranted(Money.zero());
-        refused.setScoreAtDecision(assessment.score());
-        refused.setDecidedBy("Automated assessment");
-        refused.setDecisionReasons(internalReason
-                + " You may ask for a human review of this decision.");
-        loans.save(refused);
-
-        notifications.push(
-                userId,
-                NotifyKind.GENERAL,
-                "Loan request declined",
-                customerMessage);
-
-        log.info("Declined loan request for {}: {}", userId, internalReason);
-        return new ApiException(code, customerMessage,
-                Map.of("loanId", refused.getId(), "humanReviewAvailable", true));
     }
 
     static String ratePct(BigDecimal rate) {

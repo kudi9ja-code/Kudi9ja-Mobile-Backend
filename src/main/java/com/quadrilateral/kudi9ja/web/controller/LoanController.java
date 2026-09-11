@@ -122,35 +122,11 @@ public class LoanController {
         return loans.toResponse(loans.get(currentUser.requireId(), loanId));
     }
 
-    /**
-     * Requests a loan.
-     *
-     * <p>Affordability and eligibility are checked here, not on the client. On
-     * approval the loan is created at the rate for that tenure, the wallet is
-     * credited with the principal and then debited the fee — booked gross and
-     * netted, so both legs show in the ledger rather than an unexplained
-     * smaller number arriving.
-     */
-    @PostMapping("/loans")
-    @Operation(summary = "Request a loan")
-    public ResponseEntity<LoanDtos.LoanResponse> request(
-            @Valid @RequestBody LoanDtos.RequestLoanRequest request,
-            @RequestHeader(value = "Idempotency-Key", required = false) String key) {
-
-        UUID userId = currentUser.requireId();
-
-        IdempotencyService.Result<LoanDtos.LoanResponse> result = idempotency.execute(
-                userId,
-                key,
-                "loan.request",
-                new Object[] {request.amount(), request.months(), request.purpose()},
-                LoanDtos.LoanResponse.class,
-                () -> loans.toResponse(loans.request(userId, request)));
-
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .header("Idempotency-Replayed", Boolean.toString(result.replayed()))
-                .body(result.value());
-    }
+    // Requesting a loan is no longer here. It was a POST that lent money in the
+    // time it took to answer, on arithmetic over our own records — which could
+    // never tell whether the business being lent against existed. It is now an
+    // application with evidence attached, decided by a person: see
+    // LoanApplicationController.
 
     @PostMapping("/loans/{loanId}/repay")
     @Operation(summary = "Repay from the wallet")

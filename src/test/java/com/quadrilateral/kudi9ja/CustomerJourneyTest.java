@@ -14,6 +14,7 @@ import com.quadrilateral.kudi9ja.domain.admin.AdminUser;
 import com.quadrilateral.kudi9ja.domain.admin.AdminUserRepository;
 import com.quadrilateral.kudi9ja.domain.user.User;
 import com.quadrilateral.kudi9ja.domain.user.UserRepository;
+import com.quadrilateral.kudi9ja.support.BorrowFlow;
 import com.quadrilateral.kudi9ja.support.CapturingMailer;
 import com.quadrilateral.kudi9ja.support.SignUpFlow;
 import java.math.BigDecimal;
@@ -72,12 +73,14 @@ class CustomerJourneyTest {
     private AdminUserRepository admins;
 
     private SignUpFlow flow;
+    private BorrowFlow borrowing;
     private String customerEmail;
 
     @BeforeEach
     void freshMailbox() {
         mailer.clear();
         flow = new SignUpFlow(mvc, json, mailer);
+        borrowing = new BorrowFlow(mvc, json);
         customerEmail = SignUpFlow.freshEmail("chioma");
     }
 
@@ -396,9 +399,11 @@ class CustomerJourneyTest {
         assertThat(quote.get("totalRepayable").decimalValue()).isEqualByComparingTo("250000.00");
 
         BigDecimal before = balanceOf(customer);
-        JsonNode loan = postJson("/api/v1/loans", customer, """
-                {"amount": 200000, "months": 3, "purpose": "Stock for the shop", "pin": "5271"}
-                """);
+        JsonNode application = borrowing.apply(customer, "200000", 3, "Stock for the shop");
+        // Submitting moves nothing. The money arrives when a person approves.
+        assertThat(balanceOf(customer)).isEqualByComparingTo(before);
+        borrowing.approve(admin, application.get("id").asText());
+        JsonNode loan = getJson("/api/v1/loans", customer).get(0);
 
         // ₦200,000 in, ₦5,000 straight out. The fee never joins the debt.
         assertThat(balanceOf(customer)).isEqualByComparingTo(before.add(new BigDecimal("195000")));
@@ -441,9 +446,7 @@ class CustomerJourneyTest {
         postJson("/api/v1/withdrawals", customer, """
                 {"amount": 50000, "pin": "5271"}
                 """);
-        postJson("/api/v1/loans", customer, """
-                {"amount": 100000, "months": 6, "purpose": "Working capital", "pin": "5271"}
-                """);
+        borrowing.borrow(customer, admin, "100000", 6, "Working capital");
 
         JsonNode reconciliation = getJson("/api/v1/wallet/reconciliation", customer);
 
