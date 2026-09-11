@@ -194,6 +194,9 @@ kudi9ja:
     export-directory: ${EXPORT_DIR:./var/exports}
     signed-url-ttl: PT10M
     max-receipt-bytes: 12582912
+    # A pay-in receipt is a photograph of a bank app. A bank statement is the
+    # file the bank emailed, and refusing it because it is not a picture makes
+    # a customer photograph their own screen to get past us.
     allowed-receipt-types:
       - image/jpeg
       - image/jpg
@@ -201,6 +204,12 @@ kudi9ja:
       - image/heic
       - image/webp
       - application/pdf
+      - application/msword
+      - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      - application/vnd.oasis.opendocument.text
+      - text/csv
+      - application/vnd.ms-excel
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 
     # Read only when provider is cloudinary. Uploads are authenticated-type, so
     # nothing here is ever reachable without going through the admin endpoint.

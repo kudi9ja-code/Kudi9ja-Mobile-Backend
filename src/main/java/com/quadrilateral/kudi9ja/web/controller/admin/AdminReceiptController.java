@@ -130,6 +130,29 @@ public class AdminReceiptController {
         if (lower.endsWith(".heic")) {
             return MediaType.parseMediaType("image/heic");
         }
+        // A bank statement arrives as whatever the bank sent. Served as its
+        // real type so the viewer opens it rather than downloading an opaque
+        // blob — the admin has to read this, not collect it.
+        if (lower.endsWith(".doc")) {
+            return MediaType.parseMediaType("application/msword");
+        }
+        if (lower.endsWith(".docx")) {
+            return MediaType.parseMediaType(
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        }
+        if (lower.endsWith(".odt")) {
+            return MediaType.parseMediaType("application/vnd.oasis.opendocument.text");
+        }
+        if (lower.endsWith(".csv")) {
+            return MediaType.parseMediaType("text/csv");
+        }
+        if (lower.endsWith(".xls")) {
+            return MediaType.parseMediaType("application/vnd.ms-excel");
+        }
+        if (lower.endsWith(".xlsx")) {
+            return MediaType.parseMediaType(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        }
         return MediaType.APPLICATION_OCTET_STREAM;
     }
 
