@@ -244,6 +244,7 @@ public final class LoanApplicationDtos {
             BigDecimal monthlyIncome,
             List<GuarantorPayload> guarantors,
             ApplicationDocument bankStatement,
+            ApplicationDocument selfie,
             List<ApplicationDocument> businessPhotos,
             LoanApplicationStatus status,
             String statusLabel,
@@ -280,6 +281,10 @@ public final class LoanApplicationDtos {
                             ? null
                             : ApplicationDocument.of(
                                     "Bank statement", application.getBankStatement(), urlFor),
+                    application.getSelfie() == null
+                            ? null
+                            : ApplicationDocument.of(
+                                    "The applicant", application.getSelfie(), urlFor),
                     photos,
                     application.getStatus(),
                     application.getStatus().label(),

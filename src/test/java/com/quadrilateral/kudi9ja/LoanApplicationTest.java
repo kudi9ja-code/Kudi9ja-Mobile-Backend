@@ -109,7 +109,7 @@ class LoanApplicationTest {
             JsonNode application = borrowing.apply(customer, "200000", 3, "Stock for the shop");
 
             assertThat(application.get("status").asText()).isEqualTo("PENDING");
-            assertThat(application.get("documentsAttached").asInt()).isEqualTo(4);
+            assertThat(application.get("documentsAttached").asInt()).isEqualTo(5);
             assertThat(application.get("guarantors")).hasSize(1);
             assertThat(balanceOf(customer)).isEqualByComparingTo(before);
 
@@ -125,11 +125,51 @@ class LoanApplicationTest {
 
             mvc.perform(multipart("/api/v1/loans/applications")
                             .file(formPart("200000", 3, BorrowFlow.oneGuarantor()))
+                            .file(selfie())
                             .file(photo("front.jpg"))
                             .file(photo("inside.jpg"))
                             .file(photo("stock.jpg"))
                             .header("Authorization", customer.bearer()))
                     .andExpect(status().is4xxClientError());
+        }
+
+        @Test
+        @DisplayName("is refused without a photograph of the applicant")
+        void selfieRequired() throws Exception {
+            SignUpFlow.Session admin = owner();
+            SignUpFlow.Session customer = fundedCustomer(admin);
+
+            mvc.perform(multipart("/api/v1/loans/applications")
+                            .file(formPart("200000", 3, BorrowFlow.oneGuarantor()))
+                            .file(statement())
+                            .file(photo("front.jpg"))
+                            .file(photo("inside.jpg"))
+                            .file(photo("stock.jpg"))
+                            .header("Authorization", customer.bearer()))
+                    .andExpect(status().is4xxClientError());
+        }
+
+        /**
+         * The statement may be a PDF. A face may not: there is nothing to look
+         * at in a document, and "a picture of the applicant" that is a
+         * spreadsheet is a form filled in to get past the form.
+         */
+        @Test
+        @DisplayName("is refused when the photograph of the applicant is not a picture")
+        void selfieMustBeAnImage() throws Exception {
+            SignUpFlow.Session admin = owner();
+            SignUpFlow.Session customer = fundedCustomer(admin);
+
+            mvc.perform(multipart("/api/v1/loans/applications")
+                            .file(formPart("200000", 3, BorrowFlow.oneGuarantor()))
+                            .file(statement())
+                            .file(new MockMultipartFile(
+                                    "selfie", "me.pdf", "application/pdf", "pdf".getBytes()))
+                            .file(photo("front.jpg"))
+                            .file(photo("inside.jpg"))
+                            .file(photo("stock.jpg"))
+                            .header("Authorization", customer.bearer()))
+                    .andExpect(status().isBadRequest());
         }
 
         @Test
@@ -143,6 +183,7 @@ class LoanApplicationTest {
             mvc.perform(multipart("/api/v1/loans/applications")
                             .file(formPart("200000", 3, none))
                             .file(statement())
+                            .file(selfie())
                             .file(photo("front.jpg"))
                             .file(photo("inside.jpg"))
                             .file(photo("stock.jpg"))
@@ -159,6 +200,7 @@ class LoanApplicationTest {
             mvc.perform(multipart("/api/v1/loans/applications")
                             .file(formPart("200000", 3, BorrowFlow.oneGuarantor()))
                             .file(statement())
+                            .file(selfie())
                             .file(photo("front.jpg"))
                             .file(photo("inside.jpg"))
                             .header("Authorization", customer.bearer()))
@@ -182,6 +224,7 @@ class LoanApplicationTest {
             mvc.perform(multipart("/api/v1/loans/applications")
                             .file(formPart("200000", 3, bad))
                             .file(statement())
+                            .file(selfie())
                             .file(photo("front.jpg"))
                             .file(photo("inside.jpg"))
                             .file(photo("stock.jpg"))
@@ -205,6 +248,7 @@ class LoanApplicationTest {
             mvc.perform(multipart("/api/v1/loans/applications")
                             .file(formPart("150000", 3, BorrowFlow.oneGuarantor()))
                             .file(statement())
+                            .file(selfie())
                             .file(photo("front.jpg"))
                             .file(photo("inside.jpg"))
                             .file(photo("stock.jpg"))
@@ -358,6 +402,7 @@ class LoanApplicationTest {
             assertThat(detail.get("bankStatement").get("url").asText())
                     .contains("/api/v1/admin/receipts/")
                     .contains("signature=");
+            assertThat(detail.get("selfie").get("url").asText()).contains("signature=");
             assertThat(detail.get("businessPhotos")).hasSize(3);
             assertThat(detail.get("guarantors")).hasSize(1);
             // Everything the decision rests on, in one response.
@@ -399,6 +444,10 @@ class LoanApplicationTest {
         return new MockMultipartFile(
                 "form", "form.json", MediaType.APPLICATION_JSON_VALUE,
                 json.writeValueAsBytes(form));
+    }
+
+    private static MockMultipartFile selfie() {
+        return new MockMultipartFile("selfie", "me.jpg", "image/jpeg", "face".getBytes());
     }
 
     private static MockMultipartFile statement() {

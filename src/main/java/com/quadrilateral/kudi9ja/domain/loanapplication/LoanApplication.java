@@ -41,6 +41,10 @@ import lombok.Setter;
  * <ul>
  *   <li><b>A bank statement.</b> The one document that says what actually goes
  *       through the applicant's hands, as against what they report.
+ *   <li><b>A photograph of the applicant.</b> A selfie or a passport picture,
+ *       taken now. The account was opened against a BVN, but a BVN is a
+ *       number and a loan is money handed to a person — this is the face the
+ *       admin is lending to, and the face a guarantor will be asked about.
  *   <li><b>Three photographs of the business.</b> Cheap to ask for, hard to
  *       fake convincingly, and the quickest way to tell a going concern from a
  *       description of one.
@@ -125,6 +129,18 @@ public class LoanApplication {
     })
     private StoredDocument bankStatement;
 
+    /** The applicant, as they look today. */
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "key", column = @Column(name = "selfie_key",
+                    nullable = false, length = 300, updatable = false)),
+            @AttributeOverride(name = "contentType", column = @Column(name = "selfie_content_type",
+                    length = 120, updatable = false)),
+            @AttributeOverride(name = "sizeBytes", column = @Column(name = "selfie_size_bytes",
+                    updatable = false))
+    })
+    private StoredDocument selfie;
+
     /**
      * Photographs of the business premises, in the order they were uploaded.
      *
@@ -207,6 +223,9 @@ public class LoanApplication {
         List<StoredDocument> all = new ArrayList<>();
         if (bankStatement != null) {
             all.add(bankStatement);
+        }
+        if (selfie != null) {
+            all.add(selfie);
         }
         all.addAll(businessPhotos);
         return all;

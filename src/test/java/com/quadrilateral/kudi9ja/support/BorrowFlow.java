@@ -75,6 +75,7 @@ public final class BorrowFlow {
                         .file(new MockMultipartFile("form", "form.json",
                                 MediaType.APPLICATION_JSON_VALUE, json.writeValueAsBytes(form)))
                         .file(file("bankStatement", "statement.pdf", "application/pdf"))
+                        .file(file("selfie", "me.jpg", "image/jpeg"))
                         .file(file("businessPhotos", "front.jpg", "image/jpeg"))
                         .file(file("businessPhotos", "inside.jpg", "image/jpeg"))
                         .file(file("businessPhotos", "stock.jpg", "image/jpeg"))

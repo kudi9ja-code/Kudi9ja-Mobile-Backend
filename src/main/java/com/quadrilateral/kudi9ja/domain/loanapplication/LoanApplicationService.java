@@ -92,6 +92,7 @@ public class LoanApplicationService {
      * Everything one application arrives with.
      *
      * @param statement the bank statement, already read off the request
+     * @param selfie    the applicant's face, taken now
      * @param photos    pictures of the business premises
      */
     public record Submission(
@@ -103,6 +104,7 @@ public class LoanApplicationService {
             BigDecimal monthlyIncome,
             List<Guarantor> guarantors,
             Upload statement,
+            Upload selfie,
             List<Upload> photos,
             String pin) {
     }
@@ -160,6 +162,7 @@ public class LoanApplicationService {
 
         // Now the files, once there is something for them to belong to.
         application.setBankStatement(store(user, submission.statement()));
+        application.setSelfie(store(user, submission.selfie()));
         List<StoredDocument> photos = new ArrayList<>();
         for (Upload photo : submission.photos()) {
             photos.add(store(user, photo));
@@ -384,12 +387,24 @@ public class LoanApplicationService {
             throw ApiException.validation(
                     "Attach a recent bank statement. We cannot assess an application without one.");
         }
+        if (submission.selfie() == null || submission.selfie().content().length == 0) {
+            throw ApiException.validation(
+                    "Add a clear photograph of yourself. We need to see who we are lending to.");
+        }
         if (submission.photos() == null
                 || submission.photos().size() != BUSINESS_PHOTOS_REQUIRED) {
             throw ApiException.validation(
                     "Attach " + BUSINESS_PHOTOS_REQUIRED + " photographs of your business premises.");
         }
         validateUpload(submission.statement(), "bank statement");
+        validateUpload(submission.selfie(), "photograph of yourself");
+        // A face has to be a picture. The statement may be a PDF; this may not.
+        String selfieType = submission.selfie().contentType() == null
+                ? "" : submission.selfie().contentType().toLowerCase(Locale.ROOT);
+        if (!selfieType.startsWith("image/")) {
+            throw ApiException.validation(
+                    "The photograph of yourself has to be a picture, not a document.");
+        }
         for (Upload photo : submission.photos()) {
             validateUpload(photo, "photograph");
         }

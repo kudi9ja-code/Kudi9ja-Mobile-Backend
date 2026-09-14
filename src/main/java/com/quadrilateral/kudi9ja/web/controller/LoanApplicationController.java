@@ -58,10 +58,11 @@ public class LoanApplicationController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Apply to borrow, with a bank statement, business photos and a guarantor")
+    @Operation(summary = "Apply to borrow, with a bank statement, a selfie, business photos and a guarantor")
     public ResponseEntity<LoanApplicationDtos.LoanApplicationResponse> apply(
             @RequestPart("form") @Valid LoanApplicationDtos.ApplicationFormRequest form,
             @RequestPart("bankStatement") MultipartFile bankStatement,
+            @RequestPart("selfie") MultipartFile selfie,
             @RequestPart("businessPhotos") List<MultipartFile> businessPhotos) {
 
         UUID userId = currentUser.requireId();
@@ -88,6 +89,7 @@ public class LoanApplicationController {
                                 form.monthlyIncome(),
                                 guarantors,
                                 read(bankStatement, "bank statement"),
+                                read(selfie, "photograph of yourself"),
                                 photos,
                                 form.pin())));
 
