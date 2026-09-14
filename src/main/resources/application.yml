@@ -274,6 +274,26 @@ kudi9ja:
   kyc:
     provider: ${KYC_PROVIDER:}
 
+  # How many requests one address gets before it is told to wait.
+  #
+  # The per-account lockout stops somebody attacking one customer. It does
+  # nothing against one machine trying a million emails, or filling the OTP
+  # queue, or simply hammering sign-up until the database is busy. This does.
+  # Counted per address, per minute, in memory; a limit that trips answers
+  # 429 with a Retry-After.
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    # Sign-up, sign-in, one-time codes, password reset. Generous for a person
+    # — nobody signs in thirty times a minute — and fatal for a script.
+    auth-per-minute: ${RATE_LIMIT_AUTH_PER_MINUTE:30}
+    # Everything else, per address. The app polls a handful of endpoints on a
+    # refresh; a few hundred a minute is a busy customer, a few thousand is not
+    # a customer.
+    general-per-minute: ${RATE_LIMIT_GENERAL_PER_MINUTE:300}
+    # Render sits in front of this process, so the client is the last entry in
+    # X-Forwarded-For, not the first. Zero means no proxy: use the socket.
+    trusted-proxy-hops: ${RATE_LIMIT_TRUSTED_PROXY_HOPS:1}
+
   # How a notification reaches a phone that is not open. Empty means no push:
   # notifications are still written and still appear when the app is opened.
   # A deployment without Firebase works, it is just quieter.
@@ -353,5 +373,12 @@ kudi9ja:
   # No Firebase project locally; the logging sender records what would go out.
   push:
     provider: ""
+  # The test suite opens dozens of accounts a minute from one address. The
+  # limiter still runs, so its own test can prove it bites, but the numbers
+  # here are above anything the suite reaches.
+  rate-limit:
+    auth-per-minute: 100000
+    general-per-minute: 100000
+    trusted-proxy-hops: 0
   cors:
     allowed-origins: http://localhost:*

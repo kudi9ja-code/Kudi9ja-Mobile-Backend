@@ -26,7 +26,8 @@ public record Kudi9jaProperties(
         Bootstrap bootstrap,
         Jobs jobs,
         Push push,
-        Compliance compliance) {
+        Compliance compliance,
+        RateLimit rateLimit) {
 
     /** The legal entity that contracts with customers. Kudi9ja is its product. */
     public record Company(
@@ -122,6 +123,29 @@ public record Kudi9jaProperties(
             String apiKey,
             String from,
             String replyTo) {
+    }
+
+    /**
+     * How many requests one address may make before it is told to wait.
+     *
+     * <p>Two tiers. The <b>auth</b> tier covers signing up, signing in, codes
+     * and password resets — the endpoints that need no token, and so the ones
+     * a script can hammer across a million different emails while the
+     * per-account lockout stands by, unable to help. The <b>general</b> tier
+     * is a wider backstop over everything, so a signed-in customer's own
+     * handset cannot become a denial-of-service either.
+     *
+     * @param trustedProxyHops how many proxies stand between the internet and
+     *                         this process. The client's address is read that
+     *                         many entries from the <i>right</i> of
+     *                         {@code X-Forwarded-For} — the left is whatever
+     *                         the client chose to write there.
+     */
+    public record RateLimit(
+            boolean enabled,
+            int authPerMinute,
+            int generalPerMinute,
+            int trustedProxyHops) {
     }
 
     public record Otp(
