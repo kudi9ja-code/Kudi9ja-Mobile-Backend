@@ -133,6 +133,32 @@ class LoanApplicationTest {
                     .andExpect(status().is4xxClientError());
         }
 
+        /**
+         * A street address alone is not enough to find anybody. State, local
+         * government and a landmark are what a visit is planned from, so an
+         * application without them is not an application.
+         */
+        @Test
+        @DisplayName("is refused when the guarantor has no landmark")
+        void guarantorLocationRequired() throws Exception {
+            SignUpFlow.Session admin = owner();
+            SignUpFlow.Session customer = fundedCustomer(admin);
+
+            Map<String, Object> incomplete = new java.util.HashMap<>(
+                    BorrowFlow.guarantor("Adaeze Nwosu", "08031234567", "22222222222"));
+            incomplete.put("landmark", "");
+
+            mvc.perform(multipart("/api/v1/loans/applications")
+                            .file(formPart("200000", 3, List.of(incomplete)))
+                            .file(statement())
+                            .file(selfie())
+                            .file(photo("front.jpg"))
+                            .file(photo("inside.jpg"))
+                            .file(photo("stock.jpg"))
+                            .header("Authorization", customer.bearer()))
+                    .andExpect(status().isBadRequest());
+        }
+
         @Test
         @DisplayName("is refused without a photograph of the applicant")
         void selfieRequired() throws Exception {
@@ -405,6 +431,10 @@ class LoanApplicationTest {
             assertThat(detail.get("selfie").get("url").asText()).contains("signature=");
             assertThat(detail.get("businessPhotos")).hasSize(3);
             assertThat(detail.get("guarantors")).hasSize(1);
+            JsonNode guarantor = detail.get("guarantors").get(0);
+            assertThat(guarantor.get("state").asText()).isEqualTo("Lagos");
+            assertThat(guarantor.get("localGovernment").asText()).isEqualTo("Eti-Osa");
+            assertThat(guarantor.get("landmark").asText()).isEqualTo("Opposite Ikoyi Club");
             // Everything the decision rests on, in one response.
             assertThat(detail.get("businessName").asText()).isNotBlank();
             assertThat(detail.get("monthlyIncome").decimalValue())

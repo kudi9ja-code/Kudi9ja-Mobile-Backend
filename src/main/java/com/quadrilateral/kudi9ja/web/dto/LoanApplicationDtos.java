@@ -46,6 +46,18 @@ public final class LoanApplicationDtos {
             @Size(max = 400, message = "That address is too long.")
             String address,
 
+            @NotBlank(message = "Select the guarantor's state.")
+            @Size(max = 60, message = "That state name is too long.")
+            String state,
+
+            @NotBlank(message = "Enter the guarantor's local government area.")
+            @Size(max = 120, message = "That is too long.")
+            String localGovernment,
+
+            @NotBlank(message = "Give a landmark near the guarantor's address.")
+            @Size(max = 200, message = "Keep the landmark to a short description.")
+            String landmark,
+
             @NotBlank(message = "Say what this guarantor is to you.")
             @Size(max = 120, message = "Keep that to a few words.")
             String relationship,
@@ -66,6 +78,9 @@ public final class LoanApplicationDtos {
             guarantor.setFullName(fullName.trim());
             guarantor.setPhone(phone.trim());
             guarantor.setAddress(address.trim());
+            guarantor.setState(state.trim());
+            guarantor.setLocalGovernment(localGovernment.trim());
+            guarantor.setLandmark(landmark.trim());
             guarantor.setRelationship(relationship.trim());
             guarantor.setBvn(bvn.trim());
             guarantor.setOccupation(occupation == null ? null : occupation.trim());
@@ -78,6 +93,9 @@ public final class LoanApplicationDtos {
                     guarantor.getFullName(),
                     guarantor.getPhone(),
                     guarantor.getAddress(),
+                    guarantor.getState(),
+                    guarantor.getLocalGovernment(),
+                    guarantor.getLandmark(),
                     guarantor.getRelationship(),
                     guarantor.getBvn(),
                     guarantor.getOccupation(),

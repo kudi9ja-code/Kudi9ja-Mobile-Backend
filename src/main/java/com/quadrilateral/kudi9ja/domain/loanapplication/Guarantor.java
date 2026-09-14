@@ -38,6 +38,24 @@ public class Guarantor {
     @Column(name = "address", nullable = false, length = 400)
     private String address;
 
+    /**
+     * Where the address is, in the terms somebody would use to go there.
+     *
+     * <p>A street address in Nigeria is often not enough on its own: numbering
+     * is irregular and streets share names across a city. State and local
+     * government narrow it to a place; a landmark — the church, the filling
+     * station, the junction — is how anybody actually finds it. If this loan
+     * has to be pursued, these three are what a visit is planned from.
+     */
+    @Column(name = "state", nullable = false, length = 60)
+    private String state;
+
+    @Column(name = "local_government", nullable = false, length = 120)
+    private String localGovernment;
+
+    @Column(name = "landmark", nullable = false, length = 200)
+    private String landmark;
+
     /** What they are to the borrower: an employer, a sister, a landlord. */
     @Column(name = "relationship", nullable = false, length = 120)
     private String relationship;
