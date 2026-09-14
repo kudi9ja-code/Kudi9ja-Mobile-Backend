@@ -5,7 +5,7 @@
 -- runs, but it was the only thing between a stranger and a disbursement, and no
 -- formula over our own ledger can say whether the business being lent against
 -- exists. So a request became an application, carrying a bank statement, three
--- photographs of the premises and a guarantor, and a person decides it.
+-- photographs of the premises and two guarantors, and a person decides it.
 --
 -- Nothing here holds money. The loan is still written by the loan table, by the
 -- same code as always, at the moment an admin approves.
@@ -92,7 +92,7 @@ create table loan_application_photo (
 
 create index ix_loanapp_photo on loan_application_photo (application_id);
 
--- Whoever vouches for the borrower. One today; a table, so it can be two.
+-- The two people vouching for the borrower.
 --
 -- Their BVN is recorded, not verified. Verifying one means asking the issuer
 -- about a person, and we have consent from our customer for their own number
