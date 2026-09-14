@@ -44,7 +44,8 @@ class DeployedMigrationsAreFrozenTest {
     private static final Map<String, Integer> DEPLOYED = Map.of(
             "V1__initial_schema.sql", -173574079,
             "V2__payment_reference.sql", -1815322573,
-            "V3__loan_applications.sql", -1240739060);
+            "V3__loan_applications.sql", -1240739060,
+            "V4__loan_application_selfie.sql", -1806591911);
 
     @Test
     @DisplayName("no deployed migration has changed, not even a comment")
