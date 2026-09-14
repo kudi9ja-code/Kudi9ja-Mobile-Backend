@@ -52,8 +52,8 @@ public class LoanApplicationService {
 
     private static final Logger log = LoggerFactory.getLogger(LoanApplicationService.class);
 
-    /** Exactly two people vouch for a borrower. */
-    public static final int GUARANTORS_REQUIRED = 2;
+    /** One person vouches for a borrower. */
+    public static final int GUARANTORS_REQUIRED = 1;
 
     /** And three pictures of where the money is going to work. */
     public static final int BUSINESS_PHOTOS_REQUIRED = 3;
@@ -173,7 +173,7 @@ public class LoanApplicationService {
                 NotifyKind.GENERAL,
                 "Application received",
                 "Your application to borrow " + Money.naira(saved.getAmount()) + " is with our team. "
-                        + "We read the statement, the pictures and both guarantors before deciding, "
+                        + "We read the statement, the pictures and your guarantor before deciding, "
                         + "so this is not instant. Nothing has been added to your wallet yet.");
 
         audit.record(
@@ -378,7 +378,7 @@ public class LoanApplicationService {
         if (submission.guarantors() == null
                 || submission.guarantors().size() != GUARANTORS_REQUIRED) {
             throw ApiException.validation(
-                    "Two guarantors are needed, with full details for both.");
+                    "A guarantor is needed, with their full details.");
         }
         if (submission.statement() == null || submission.statement().content().length == 0) {
             throw ApiException.validation(

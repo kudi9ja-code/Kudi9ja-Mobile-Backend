@@ -14,7 +14,6 @@ import com.quadrilateral.kudi9ja.support.BorrowFlow;
 import com.quadrilateral.kudi9ja.support.CapturingMailer;
 import com.quadrilateral.kudi9ja.support.SignUpFlow;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +37,7 @@ import org.springframework.test.web.servlet.MvcResult;
  *
  * <p>The property this file exists to hold is the first one: <b>submitting an
  * application moves no money</b>. Everything else — the documents, the
- * guarantors, the reason on a refusal — is in service of a human being able to
+ * guarantor, the reason on a refusal — is in service of a human being able to
  * make that decision well, but the decision itself has to be theirs, and a
  * balance that moved before they made it would mean it never was.
  */
@@ -111,7 +110,7 @@ class LoanApplicationTest {
 
             assertThat(application.get("status").asText()).isEqualTo("PENDING");
             assertThat(application.get("documentsAttached").asInt()).isEqualTo(4);
-            assertThat(application.get("guarantors")).hasSize(2);
+            assertThat(application.get("guarantors")).hasSize(1);
             assertThat(balanceOf(customer)).isEqualByComparingTo(before);
 
             // And no loan exists yet either — not a pending one, not any.
@@ -125,7 +124,7 @@ class LoanApplicationTest {
             SignUpFlow.Session customer = fundedCustomer(admin);
 
             mvc.perform(multipart("/api/v1/loans/applications")
-                            .file(formPart("200000", 3, BorrowFlow.twoGuarantors()))
+                            .file(formPart("200000", 3, BorrowFlow.oneGuarantor()))
                             .file(photo("front.jpg"))
                             .file(photo("inside.jpg"))
                             .file(photo("stock.jpg"))
@@ -134,16 +133,15 @@ class LoanApplicationTest {
         }
 
         @Test
-        @DisplayName("is refused with one guarantor")
-        void twoGuarantorsRequired() throws Exception {
+        @DisplayName("is refused with no guarantor")
+        void guarantorRequired() throws Exception {
             SignUpFlow.Session admin = owner();
             SignUpFlow.Session customer = fundedCustomer(admin);
 
-            List<Map<String, Object>> one =
-                    List.of(BorrowFlow.guarantor("Adaeze Nwosu", "08031234567", "22222222222"));
+            List<Map<String, Object>> none = List.of();
 
             mvc.perform(multipart("/api/v1/loans/applications")
-                            .file(formPart("200000", 3, one))
+                            .file(formPart("200000", 3, none))
                             .file(statement())
                             .file(photo("front.jpg"))
                             .file(photo("inside.jpg"))
@@ -159,7 +157,7 @@ class LoanApplicationTest {
             SignUpFlow.Session customer = fundedCustomer(admin);
 
             mvc.perform(multipart("/api/v1/loans/applications")
-                            .file(formPart("200000", 3, BorrowFlow.twoGuarantors()))
+                            .file(formPart("200000", 3, BorrowFlow.oneGuarantor()))
                             .file(statement())
                             .file(photo("front.jpg"))
                             .file(photo("inside.jpg"))
@@ -178,8 +176,8 @@ class LoanApplicationTest {
             SignUpFlow.Session admin = owner();
             SignUpFlow.Session customer = fundedCustomer(admin);
 
-            List<Map<String, Object>> bad = new ArrayList<>(BorrowFlow.twoGuarantors());
-            bad.set(1, BorrowFlow.guarantor("Tunde Bakare", "08061234567", "123"));
+            List<Map<String, Object>> bad =
+                    List.of(BorrowFlow.guarantor("Tunde Bakare", "08061234567", "123"));
 
             mvc.perform(multipart("/api/v1/loans/applications")
                             .file(formPart("200000", 3, bad))
@@ -205,7 +203,7 @@ class LoanApplicationTest {
             borrowing.apply(customer, "200000", 3, "Stock");
 
             mvc.perform(multipart("/api/v1/loans/applications")
-                            .file(formPart("150000", 3, BorrowFlow.twoGuarantors()))
+                            .file(formPart("150000", 3, BorrowFlow.oneGuarantor()))
                             .file(statement())
                             .file(photo("front.jpg"))
                             .file(photo("inside.jpg"))
@@ -361,7 +359,7 @@ class LoanApplicationTest {
                     .contains("/api/v1/admin/receipts/")
                     .contains("signature=");
             assertThat(detail.get("businessPhotos")).hasSize(3);
-            assertThat(detail.get("guarantors")).hasSize(2);
+            assertThat(detail.get("guarantors")).hasSize(1);
             // Everything the decision rests on, in one response.
             assertThat(detail.get("businessName").asText()).isNotBlank();
             assertThat(detail.get("monthlyIncome").decimalValue())

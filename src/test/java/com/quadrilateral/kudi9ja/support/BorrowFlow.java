@@ -18,7 +18,7 @@ import org.springframework.test.web.servlet.MvcResult;
  * Borrowing, end to end, for tests that need a disbursed loan.
  *
  * <p>Getting one used to be a single POST. It is now an application with four
- * files and two guarantors on it, followed by an admin approving — which is a
+ * files and a guarantor on it, followed by an admin approving — which is a
  * great deal to retype in every test that merely wants a loan on the books in
  * order to check something else. So it lives here, and the tests that care
  * about the flow itself drive the endpoints directly instead.
@@ -49,11 +49,9 @@ public final class BorrowFlow {
                 "email", "");
     }
 
-    /** The two guarantors every application needs. */
-    public static List<Map<String, Object>> twoGuarantors() {
-        return List.of(
-                guarantor("Adaeze Nwosu", "08031234567", "22222222222"),
-                guarantor("Tunde Bakare", "08061234567", "33333333333"));
+    /** The guarantor every application needs. */
+    public static List<Map<String, Object>> oneGuarantor() {
+        return List.of(guarantor("Adaeze Nwosu", "08031234567", "22222222222"));
     }
 
     /** Submits an application and returns the created row. */
@@ -70,7 +68,7 @@ public final class BorrowFlow {
                 "businessName", "Chioma Grace Provisions",
                 "businessAddress", "14 Adeola Odeku Street, Victoria Island, Lagos",
                 "monthlyIncome", new BigDecimal("450000"),
-                "guarantors", twoGuarantors(),
+                "guarantors", oneGuarantor(),
                 "pin", SignUpFlow.PIN);
 
         MvcResult result = mvc.perform(multipart("/api/v1/loans/applications")

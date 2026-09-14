@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>This is where money is created out of a promise, so it is the most
  * consequential thing in the panel. Reading the file is the job: a statement
  * that matches what was claimed, premises that look like the business
- * described, two guarantors who can actually be reached.
+ * described, a guarantor who can actually be reached.
  *
  * <p>Approving <b>disburses immediately</b> — the loan is written and the
  * wallet credited in the same transaction, through the same path that has

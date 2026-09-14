@@ -33,7 +33,7 @@ import lombok.Setter;
  * checked, and the wallet credited in the same request. That arithmetic still
  * runs, but the arithmetic was never the whole decision — whether the business
  * exists, whether the statement shows what the applicant says it shows, whether
- * two named people will really stand behind it. Those are questions for a
+ * the person named will really stand behind it. Those are questions for a
  * person, so the application waits until one has answered them.
  *
  * <p>What it carries beyond the figures:
@@ -44,7 +44,7 @@ import lombok.Setter;
  *   <li><b>Three photographs of the business.</b> Cheap to ask for, hard to
  *       fake convincingly, and the quickest way to tell a going concern from a
  *       description of one.
- *   <li><b>Two guarantors.</b> Recorded in full, verified nowhere — see
+ *   <li><b>A guarantor.</b> Recorded in full, verified nowhere — see
  *       {@link Guarantor}.
  * </ul>
  *
@@ -141,7 +141,10 @@ public class LoanApplication {
     private List<StoredDocument> businessPhotos = new ArrayList<>();
 
     /**
-     * The two people vouching for this borrower.
+     * Whoever vouches for this borrower.
+     *
+     * <p>One today. Still a collection, because a table does not have to be
+     * altered when that becomes two.
      *
      * <p>Eager, and deliberately: an application is never read without them —
      * they are half of what the admin is deciding on.

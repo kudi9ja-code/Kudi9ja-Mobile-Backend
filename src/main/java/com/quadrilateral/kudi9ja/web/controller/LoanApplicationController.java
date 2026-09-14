@@ -33,14 +33,14 @@ import org.springframework.web.multipart.MultipartFile;
  * whether the business it is lending against exists.
  *
  * <p>So an application is submitted with evidence — a bank statement, three
- * photographs of the premises, two guarantors in full — and <b>nothing is
+ * photographs of the premises, a guarantor in full — and <b>nothing is
  * credited until an admin has read it</b> and approved. A refusal comes with a
  * reason written for the customer, because the point of refusing is that they
  * can fix what was wrong and come back.
  *
  * <p>The form and the files travel together as one multipart request. The
- * fields arrive as a JSON part rather than as loose form values: two guarantors
- * are a repeated structure, and flattening them into numbered field names makes
+ * fields arrive as a JSON part rather than as loose form values: a guarantor is
+ * a structure of their own, and flattening one into prefixed field names makes
  * the shape a convention both sides have to remember.
  */
 @RestController
@@ -58,7 +58,7 @@ public class LoanApplicationController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Apply to borrow, with a bank statement, business photos and two guarantors")
+    @Operation(summary = "Apply to borrow, with a bank statement, business photos and a guarantor")
     public ResponseEntity<LoanApplicationDtos.LoanApplicationResponse> apply(
             @RequestPart("form") @Valid LoanApplicationDtos.ApplicationFormRequest form,
             @RequestPart("bankStatement") MultipartFile bankStatement,

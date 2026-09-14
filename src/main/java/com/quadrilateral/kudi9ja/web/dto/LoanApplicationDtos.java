@@ -118,8 +118,8 @@ public final class LoanApplicationDtos {
             @DecimalMin(value = "0", message = "An income cannot be negative.")
             BigDecimal monthlyIncome,
 
-            @NotNull(message = "Two guarantors are needed.")
-            @Size(min = 2, max = 2, message = "Two guarantors are needed, no more and no fewer.")
+            @NotNull(message = "A guarantor is needed.")
+            @Size(min = 1, max = 1, message = "One guarantor, with their full details.")
             List<@Valid GuarantorPayload> guarantors,
 
             @NotBlank(message = "Enter your PIN.")

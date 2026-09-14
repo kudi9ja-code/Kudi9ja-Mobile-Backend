@@ -9,7 +9,7 @@ import lombok.Setter;
 /**
  * Somebody who vouches for a borrower.
  *
- * <p>Two are required on every application. They are not customers: no account
+ * <p>One is required on every application. They are not customers: no account
  * is opened for them, nothing is checked against an institution, and their BVN
  * is <b>recorded, not verified</b>. Verifying a BVN means asking the issuer
  * about a person, and we have that person's consent for their own number only —
