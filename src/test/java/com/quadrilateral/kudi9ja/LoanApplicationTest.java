@@ -428,6 +428,11 @@ class LoanApplicationTest {
             assertThat(detail.get("bankStatement").get("url").asText())
                     .contains("/api/v1/admin/receipts/")
                     .contains("signature=");
+            // The statement is stored as sent, lock and all, so the admin is
+            // told what opens it — and the customer's own view is not, because
+            // it is theirs and they already know it.
+            assertThat(detail.get("statementPassword").asText()).isEqualTo("15081990");
+            assertThat(application.has("statementPassword")).isFalse();
             assertThat(detail.get("selfie").get("url").asText()).contains("signature=");
             assertThat(detail.get("businessPhotos")).hasSize(3);
             assertThat(detail.get("guarantors")).hasSize(1);

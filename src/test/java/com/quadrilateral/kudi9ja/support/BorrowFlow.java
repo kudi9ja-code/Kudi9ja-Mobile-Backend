@@ -72,6 +72,9 @@ public final class BorrowFlow {
                 "businessAddress", "14 Adeola Odeku Street, Victoria Island, Lagos",
                 "monthlyIncome", new BigDecimal("450000"),
                 "guarantors", oneGuarantor(),
+                // What a bank locks a PDF statement with. Sent so the admin
+                // view can be checked for it.
+                "statementPassword", "15081990",
                 "pin", SignUpFlow.PIN);
 
         MvcResult result = mvc.perform(multipart("/api/v1/loans/applications")

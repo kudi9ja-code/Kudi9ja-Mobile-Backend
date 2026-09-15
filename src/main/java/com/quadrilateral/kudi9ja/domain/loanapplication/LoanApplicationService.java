@@ -91,9 +91,10 @@ public class LoanApplicationService {
     /**
      * Everything one application arrives with.
      *
-     * @param statement the bank statement, already read off the request
-     * @param selfie    the applicant's face, taken now
-     * @param photos    pictures of the business premises
+     * @param statement         the bank statement, already read off the request
+     * @param statementPassword what opens it, if the bank locked it; else null
+     * @param selfie            the applicant's face, taken now
+     * @param photos            pictures of the business premises
      */
     public record Submission(
             BigDecimal amount,
@@ -104,6 +105,7 @@ public class LoanApplicationService {
             BigDecimal monthlyIncome,
             List<Guarantor> guarantors,
             Upload statement,
+            String statementPassword,
             Upload selfie,
             List<Upload> photos,
             String pin) {
@@ -161,11 +163,16 @@ public class LoanApplicationService {
         application.setStatus(LoanApplicationStatus.PENDING);
 
         // Now the files, once there is something for them to belong to.
-        application.setBankStatement(store(user, submission.statement()));
-        application.setSelfie(store(user, submission.selfie()));
+        application.setBankStatement(store(user, submission.statement(), "bank statement"));
+        application.setStatementPassword(
+                submission.statementPassword() == null || submission.statementPassword().isBlank()
+                        ? null
+                        : submission.statementPassword().trim());
+        application.setSelfie(store(user, submission.selfie(), "photograph of yourself"));
         List<StoredDocument> photos = new ArrayList<>();
+        int n = 0;
         for (Upload photo : submission.photos()) {
-            photos.add(store(user, photo));
+            photos.add(store(user, photo, "business photograph " + (++n)));
         }
         application.setBusinessPhotos(photos);
 
@@ -432,9 +439,30 @@ public class LoanApplicationService {
         }
     }
 
-    private StoredDocument store(User user, Upload upload) {
-        String key = documents.store(
-                user.getCustomerRef(), upload.filename(), upload.contentType(), upload.content());
+    /**
+     * Puts one document in storage, naming it if that fails.
+     *
+     * <p>The store was written for pay-in receipts and says "receipt" when it
+     * cannot save something. A customer sending a loan application attached
+     * no receipt, and "that receipt could not be saved" told them nothing
+     * about which of their five files was refused. The log line underneath
+     * carries the provider's reason; this carries the document's name.
+     */
+    private StoredDocument store(User user, Upload upload, String what) {
+        String key;
+        try {
+            key = documents.store(
+                    user.getCustomerRef(), upload.filename(), upload.contentType(), upload.content());
+        } catch (ApiException e) {
+            if (e.code() != ErrorCode.INTERNAL) {
+                throw e;
+            }
+            log.error("Could not store the {} for {}: {} bytes of {} named {}",
+                    what, user.getCustomerRef(), upload.content().length,
+                    upload.contentType(), upload.filename());
+            throw new ApiException(ErrorCode.INTERNAL,
+                    "Your " + what + " could not be saved. Try again, or attach a different file.");
+        }
         return new StoredDocument(key, upload.contentType(), (long) upload.content().length);
     }
 }

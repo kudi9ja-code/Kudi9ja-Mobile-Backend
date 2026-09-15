@@ -140,6 +140,13 @@ public final class LoanApplicationDtos {
             @Size(min = 1, max = 1, message = "One guarantor, with their full details.")
             List<@Valid GuarantorPayload> guarantors,
 
+            /**
+             * What opens the bank statement, if the bank locked it. Optional:
+             * a screenshot has no password, and neither do most spreadsheets.
+             */
+            @Size(max = 64, message = "That password is longer than any bank uses.")
+            String statementPassword,
+
             @NotBlank(message = "Enter your PIN.")
             String pin) {
     }
@@ -262,6 +269,7 @@ public final class LoanApplicationDtos {
             BigDecimal monthlyIncome,
             List<GuarantorPayload> guarantors,
             ApplicationDocument bankStatement,
+            String statementPassword,
             ApplicationDocument selfie,
             List<ApplicationDocument> businessPhotos,
             LoanApplicationStatus status,
@@ -299,6 +307,7 @@ public final class LoanApplicationDtos {
                             ? null
                             : ApplicationDocument.of(
                                     "Bank statement", application.getBankStatement(), urlFor),
+                    application.getStatementPassword(),
                     application.getSelfie() == null
                             ? null
                             : ApplicationDocument.of(

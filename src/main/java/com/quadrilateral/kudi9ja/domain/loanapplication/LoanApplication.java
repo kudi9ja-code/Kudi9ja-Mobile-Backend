@@ -129,6 +129,20 @@ public class LoanApplication {
     })
     private StoredDocument bankStatement;
 
+    /**
+     * What opens the statement, if it is locked.
+     *
+     * <p>Banks send statements as PDFs locked with the customer's date of
+     * birth or phone number, and the file is kept exactly as sent. Without
+     * this an admin held a document they could not read and had to go back
+     * to the customer to ask. Null for a file that has no lock.
+     *
+     * <p>Served only on the admin's view of the application — the customer
+     * already knows it, and it is theirs.
+     */
+    @Column(name = "statement_password", length = 64, updatable = false)
+    private String statementPassword;
+
     /** The applicant, as they look today. */
     @Embedded
     @AttributeOverrides({

@@ -89,6 +89,7 @@ public class LoanApplicationController {
                                 form.monthlyIncome(),
                                 guarantors,
                                 read(bankStatement, "bank statement"),
+                                form.statementPassword(),
                                 read(selfie, "photograph of yourself"),
                                 photos,
                                 form.pin())));
