@@ -6,6 +6,7 @@ import com.quadrilateral.kudi9ja.domain.user.AccountStatus;
 import com.quadrilateral.kudi9ja.domain.user.KycTier;
 import com.quadrilateral.kudi9ja.domain.user.ThemeMode;
 import com.quadrilateral.kudi9ja.domain.user.User;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
@@ -131,6 +132,16 @@ public final class UserDtos {
             Boolean biometricsEnabled,
 
             Boolean autoDebit) {
+    }
+
+    /** A customer accepting a document that changed after they signed up. */
+    public record AcceptDocumentRequest(
+            @NotBlank(message = "Say which document.")
+            String document,
+
+            @NotBlank(message = "Say which version you read.")
+            @Size(max = 16, message = "That is not a version number.")
+            String version) {
     }
 
     /** Changing where money leaves to. Confirmed by a code and a name enquiry. */

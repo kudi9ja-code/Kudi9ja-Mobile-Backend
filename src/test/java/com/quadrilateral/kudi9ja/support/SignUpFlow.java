@@ -114,8 +114,10 @@ public final class SignUpFlow {
                         .header("X-Device", "Integration test")
                         .content(json.writeValueAsString(Map.of(
                                 "accepted", true,
+                                // The versions in force, the same ones the app
+                                // carries. A stale number here is refused.
                                 "acceptedVersions", Map.of(
-                                        "TERMS", "1.0", "PRIVACY", "1.0", "LENDING", "1.0")))))
+                                        "TERMS", "1.1", "PRIVACY", "1.1", "LENDING", "1.0")))))
                 .andExpect(status().isCreated())
                 .andReturn();
 

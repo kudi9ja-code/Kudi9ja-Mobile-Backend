@@ -1,0 +1,725 @@
+{
+  "id": "terms",
+  "title": "Terms of Service",
+  "shortTitle": "Terms of Service",
+  "summary": "The agreement that governs your Kudi9ja account, your wallet, your savings and everything else you do in the app.",
+  "version": "1.1",
+  "effective": "2026-09-15T00:00:00.000",
+  "changeSummary": "Removed the reference to credit scores: there is no longer one in the app.",
+  "readMinutes": 18,
+  "sections": [
+    {
+      "title": "Who you are agreeing with",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Kudi9ja is a product of **Quadrilateral Technologies Limited** (**RC 1657731**), a company incorporated in Nigeria at Kudi9ja Limited, Lagos, Nigeria. In these Terms, \"Kudi9ja\", \"we\", \"us\" and \"our\" mean that company. \"You\" and \"your\" mean the person who opens or uses a Kudi9ja account."
+        },
+        {
+          "type": "text",
+          "text": "A Kudi9ja account may only be opened and used by an individual, in their own name, for their own benefit."
+        },
+        {
+          "type": "definitions",
+          "entries": [
+            {
+              "term": "General support",
+              "meaning": "support@kudi9ja.com"
+            },
+            {
+              "term": "Questions about these Terms",
+              "meaning": "legal@kudi9ja.com"
+            },
+            {
+              "term": "Privacy and your data",
+              "meaning": "privacy@kudi9ja.com"
+            },
+            {
+              "term": "WhatsApp",
+              "meaning": "+234 805 679 1426 or +234 803 630 0582"
+            },
+            {
+              "term": "Address",
+              "meaning": "Kudi9ja Limited, Lagos, Nigeria"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "These Terms, and the documents that go with them",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "By ticking the acceptance box when you open your account, and by continuing to use Kudi9ja afterwards, you agree to these Terms. If you do not agree with them, do not open an account, and stop using the app."
+        },
+        {
+          "type": "text",
+          "text": "Three documents make up your agreement with us:"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "**These Terms of Service**, which cover your account, your wallet, savings and thrift circles.",
+            "**The Privacy Policy**, which explains what we do with your personal data.",
+            "**The Lending Agreement**, which applies only if you borrow from us, and which sets out what a loan costs and how it is repaid."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Where a specific product term contradicts these general Terms, the specific term wins for that product. The Lending Agreement, for example, governs your loan even where these Terms say something more general about money owed to us."
+        },
+        {
+          "type": "note",
+          "text": "You are entering into a legally binding contract electronically. Under the Evidence Act 2011, the electronic record we keep of your acceptance — the version accepted, the date, the time and the device — is admissible evidence of this agreement, and you agree not to dispute it on the ground that it was not signed on paper.",
+          "title": "Electronic acceptance",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "title": "Who can open an account",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "To open a Kudi9ja account you must:"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "be a natural person aged **18 or above**;",
+            "be resident in Nigeria, or hold a Nigerian bank account in your own name;",
+            "have a valid **Bank Verification Number (BVN)** and **National Identification Number (NIN)** issued to you;",
+            "have a working email address and a Nigerian mobile number you control;",
+            "not be acting on behalf of anybody else; and",
+            "not be barred from using financial services under Nigerian law, or listed on any sanctions list we are required to screen against."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "We may refuse to open an account, and we do not have to give a reason. Where the law allows us to explain, we will."
+        }
+      ]
+    },
+    {
+      "title": "Opening your account and verifying who you are",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Nigerian law requires us to know who our customers are. When you sign up we collect your name, date of birth, gender, address, state of residence, phone number, email address, BVN and NIN, and we verify them against the records held by the institutions that issued them."
+        },
+        {
+          "type": "text",
+          "text": "You promise that everything you tell us is true, complete and current, and that you will update us within **7 days** if any of it changes — particularly your phone number, email address or home address."
+        },
+        {
+          "type": "text",
+          "text": "Verification decides what your account can do. Until your identity is confirmed we may hold your account at a lower tier, cap what you can move, or keep it closed to new funds."
+        },
+        {
+          "type": "note",
+          "text": "Giving us false information, or using somebody else's identity documents, is a criminal offence. It will also cost you your account, and we will report it.",
+          "title": null,
+          "tone": "caution"
+        }
+      ]
+    },
+    {
+      "title": "Your wallet, and what it is not",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Your Kudi9ja wallet is a record of what we owe you. It shows the money you have paid in, the returns we have credited, the loans we have disbursed to you and everything you have moved out."
+        },
+        {
+          "type": "note",
+          "text": "Quadrilateral Technologies Limited is not a bank. Your wallet is not a bank account, and money held in it is not insured by the Nigeria Deposit Insurance Corporation. **We do not issue account numbers** — the code shown in the app is a reference for matching your payments to you, and nobody can pay into it. Money leaves Kudi9ja to a bank account you already hold in your own name.",
+          "title": "Read this twice",
+          "tone": "caution"
+        },
+        {
+          "type": "text",
+          "text": "Customer money paid in is held in our collection account at Zenith Bank in the name of Quadrilateral Technologies Ltd. We keep our own records of which part of that balance belongs to which customer."
+        },
+        {
+          "type": "text",
+          "text": "We do not pay interest on money that is simply sitting in your wallet. Returns are earned by placing money into a savings plan."
+        }
+      ]
+    },
+    {
+      "title": "Paying money in",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "You fund your wallet, open a savings plan or repay a loan by transferring from your own bank account to our collection account (Zenith Bank, 1018548852, Quadrilateral Technologies Ltd), quoting the reference the app gives you, and then telling us in the app that you have paid, attaching the receipt from your bank."
+        },
+        {
+          "type": "text",
+          "text": "So that your money reaches you and not somebody else:"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "transfer only from a bank account **in your own name** — third party transfers may be returned to source;",
+            "quote **the exact reference** shown in the app on that transfer;",
+            "submit the claim in the app with a legible receipt; and",
+            "submit **one claim per transfer**."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Nothing is credited on your word alone. Our team matches your claim against the collection account statement first. Claims received on a working day are normally reviewed within **one working day**, and we will always tell you the outcome in the app."
+        },
+        {
+          "type": "text",
+          "text": "If a payment reaches us but cannot be matched to a customer, we will hold it and try to trace it. If we still cannot identify the sender after **30 days**, we will return it to the account it came from."
+        },
+        {
+          "type": "note",
+          "text": "Submitting a receipt for a transfer you did not make, or altering one, is attempted fraud. We will freeze the account, keep the evidence and report it to the police and to your bank.",
+          "title": null,
+          "tone": "caution"
+        }
+      ]
+    },
+    {
+      "title": "Taking money out",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Everything you earn or receive through Kudi9ja — a savings return, a loan we disburse, a thrift payout — lands in your wallet. You move it out by asking us to pay it to **a Nigerian bank account in your own name**, which you nominate when you open your account. It is the only account we will ever pay you into."
+        },
+        {
+          "type": "text",
+          "text": "When you make the request the amount leaves your wallet immediately, so it cannot be spent twice while we check it."
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "Requests are reviewed and, where approved, paid out within **one working day**. Bank processing may add to that.",
+            "If we decline a request, the full amount goes straight back to your wallet and we tell you why.",
+            "We pay only into the account on your profile. You cannot enter a different one while making a request, so a payout cannot be redirected by a slip of the finger or by anyone who gets hold of your phone.",
+            "Money committed to a running savings plan or a thrift circle is not available to withdraw."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Changing your payout account is a deliberate step of its own. We ask for a code sent to your email address and your transaction PIN, and we check the name on the new account with the bank. **If it is not in your name, we refuse the change.** We will also tell you whenever it changes, so that if it was not you, you find out in time."
+        },
+        {
+          "type": "note",
+          "text": "Kudi9ja does not send money to other people. There is no way to pay a third party from your wallet, and no way to move money to an account that is not yours. The only route out is a withdrawal to your own nominated account."
+        }
+      ]
+    },
+    {
+      "title": "Fixed Savings",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "A Fixed Savings plan locks a sum of money for a period you choose in **days** — anything from 30 days to 1,825 days (5 years) — and pays **17% per annum**, pro-rated to the exact number of days you lock for."
+        },
+        {
+          "type": "text",
+          "text": "The return is worked out as **the amount locked, times 17%, times the number of days divided by 365**. Nothing is rounded to whole months: a 365-day lock earns the full 17%, and a 171-day lock earns 7.964%."
+        },
+        {
+          "type": "example",
+          "title": "What ₦100,000 earns, by lock period",
+          "rows": [
+            {
+              "label": "30 days (1 month)",
+              "value": "₦1,397.26 (1.40%)"
+            },
+            {
+              "label": "90 days (3 months)",
+              "value": "₦4,191.78 (4.19%)"
+            },
+            {
+              "label": "171 days (5 months, 3 weeks)",
+              "value": "₦7,964.38 (7.96%)"
+            },
+            {
+              "label": "365 days (1 year)",
+              "value": "₦17,000.00 (17.00%)"
+            },
+            {
+              "label": "730 days (2 years)",
+              "value": "₦34,000.00 (34.00%)"
+            },
+            {
+              "label": "1,825 days (5 years)",
+              "value": "₦85,000.00 (85.00%)"
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "The minimum amount is ₦5,000.",
+            "The return is **paid into your wallet at the moment the plan is created**, not at maturity.",
+            "The exact figure is shown to you before you confirm, and it is the figure you are paid.",
+            "The rate that applies to your plan is the rate displayed when you create it. Later rate changes do not touch a running plan.",
+            "On maturity, the principal is returned to your wallet in full."
+          ]
+        },
+        {
+          "type": "note",
+          "text": "A Fixed Savings plan cannot be broken before maturity. You are paid the return upfront precisely because the money stays where it is, so choose a lock period you can live with.",
+          "title": "Fixed means fixed",
+          "tone": "caution"
+        },
+        {
+          "type": "text",
+          "text": "If you die or become permanently incapacitated during a lock period, the plan is released early, in full and without penalty, to you or to whoever is legally entitled to it, on production of the documents the law requires."
+        }
+      ]
+    },
+    {
+      "title": "Target Savings",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "A Target Savings plan is a goal you fund over time, either manually or by an automatic schedule you set. The minimum term is **3 months**, and a month counts as 30 days."
+        },
+        {
+          "type": "text",
+          "text": "A bonus is paid on the final day of the term, calculated on the total you actually saved, at a rate that depends on how long you committed for:"
+        },
+        {
+          "type": "definitions",
+          "entries": [
+            {
+              "term": "3 to 5 months",
+              "meaning": "2.5% bonus"
+            },
+            {
+              "term": "6 to 11 months",
+              "meaning": "5.0% bonus"
+            },
+            {
+              "term": "12 months and above",
+              "meaning": "10.0% bonus"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "You may end a Target Savings plan early. If you do, **every naira you saved comes back to your wallet in full**, and the bonus is forfeited. We do not charge a break fee and we do not keep any part of your principal."
+        },
+        {
+          "type": "text",
+          "text": "If you turn on automatic saving, you are instructing us to move the scheduled amount from your wallet on each due date. Where the wallet is short, the run is skipped, we tell you, and we try again on the next scheduled date. Repeated shortfalls will leave you short of your goal — the bonus is paid on what you saved, not on what you intended to save."
+        }
+      ]
+    },
+    {
+      "title": "Thrift circles (ajo, esusu, adashe)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "A thrift circle is a rotating savings group. Every member contributes the same amount each cycle and one member collects the whole pot each round, until everyone has had a turn."
+        },
+        {
+          "type": "note",
+          "text": "In a thrift circle we are the record-keeper and the rails, not a guarantor. We do not underwrite the members of your circle, and we do not make good a round that another member fails to pay into.",
+          "title": "What our role is",
+          "tone": "neutral"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "By joining a circle you commit to contributing on every round of that circle, including the rounds that come after you have already collected.",
+            "Collection order is set when the circle is created and is visible to every member.",
+            "If you leave a circle, or stop contributing, before you have paid into every round, you may forfeit contributions already made, and we may recover what you owe the circle from your wallet.",
+            "Only invite people you actually know and trust. A circle is only as sound as the people in it."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Loans",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "We lend from ₦50,000 to ₦5,000,000, over any period from **1 month to 24 months**. Interest is a single flat charge on the amount borrowed, and every one of those tenures carries its own published rate — 12.5% over 1 month, 25% over 3, 134% over 24. The rate for the tenure you pick is shown before you borrow, and is fixed for the life of that loan."
+        },
+        {
+          "type": "text",
+          "text": "Everything else about borrowing — the processing fee, how a loan is repaid, what happens if you do not repay, and the rights you have — is in the **Lending Agreement**, which you accept separately each time you take a loan."
+        },
+        {
+          "type": "text",
+          "text": "Applying does not entitle you to a loan. We decide whether to lend, how much, and for how long, and we may decline without giving reasons."
+        }
+      ]
+    },
+    {
+      "title": "Fees, charges and tax",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "We publish every charge in the app before you commit to anything. The charges that exist today are:"
+        },
+        {
+          "type": "definitions",
+          "entries": [
+            {
+              "term": "Opening an account",
+              "meaning": "Free"
+            },
+            {
+              "term": "Wallet maintenance",
+              "meaning": "Free"
+            },
+            {
+              "term": "Kudi9ja to Kudi9ja transfers",
+              "meaning": "Free"
+            },
+            {
+              "term": "Withdrawals to your bank",
+              "meaning": "Free"
+            },
+            {
+              "term": "Opening or breaking a savings plan",
+              "meaning": "Free"
+            },
+            {
+              "term": "Loan processing fee (management fee)",
+              "meaning": "Flat ₦5,000 on loans up to and including ₦500,000; above that, 1% of the whole amount borrowed. Always deducted from the disbursement, never added to what you owe."
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Your own bank may charge you for transfers to us. That charge is theirs, not ours."
+        },
+        {
+          "type": "text",
+          "text": "Where Nigerian tax law requires it, we will deduct withholding tax or any other statutory levy from returns we pay you, and remit it to the relevant authority. Anything you owe us is payable free of any deduction you might otherwise make."
+        },
+        {
+          "type": "text",
+          "text": "We will give you at least **30 days' notice** in the app and by email before introducing a new charge or increasing an existing one. A change never applies retrospectively to a plan or a loan already running."
+        }
+      ]
+    },
+    {
+      "title": "Bonuses and promotions",
+      "blocks": [
+        {
+          "type": "note",
+          "text": "There is no sign-up bonus and no free credit. Opening an account gives you nothing to spend — every naira in your wallet got there because you paid it in, earned it on a savings plan, or borrowed it.",
+          "title": "Nothing is given away",
+          "tone": "neutral"
+        },
+        {
+          "type": "text",
+          "text": "We may run promotions in future — a referral reward, a seasonal bonus. Any such offer is discretionary, is subject to whatever specific rules we publish for it at the time, and can be withdrawn at any time for the future. None is running today."
+        },
+        {
+          "type": "text",
+          "text": "Bonuses are for real customers using the app in the ordinary way. If you obtain one through duplicate accounts, false referrals or any other manipulation, we may reverse it, withhold it, and close the accounts involved."
+        }
+      ]
+    },
+    {
+      "title": "Keeping your account secure",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Your account is protected by a sign-in passcode, a separate transaction PIN and, if you enable it, your device biometrics. These are yours alone."
+        },
+        {
+          "type": "text",
+          "text": "You agree to:"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "keep your passcode, PIN, password and one-time codes secret — we will **never** ask you for any of them, and anybody who does is not from Kudi9ja;",
+            "not choose an obvious code, and not reuse one from elsewhere;",
+            "keep your phone locked, keep its software up to date, and not install Kudi9ja on a rooted or jailbroken device;",
+            "only enable biometric sign-in on a device where **your** biometrics are the only ones enrolled; and",
+            "tell us **immediately** — by phone, WhatsApp or support@kudi9ja.com — if your phone is lost or stolen, or if you think somebody else knows your codes or has used your account."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Until you tell us, transactions authorised with your codes are treated as authorised by you. Once you have told us we will freeze the account promptly, and you are not responsible for what happens after that, unless you acted fraudulently or shared your codes deliberately."
+        },
+        {
+          "type": "text",
+          "text": "If you report an unauthorised transaction, we will investigate and come back to you within **10 working days** with what we found and what we are doing about it."
+        }
+      ]
+    },
+    {
+      "title": "How we talk to each other",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "We communicate with you in the app, by email, by SMS and, where you have used it to reach us, on WhatsApp. Notices about your account, your money and these Terms are sent that way and are treated as received when sent to the details we hold for you. Keep them current."
+        },
+        {
+          "type": "text",
+          "text": "You can opt out of marketing at any time without affecting your account. You cannot opt out of service messages — a repayment reminder or a security alert has to reach you."
+        }
+      ]
+    },
+    {
+      "title": "What you must not do",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "You must not use Kudi9ja to:"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "launder money, finance terrorism, or move the proceeds of any crime;",
+            "impersonate anybody, or open an account for somebody else;",
+            "run a business account, a betting float, or any deposit-taking scheme of your own through your wallet;",
+            "defraud us or another customer, including by disputing a payment you did make;",
+            "break, probe, overload, reverse-engineer or automate access to the app, or interfere with anybody else's use of it; or",
+            "do anything unlawful, or anything these Terms prohibit."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "When we can freeze, restrict or close an account",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "We may suspend an account, hold a transaction, or refuse to act on an instruction where we reasonably believe that:"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "the account is being used fraudulently or unlawfully;",
+            "somebody other than you is operating it;",
+            "we are required to act by a law, a regulator or a court order;",
+            "the information we hold about you is materially wrong or out of date and you have not corrected it after we asked; or",
+            "there is a genuine dispute over who is entitled to the money."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Where we are legally allowed to tell you, we will explain what has happened, what we need from you, and how to get the restriction lifted. Some legal orders forbid us from saying anything at all; in that case our silence is not a choice."
+        },
+        {
+          "type": "text",
+          "text": "We may **set off** money in your wallet, and money released from a matured savings plan, against any amount you owe us that is due and unpaid. We will tell you when we do."
+        },
+        {
+          "type": "text",
+          "text": "We may close your account on **30 days' notice**, or without notice where you have breached these Terms seriously, where we must do so by law, or where continuing to serve you would expose us or other customers to real risk. Closing an account does not cancel what you owe us, and does not cancel what we owe you."
+        }
+      ]
+    },
+    {
+      "title": "Closing your account yourself",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "You can close your account at any time, provided you have no running loan and no unfinished obligation to a thrift circle. Any balance goes back to a bank account in your own name."
+        },
+        {
+          "type": "text",
+          "text": "Deleting the app does not close your account. Ask us at support@kudi9ja.com, or use the option in the app."
+        },
+        {
+          "type": "text",
+          "text": "After closure we keep your records for as long as the law requires — generally **five years** — as explained in the Privacy Policy."
+        }
+      ]
+    },
+    {
+      "title": "Dormant accounts and unclaimed money",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "If your account has no activity for **12 months** we will treat it as dormant, tell you, and stop it from being used until you get in touch and confirm your identity. Dormancy costs you nothing; we do not charge dormancy fees."
+        },
+        {
+          "type": "text",
+          "text": "Money left unclaimed will be dealt with as Nigerian law directs, and we will make reasonable efforts to reach you first."
+        }
+      ]
+    },
+    {
+      "title": "The service itself",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "We work to keep Kudi9ja available, accurate and fast, but we do not promise it will never be interrupted. We carry out maintenance, we depend on banks, telecom networks and identity services we do not control, and any of those can fail."
+        },
+        {
+          "type": "text",
+          "text": "We may change, add to, or discontinue features. Where a change materially reduces what you get, we will give you at least **30 days' notice**, and you may close your account if you do not want to continue."
+        },
+        {
+          "type": "text",
+          "text": "Calculators, projections and insights in the app are estimates to help you plan. They are not financial advice and they are not a promise of any outcome. If you need advice on your own situation, speak to a licensed adviser."
+        }
+      ]
+    },
+    {
+      "title": "What we are responsible for, and what we are not",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "We are responsible for losses you suffer because we broke this agreement or failed to use reasonable care and skill."
+        },
+        {
+          "type": "text",
+          "text": "We are not responsible for:"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "loss caused by you giving us wrong details, sharing your codes, or acting on instructions from somebody pretending to be us;",
+            "the failure or delay of a bank, card scheme, telecom network, identity service or other third party we do not control;",
+            "loss of profit, loss of opportunity, or loss that was not a reasonably foreseeable result of what went wrong; or",
+            "events outside our reasonable control — power failure, network outage, flood, fire, epidemic, civil unrest, strike, act of government or war. While such an event lasts our obligations are paused, not cancelled, and we will tell you what is happening and restore service as soon as we can."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Except where the law does not allow a limit, our total liability to you for any claim, or series of connected claims, is capped at the greater of **the amount directly lost** and **the total fees you paid us in the 12 months before the claim arose**."
+        },
+        {
+          "type": "text",
+          "text": "Nothing in these Terms limits our liability for fraud, for our own wilful misconduct, or for anything that cannot lawfully be limited."
+        },
+        {
+          "type": "text",
+          "text": "You will cover us against loss we suffer because you used Kudi9ja unlawfully, broke these Terms deliberately, or gave us information you knew to be false."
+        }
+      ]
+    },
+    {
+      "title": "If something goes wrong: complaints",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Tell us first. Most things are fixed the same day."
+        },
+        {
+          "type": "definitions",
+          "entries": [
+            {
+              "term": "Step 1",
+              "meaning": "Contact support in the app, on WhatsApp, by phone, or at support@kudi9ja.com. We acknowledge every complaint within 24 hours and give you a reference number."
+            },
+            {
+              "term": "Step 2",
+              "meaning": "We investigate and give you a written answer within 10 working days. Where a matter is genuinely complex we will tell you why, and resolve it within 30 days."
+            },
+            {
+              "term": "Step 3",
+              "meaning": "If you are not satisfied, ask for the complaint to be escalated to our management at legal@kudi9ja.com."
+            },
+            {
+              "term": "Step 4",
+              "meaning": "If we still have not resolved it, you may take the matter to the appropriate regulator — the Central Bank of Nigeria consumer protection department, the Federal Competition and Consumer Protection Commission, or, for a data matter, the Nigeria Data Protection Commission."
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Nothing here stops you from going to court, or to a regulator, whenever you choose."
+        }
+      ]
+    },
+    {
+      "title": "Disputes, governing law and jurisdiction",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "These Terms, and any dispute arising out of them, are governed by the laws of the **Federal Republic of Nigeria**."
+        },
+        {
+          "type": "text",
+          "text": "If a dispute cannot be settled through our complaints process, either of us may refer it to arbitration by a single arbitrator under the Arbitration and Mediation Act 2023. The seat is **Lagos, Nigeria**, the language is English, and the award is final. If we cannot agree on who the arbitrator should be within 14 days, either of us may ask the Lagos Court of Arbitration to appoint one."
+        },
+        {
+          "type": "text",
+          "text": "This does not stop either of us from asking a court for urgent protective relief, and it does not stop you from bringing a small claim, or a complaint to a regulator, instead. The courts of Lagos State have jurisdiction over anything not sent to arbitration."
+        }
+      ]
+    },
+    {
+      "title": "Changes to these Terms",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "We may update these Terms — to reflect a change in the law, a new feature, or a clearer way of saying something."
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "For a change that affects your rights or your costs, we give you at least **30 days' notice** in the app and by email, and we tell you plainly what is changing.",
+            "For a correction, or a change that is purely in your favour, the new version applies as soon as we publish it.",
+            "If you do not accept a change, you may close your account before it takes effect, at no cost. Continuing to use Kudi9ja after that date means you accept the new version."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Every version is dated and numbered. The version in force is always the one in the app."
+        }
+      ]
+    },
+    {
+      "title": "The small print",
+      "blocks": [
+        {
+          "type": "definitions",
+          "entries": [
+            {
+              "term": "Transfer",
+              "meaning": "We may transfer our rights and obligations to another company, for example on a restructuring or a sale, provided your rights are not reduced. You may not transfer yours."
+            },
+            {
+              "term": "Waiver",
+              "meaning": "If we do not enforce a right straight away, we have not given it up."
+            },
+            {
+              "term": "Severance",
+              "meaning": "If any part of these Terms turns out to be unenforceable, the rest still stands."
+            },
+            {
+              "term": "Whole agreement",
+              "meaning": "These Terms, the Privacy Policy and — where you borrow — the Lending Agreement are the entire agreement between us, and replace anything said beforehand."
+            },
+            {
+              "term": "Third parties",
+              "meaning": "Nobody other than you and us has rights under this agreement."
+            },
+            {
+              "term": "Language",
+              "meaning": "This agreement is made in English. Any translation is a courtesy, and the English version governs."
+            },
+            {
+              "term": "Records",
+              "meaning": "Our records are the primary evidence of your transactions, unless you show them to be wrong."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

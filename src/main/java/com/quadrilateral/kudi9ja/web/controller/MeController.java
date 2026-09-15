@@ -1,8 +1,13 @@
 package com.quadrilateral.kudi9ja.web.controller;
 
 import com.quadrilateral.kudi9ja.domain.kyc.OtpService;
+import com.quadrilateral.kudi9ja.common.error.ApiException;
+import com.quadrilateral.kudi9ja.common.error.ErrorCode;
 import com.quadrilateral.kudi9ja.domain.legal.LegalDocument;
+import com.quadrilateral.kudi9ja.domain.legal.LegalDocumentKind;
 import com.quadrilateral.kudi9ja.domain.legal.LegalService;
+import com.quadrilateral.kudi9ja.web.support.RequestContext;
+import jakarta.servlet.http.HttpServletRequest;
 import com.quadrilateral.kudi9ja.domain.user.ProfileService;
 import com.quadrilateral.kudi9ja.security.auth.CurrentUser;
 import com.quadrilateral.kudi9ja.web.dto.AuthDtos;
@@ -121,6 +126,38 @@ public class MeController {
                 .toList();
     }
 
+    /**
+     * Records that this customer has read and accepted a new version.
+     *
+     * <p>The version is named rather than assumed: the app sends the number
+     * of the document it showed, and if that is no longer the one in force the
+     * acceptance is refused and the app is told to fetch the current one.
+     */
+    @PostMapping("/me/legal/accept")
+    @Operation(summary = "Accept the current version of a document")
+    public Map<String, String> accept(
+            @Valid @RequestBody UserDtos.AcceptDocumentRequest request, HttpServletRequest http) {
+        LegalDocumentKind kind = LegalDocumentKind.fromId(request.document());
+        LegalDocument current = legal.current(kind);
+        if (!current.getVersion().equals(request.version())) {
+            throw new ApiException(
+                    ErrorCode.LEGAL_ACCEPTANCE_REQUIRED,
+                    "The " + current.getTitle() + " has changed since you opened it. "
+                            + "Read the current version and accept that one.",
+                    Map.of("document", kind.id(), "currentVersion", current.getVersion()));
+        }
+        legal.accept(
+                currentUser.requireId(),
+                kind,
+                request.version(),
+                RequestContext.device(http),
+                RequestContext.ipAddress(http));
+        return Map.of(
+                "document", kind.id(),
+                "version", current.getVersion(),
+                "message", "Thank you. You have accepted the " + current.getTitle() + ".");
+    }
+
     @GetMapping("/me/legal/acceptances")
     @Operation(summary = "Which version of each document this customer accepted, and when")
     public List<Map<String, String>> acceptances() {
@@ -136,8 +173,12 @@ public class MeController {
     private static Map<String, String> describe(LegalDocument document) {
         return Map.of(
                 "kind", document.getKind().name(),
+                "id", document.getKind().id(),
                 "title", document.getTitle(),
                 "version", document.getVersion(),
-                "effectiveFrom", String.valueOf(document.getEffectiveFrom()));
+                "effectiveFrom", String.valueOf(document.getEffectiveFrom()),
+                // What changed, so the app can say so rather than presenting
+                // a whole document and asking what is different.
+                "changeSummary", String.valueOf(document.getChangeSummary()));
     }
 }

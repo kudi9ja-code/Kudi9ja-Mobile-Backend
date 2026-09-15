@@ -1,0 +1,489 @@
+{
+  "id": "privacy",
+  "title": "Privacy Policy",
+  "shortTitle": "Privacy Policy",
+  "summary": "What personal data Kudi9ja collects, why we are allowed to hold it, who we share it with, how long we keep it, and the rights you have over it.",
+  "version": "1.1",
+  "effective": "2026-09-15T00:00:00.000",
+  "changeSummary": "Removed the credit score and automated lending decisions. A member of our team now reads every loan application and decides; the section on how we decide on a loan says so, and the right to a second look replaces the right to a human review of an automated decision.",
+  "readMinutes": 14,
+  "sections": [
+    {
+      "title": "Who is responsible for your data",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "**Quadrilateral Technologies Limited** (**RC 1657731**), the company behind Kudi9ja, is the **data controller** for the personal data described here. That means we decide what is collected and why, and we answer for it."
+        },
+        {
+          "type": "text",
+          "text": "We are registered in Nigeria at Kudi9ja Limited, Lagos, Nigeria and we process personal data under the **Nigeria Data Protection Act 2023 (NDPA)** and the regulations made under it."
+        },
+        {
+          "type": "definitions",
+          "entries": [
+            {
+              "term": "Data protection contact",
+              "meaning": "privacy@kudi9ja.com"
+            },
+            {
+              "term": "Legal and contractual questions",
+              "meaning": "legal@kudi9ja.com"
+            },
+            {
+              "term": "General support",
+              "meaning": "support@kudi9ja.com"
+            },
+            {
+              "term": "WhatsApp",
+              "meaning": "+234 805 679 1426 or +234 803 630 0582"
+            },
+            {
+              "term": "Post",
+              "meaning": "Kudi9ja Limited, Lagos, Nigeria"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Write to privacy@kudi9ja.com with anything at all about your data — a question, a correction, a request, or a complaint. That inbox reaches the person accountable for privacy at Kudi9ja."
+        }
+      ]
+    },
+    {
+      "title": "The short version",
+      "blocks": [
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "We collect what we need to open your account, keep it safe, obey the law and run the products you asked for. Nothing beyond that.",
+            "We **never sell your personal data**, and we never rent it out for somebody else's marketing.",
+            "We **never read your contacts, your photo gallery, your messages or your call log**, and we never contact your friends or family about a debt.",
+            "Your passcode, PIN and password are stored only as one-way hashes. Nobody at Kudi9ja can read them.",
+            "Your fingerprint or face is checked by your phone. It never reaches us.",
+            "You can ask for a copy of your data, ask us to correct it, or ask us to delete it, at any time."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The rest of this policy sets all of that out properly."
+        }
+      ]
+    },
+    {
+      "title": "What we collect",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "We group the data into the categories below. Not all of it applies to every customer — what we hold depends on what you use."
+        },
+        {
+          "type": "definitions",
+          "entries": [
+            {
+              "term": "Identity data",
+              "meaning": "Your full name, date of birth, gender, Bank Verification Number (BVN) and National Identification Number (NIN)."
+            },
+            {
+              "term": "Contact data",
+              "meaning": "Your email address, mobile number, home address and state of residence."
+            },
+            {
+              "term": "Account data",
+              "meaning": "Your Kudi9ja customer reference, verification tier, the date you joined, and your notification and display preferences."
+            },
+            {
+              "term": "Financial data",
+              "meaning": "Your wallet balance, savings plans, target goals, thrift circle membership and contributions, loans, repayments and the full history of your transactions."
+            },
+            {
+              "term": "Payment evidence",
+              "meaning": "The receipt or screenshot you attach when you tell us you have paid into our collection account, the name on the sending account, and the reference quoted."
+            },
+            {
+              "term": "Bank details",
+              "meaning": "The bank and account number you nominate for payouts, and any other account of your own you ask us to withdraw to. Kudi9ja issues no account numbers of its own."
+            },
+            {
+              "term": "Security data",
+              "meaning": "One-way hashes of your password, sign-in passcode and transaction PIN, whether biometric sign-in is switched on, your security question and answer, and the one-time codes we issue."
+            },
+            {
+              "term": "Technical data",
+              "meaning": "Device model, operating system version, app version, and the in-app events we log to keep the service working and to detect fraud."
+            },
+            {
+              "term": "Communications data",
+              "meaning": "Your emails, WhatsApp messages, calls and in-app chats with our support team, and the notes we make on them."
+            }
+          ]
+        },
+        {
+          "type": "note",
+          "text": "We do not collect your contact list, your photo library, your text messages, your call history or your location. If a future feature ever needs one of those, we will ask you first, explain why, and you will be free to say no.",
+          "title": "What we deliberately do not collect",
+          "tone": "positive"
+        },
+        {
+          "type": "text",
+          "text": "Your fingerprint or face is never collected by us. When you turn on biometric sign-in, your phone performs the check in its own secure hardware and tells the app nothing more than \"yes\" or \"no\". No biometric template is ever sent to or stored by Kudi9ja."
+        }
+      ]
+    },
+    {
+      "title": "Where the data comes from",
+      "blocks": [
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "**From you** — when you sign up, verify your identity, transact, attach a receipt or contact support.",
+            "**From your device** — the technical data above, generated as you use the app.",
+            "**From verification partners** — the institutions that issued your BVN and NIN confirm to us that the number you gave matches the name and date of birth on record.",
+            "**From banks and payment partners** — confirmation that a transfer reached our collection account, and that a payout to you succeeded.",
+            "**From licensed credit bureaux** — your credit history, where you have applied to borrow.",
+            "**From public and official sources** — sanctions lists, politically exposed person lists and public registers we are required to screen against."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Why we use it, and what allows us to",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Under the NDPA we must have a lawful basis for every use. Ours are set out here, purpose by purpose."
+        },
+        {
+          "type": "definitions",
+          "entries": [
+            {
+              "term": "Opening and running your account",
+              "meaning": "Basis: performance of our contract with you. Without this data there is no account."
+            },
+            {
+              "term": "Verifying your identity, screening for money laundering and terrorist financing, and reporting where required",
+              "meaning": "Basis: compliance with a legal obligation — including the Money Laundering (Prevention and Prohibition) Act 2022 and the know-your-customer rules that apply to us."
+            },
+            {
+              "term": "Processing your payments in and out, and running your savings, thrift and loan products",
+              "meaning": "Basis: performance of our contract with you."
+            },
+            {
+              "term": "Assessing whether to lend to you, and on what terms",
+              "meaning": "Basis: steps taken at your request before entering a contract, and our legitimate interest in lending responsibly."
+            },
+            {
+              "term": "Preventing, detecting and investigating fraud, and keeping accounts secure",
+              "meaning": "Basis: our legitimate interest in protecting you, other customers and ourselves — and, in places, a legal obligation."
+            },
+            {
+              "term": "Recovering money you owe us",
+              "meaning": "Basis: performance of our contract, and our legitimate interest in being repaid."
+            },
+            {
+              "term": "Answering your questions and handling complaints",
+              "meaning": "Basis: performance of our contract, and our legitimate interest in running a service people can rely on."
+            },
+            {
+              "term": "Improving the app, fixing faults and measuring how features are used",
+              "meaning": "Basis: our legitimate interest in a product that works. We use aggregated or de-identified data for this wherever we can."
+            },
+            {
+              "term": "Sending you marketing about Kudi9ja products",
+              "meaning": "Basis: your consent, which you can withdraw at any time."
+            },
+            {
+              "term": "Establishing, exercising or defending legal claims",
+              "meaning": "Basis: our legitimate interest, and compliance with a legal obligation."
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Where we rely on a legitimate interest, we have weighed it against your rights and interests first. You can ask us to explain that balancing, and you can object to it."
+        }
+      ]
+    },
+    {
+      "title": "How we decide on a loan",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "When you apply for a loan, a member of our team reads your application: the amount you asked for, your bank statement, the business you described and photographed, and your guarantor. They approve it or decline it, and if they decline it they tell you why."
+        },
+        {
+          "type": "text",
+          "text": "There is no credit score in Kudi9ja and no automated lending decision. Nothing about how much you have saved with us, how long you have been a customer or how you have repaid before sets a limit on what you may ask for. Every application within our published minimum and maximum is read by a person."
+        },
+        {
+          "type": "note",
+          "text": "If a decision goes against you, you have the right to be told the main reasons, to give us more information, and to ask for somebody who was not involved in the decision to look at it again. Write to privacy@kudi9ja.com or support@kudi9ja.com and a person will review it.",
+          "title": "Your right to a second look",
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "title": "Who we share it with",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "We share personal data only where it is necessary, and only with people who are bound to protect it."
+        },
+        {
+          "type": "definitions",
+          "entries": [
+            {
+              "term": "Identity verification providers",
+              "meaning": "To confirm your BVN and NIN against the records of the institutions that issued them."
+            },
+            {
+              "term": "Banks and payment partners",
+              "meaning": "To receive your transfers, to pay your withdrawals, and to trace a payment that has gone astray."
+            },
+            {
+              "term": "Licensed credit bureaux",
+              "meaning": "We report the existence, performance and settlement of your loan, as lenders are expected to. Repaying on time helps your record; not repaying harms it."
+            },
+            {
+              "term": "Regulators, law enforcement and courts",
+              "meaning": "Where we are required to report or to respond — for example to a court order, or to a financial intelligence request."
+            },
+            {
+              "term": "Technology suppliers",
+              "meaning": "Hosting, storage, messaging, error reporting and analytics providers who process data strictly on our written instructions."
+            },
+            {
+              "term": "Professional advisers",
+              "meaning": "Lawyers, auditors and insurers, under a duty of confidence."
+            },
+            {
+              "term": "Debt recovery partners",
+              "meaning": "Only where a loan is in default, only firms bound by our conduct standards, and never anybody who would contact people other than you."
+            },
+            {
+              "term": "A buyer or successor",
+              "meaning": "If our business is reorganised, merged or sold, under confidentiality and with your rights unchanged."
+            }
+          ]
+        },
+        {
+          "type": "note",
+          "text": "We do not sell your personal data. We do not share it for anybody else's advertising. We do not disclose your borrowing to your employer, your family or your contacts.",
+          "title": null,
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "title": "Sending data outside Nigeria",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Some of the technology suppliers we use store data on servers outside Nigeria. Where that happens we transfer data only to a country the Nigeria Data Protection Commission recognises as providing adequate protection, or under a written contract that imposes the same standards this policy sets out — or with your explicit consent."
+        },
+        {
+          "type": "text",
+          "text": "You can ask us at privacy@kudi9ja.com where your data is held and what safeguards apply."
+        }
+      ]
+    },
+    {
+      "title": "How long we keep it",
+      "blocks": [
+        {
+          "type": "definitions",
+          "entries": [
+            {
+              "term": "While you are a customer",
+              "meaning": "For as long as your account is open, plus the periods below."
+            },
+            {
+              "term": "Identity and transaction records",
+              "meaning": "At least **five years** after your relationship with us ends. Anti-money-laundering law requires this, and we cannot delete them earlier even if you ask."
+            },
+            {
+              "term": "Loan records",
+              "meaning": "At least five years after the loan is settled or written off."
+            },
+            {
+              "term": "Payment receipts you attach",
+              "meaning": "Five years, as part of the transaction record."
+            },
+            {
+              "term": "Support conversations",
+              "meaning": "Two years after the matter is closed, or longer if it concerns a live dispute."
+            },
+            {
+              "term": "Marketing preferences",
+              "meaning": "Until you withdraw consent, and then a minimal record of the withdrawal so we honour it."
+            },
+            {
+              "term": "Technical logs",
+              "meaning": "Up to 12 months, unless kept longer for a fraud or security investigation."
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "When a retention period ends, we delete the data or anonymise it beyond recovery."
+        }
+      ]
+    },
+    {
+      "title": "Data held on your phone",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Kudi9ja stores your profile, balances, plans, loans, transaction history and preferences on your device so the app works quickly and without a connection. Your passcode, PIN and password are stored there only as one-way hashes."
+        },
+        {
+          "type": "text",
+          "text": "Anyone who can unlock your phone and get past your Kudi9ja passcode can see that data. Keep a screen lock on your device, keep your codes to yourself, and sign out on a device you no longer use. Deleting the app removes the local copy; it does not close your account or delete the records we hold."
+        }
+      ]
+    },
+    {
+      "title": "How we protect it",
+      "blocks": [
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "Passwords, passcodes and PINs are stored as salted one-way hashes and are never held or transmitted in readable form.",
+            "Data in transit is encrypted.",
+            "Access inside Kudi9ja is restricted by role, so staff see only what their job requires, and administrative actions are written to an audit log.",
+            "Sensitive numbers such as your BVN and NIN are masked in the app and in our internal tools.",
+            "Sign-in is protected by a passcode, transactions by a separate PIN, and the app locks itself after a short period of inactivity.",
+            "Staff are trained on data protection, and are bound by confidentiality obligations that outlast their employment."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "No system is perfect. If a breach occurs that is likely to put your rights at risk we will report it to the Nigeria Data Protection Commission within **72 hours** of becoming aware of it, and tell you without undue delay, in plain language, along with what we are doing and what you should do."
+        }
+      ]
+    },
+    {
+      "title": "Your rights",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Under the NDPA you have the right to:"
+        },
+        {
+          "type": "definitions",
+          "entries": [
+            {
+              "term": "Be informed",
+              "meaning": "To know what we hold and what we do with it — that is what this policy is for."
+            },
+            {
+              "term": "Access",
+              "meaning": "To get a copy of the personal data we hold about you."
+            },
+            {
+              "term": "Rectification",
+              "meaning": "To have data that is wrong corrected, and data that is incomplete completed."
+            },
+            {
+              "term": "Erasure",
+              "meaning": "To have data deleted where we no longer have a lawful reason to keep it. Records the law requires us to retain are the exception."
+            },
+            {
+              "term": "Restriction",
+              "meaning": "To ask us to pause using your data while a dispute about it is sorted out."
+            },
+            {
+              "term": "Objection",
+              "meaning": "To object to processing based on our legitimate interests, and to stop direct marketing at any time, no reason needed."
+            },
+            {
+              "term": "Portability",
+              "meaning": "To receive the data you gave us in a structured, machine-readable format, and to have it sent to another provider where that is technically feasible."
+            },
+            {
+              "term": "Withdraw consent",
+              "meaning": "Where we rely on consent, to withdraw it at any time. That does not undo processing already carried out lawfully."
+            },
+            {
+              "term": "Human review",
+              "meaning": "To ask for a decision about you to be looked at again by somebody who was not involved in it."
+            },
+            {
+              "term": "Complain",
+              "meaning": "To lodge a complaint with the Nigeria Data Protection Commission."
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "To exercise any of these, write to **privacy@kudi9ja.com**. We may need to confirm your identity first, so that we do not hand your data to somebody else. We answer within **30 days**; if a request is complex we will tell you why and how much longer we need."
+        },
+        {
+          "type": "text",
+          "text": "Exercising your rights is free. We only charge where a request is manifestly unfounded or repetitive, and we tell you before we do."
+        }
+      ]
+    },
+    {
+      "title": "Marketing",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "We will only send you marketing where you have agreed to it. Every marketing message carries a way to stop it, and you can turn it off in the app or by writing to privacy@kudi9ja.com."
+        },
+        {
+          "type": "text",
+          "text": "Opting out of marketing does not stop the messages we must send about your account — a repayment reminder, a maturity notice, a security alert or a change to these documents."
+        }
+      ]
+    },
+    {
+      "title": "Children",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Kudi9ja is for adults. We do not knowingly collect data about anybody under 18. If we learn that an account belongs to a child, we will close it and delete the data, except anything the law requires us to keep. If you believe a child has given us data, tell us at privacy@kudi9ja.com."
+        }
+      ]
+    },
+    {
+      "title": "Our website and cookies",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The Kudi9ja app does not use advertising cookies or third-party trackers. Our website uses cookies that are strictly necessary to make it work, and — only with your consent — cookies that help us understand which pages are useful. You can refuse the optional ones without losing access to anything."
+        }
+      ]
+    },
+    {
+      "title": "Changes to this policy",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "We will update this policy as the law, our products or our suppliers change. Every version is dated and numbered."
+        },
+        {
+          "type": "text",
+          "text": "Where a change materially affects how we use your data, we will tell you in the app and by email at least **30 days** before it takes effect, and where the law requires your consent we will ask for it rather than assume it."
+        }
+      ]
+    },
+    {
+      "title": "Contact and complaints",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Talk to us first — most concerns are resolved quickly. Write to **privacy@kudi9ja.com** and we will acknowledge within 24 hours and respond substantively within 30 days."
+        },
+        {
+          "type": "text",
+          "text": "If you are not satisfied with our answer, you may complain to the **Nigeria Data Protection Commission**, the supervisory authority for data protection in Nigeria. You do not need our permission, and you do not have to come to us first."
+        }
+      ]
+    }
+  ]
+}

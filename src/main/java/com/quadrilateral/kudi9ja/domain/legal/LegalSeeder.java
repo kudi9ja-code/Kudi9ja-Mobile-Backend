@@ -3,21 +3,26 @@ package com.quadrilateral.kudi9ja.domain.legal;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quadrilateral.kudi9ja.config.Kudi9jaProperties;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Loads version 1.0 of each document on an empty database.
+ * Publishes every version of each document that ships with the app.
  *
  * <p>The files under {@code resources/legal} are the documents the app shipped,
  * exported from the client rather than retyped, so the wording a customer
@@ -25,7 +30,11 @@ import org.springframework.transaction.annotation.Transactional;
  * transcription would risk a difference between what was shown and what is held
  * as evidence of it, which is the one difference that must not exist.
  *
- * <p>Seeding never overwrites. Once a version exists it is left alone.
+ * <p>Every {@code <kind>-<version>.json} on the classpath is seeded, oldest
+ * first, so a new version is published by adding a file rather than by hand
+ * in the panel — and the app, which carries the same file, sends the same
+ * version number at signup. Seeding a version that has been accepted never
+ * overwrites it.
  */
 @Component
 public class LegalSeeder implements ApplicationRunner {
@@ -55,8 +64,48 @@ public class LegalSeeder implements ApplicationRunner {
             return;
         }
         for (LegalDocumentKind kind : LegalDocumentKind.values()) {
-            seed(kind, "1.0");
+            for (String version : shippedVersions(kind)) {
+                seed(kind, version);
+            }
         }
+    }
+
+    /**
+     * The versions on the classpath for one kind, lowest first.
+     *
+     * <p>Sorted numerically on the dotted parts rather than as strings, so
+     * that a 1.10 lands after 1.9 rather than between 1.1 and 1.2.
+     */
+    private List<String> shippedVersions(LegalDocumentKind kind) {
+        try {
+            Resource[] files = new PathMatchingResourcePatternResolver()
+                    .getResources("classpath:legal/" + kind.id() + "-*.json");
+            List<String> versions = new ArrayList<>();
+            for (Resource file : files) {
+                String name = file.getFilename();
+                if (name == null) {
+                    continue;
+                }
+                versions.add(name.substring(kind.id().length() + 1, name.length() - ".json".length()));
+            }
+            versions.sort(LegalSeeder::compareVersions);
+            return versions;
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not list the shipped legal documents", e);
+        }
+    }
+
+    public static int compareVersions(String a, String b) {
+        String[] left = a.split("\\.");
+        String[] right = b.split("\\.");
+        for (int i = 0; i < Math.max(left.length, right.length); i++) {
+            int l = i < left.length ? Integer.parseInt(left[i]) : 0;
+            int r = i < right.length ? Integer.parseInt(right[i]) : 0;
+            if (l != r) {
+                return Integer.compare(l, r);
+            }
+        }
+        return 0;
     }
 
     private void seed(LegalDocumentKind kind, String version) {
@@ -108,9 +157,14 @@ public class LegalSeeder implements ApplicationRunner {
             document.setEffectiveFrom(parseEffective(root.path("effective").asText(null)));
             document.setPublishedAt(Instant.now());
             document.setPublishedBy("System (shipped with the app)");
-            document.setChangeSummary(existing == null
-                    ? "First published version."
-                    : "Refreshed from the shipped file before anyone had accepted it.");
+            // What changed, in the words the file gives, so the panel's
+            // history and the customer's change notice say the same thing.
+            String shipped = root.path("changeSummary").asText(null);
+            document.setChangeSummary(shipped != null
+                    ? shipped
+                    : existing == null
+                            ? "First published version."
+                            : "Refreshed from the shipped file before anyone had accepted it.");
 
             documents.save(document);
             log.info("{} {} version {} ({} sections)",

@@ -648,6 +648,38 @@ class CustomerJourneyTest {
         assertThat(page.get("items")).isNotNull();
     }
 
+    /**
+     * A customer who signed up under one version meets the next one on their
+     * next open. They are asked, not blocked; and what they accept has to be
+     * the version in force, named by number, so an app showing stale wording
+     * cannot record agreement to words the customer never saw.
+     */
+    @Test
+    @DisplayName("a customer is told about a new version and can accept it")
+    void acceptsANewVersion() throws Exception {
+        SignUpFlow.Session customer = flow.signUp(customerEmail);
+
+        // Signed up against everything in force, so nothing is outstanding.
+        assertThat(getJson("/api/v1/me/legal/outstanding", customer)).isEmpty();
+
+        // Accepting the version in force again is harmless and idempotent.
+        JsonNode accepted = postJson("/api/v1/me/legal/accept", customer, """
+                {"document": "privacy", "version": "1.1"}
+                """);
+        assertThat(accepted.get("version").asText()).isEqualTo("1.1");
+
+        // A version that is not the one in force is refused with the current
+        // number, so the app can fetch and show that instead.
+        mvc.perform(post("/api/v1/me/legal/accept")
+                        .header("Authorization", "Bearer " + customer.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"document": "privacy", "version": "1.0"}
+                                """))
+                .andExpect(status().is4xxClientError())
+                .andExpect(jsonPath("$.details.currentVersion").value("1.1"));
+    }
+
     private JsonNode getJson(String path, SignUpFlow.Session session) throws Exception {
         return read(mvc.perform(get(path)
                         .header("Authorization", "Bearer " + session.accessToken()))

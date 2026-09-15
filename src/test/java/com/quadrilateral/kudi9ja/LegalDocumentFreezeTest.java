@@ -66,6 +66,36 @@ class LegalDocumentFreezeTest {
     }
 
     /**
+     * Every shipped version is published, and the newest is the one in force.
+     * Version 1.1 of the Privacy Policy and the Terms removed the credit
+     * score; 1.0 stays on record for the customers who accepted it.
+     */
+    @Test
+    @DisplayName("every shipped version is published and the newest binds")
+    void everyShippedVersionIsPublished() {
+        assertThat(documents.findByKindAndVersion(LegalDocumentKind.PRIVACY, "1.0")).isPresent();
+        assertThat(documents.findByKindAndVersion(LegalDocumentKind.PRIVACY, "1.1")).isPresent();
+        assertThat(documents.findByKindAndVersion(LegalDocumentKind.TERMS, "1.1")).isPresent();
+
+        LegalDocument privacy = documents
+                .findByKindOrderByEffectiveFromDesc(LegalDocumentKind.PRIVACY).get(0);
+        assertThat(privacy.getVersion()).isEqualTo("1.1");
+        assertThat(privacy.getChangeSummary()).contains("credit score");
+        assertThat(privacy.getBodyJson())
+                .as("the policy must not describe a score the product no longer has")
+                .doesNotContain("Credit scoring and automated decisions")
+                .contains("How we decide on a loan");
+    }
+
+    @Test
+    @DisplayName("versions sort numerically, not as strings")
+    void versionsSortNumerically() {
+        assertThat(LegalSeeder.compareVersions("1.9", "1.10")).isNegative();
+        assertThat(LegalSeeder.compareVersions("1.1", "1.0")).isPositive();
+        assertThat(LegalSeeder.compareVersions("2.0", "1.10")).isPositive();
+    }
+
+    /**
      * The number that used to be published as a way to reach the company. It
      * does not answer, and this asserts the live document no longer offers it.
      */
