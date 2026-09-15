@@ -54,28 +54,6 @@ public final class SettingsDiff {
         pct(changes, "Management fee rate",
                 before.getLoanProcessingFeeRate(), after.getLoanProcessingFeeRate());
 
-        // Loan offer -----------------------------------------------------------
-        money(changes, "Offer base cap", before.getLoanBaseCap(), after.getLoanBaseCap());
-        plain(changes, "Offer savings multiple", before.getLoanSavingsMultiple(), after.getLoanSavingsMultiple());
-        num(changes, "Offer score baseline", before.getLoanScoreBaseline(), after.getLoanScoreBaseline(), "");
-        money(changes, "Offer per score point", before.getLoanScorePerPoint(), after.getLoanScorePerPoint());
-        money(changes, "Offer rounding", before.getLoanOfferRounding(), after.getLoanOfferRounding());
-
-        // Credit score ---------------------------------------------------------
-        num(changes, "Credit base score", before.getCreditBaseScore(), after.getCreditBaseScore(), "");
-        num(changes, "Points per plan", before.getCreditPointsPerPlan(), after.getCreditPointsPerPlan(), "");
-        num(changes, "Plan points cap", before.getCreditPlanPointsCap(), after.getCreditPlanPointsCap(), "");
-        money(changes, "Naira per savings point",
-                before.getCreditNairaPerSavingsPoint(), after.getCreditNairaPerSavingsPoint());
-        num(changes, "Savings points cap", before.getCreditSavingsPointsCap(), after.getCreditSavingsPointsCap(), "");
-        num(changes, "Points per repaid loan",
-                before.getCreditPointsPerRepaidLoan(), after.getCreditPointsPerRepaidLoan(), "");
-        num(changes, "Repaid points cap", before.getCreditRepaidPointsCap(), after.getCreditRepaidPointsCap(), "");
-        num(changes, "Overdue penalty", before.getCreditOverduePenalty(), after.getCreditOverduePenalty(), "");
-        num(changes, "Verified bonus", before.getCreditVerifiedBonus(), after.getCreditVerifiedBonus(), "");
-        num(changes, "Score floor", before.getCreditScoreFloor(), after.getCreditScoreFloor(), "");
-        num(changes, "Score ceiling", before.getCreditScoreCeiling(), after.getCreditScoreCeiling(), "");
-
         // Security -------------------------------------------------------------
         num(changes, "Passcode attempts allowed",
                 before.getMaxPasscodeAttempts(), after.getMaxPasscodeAttempts(), "");

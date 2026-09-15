@@ -1,7 +1,6 @@
 package com.quadrilateral.kudi9ja.web.controller;
 
 import com.quadrilateral.kudi9ja.common.idempotency.IdempotencyService;
-import com.quadrilateral.kudi9ja.domain.loan.CreditScoreService;
 import com.quadrilateral.kudi9ja.domain.loan.LoanService;
 import com.quadrilateral.kudi9ja.security.auth.CurrentUser;
 import com.quadrilateral.kudi9ja.web.dto.LoanDtos;
@@ -49,17 +48,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class LoanController {
 
     private final LoanService loans;
-    private final CreditScoreService creditScores;
     private final IdempotencyService idempotency;
     private final CurrentUser currentUser;
 
     public LoanController(
             LoanService loans,
-            CreditScoreService creditScores,
             IdempotencyService idempotency,
             CurrentUser currentUser) {
         this.loans = loans;
-        this.creditScores = creditScores;
         this.idempotency = idempotency;
         this.currentUser = currentUser;
     }
@@ -80,32 +76,17 @@ public class LoanController {
     }
 
     /**
-     * What this customer is offered, and why.
+     * Whether this customer may apply, and the range they may ask within.
      *
-     * <p>The offer is built from what they have done with Kudi9ja — what they
-     * have saved, what they have repaid, whether they are verified — and capped
-     * by the headroom their open loans leave. Nothing is given away: there is no
-     * sign-up bonus and no free credit anywhere in this product.
+     * <p>There is no offer and no score. A customer asks for what they need,
+     * between the smallest and the largest loan the company writes, and a
+     * person reads the application and decides. Nothing is given away: there
+     * is no sign-up bonus and no free credit anywhere in this product.
      */
     @GetMapping("/loans/eligibility")
-    @Operation(summary = "The offer, the headroom behind it, and the score")
+    @Operation(summary = "Whether this customer may apply, and the amounts and tenures on offer")
     public LoanDtos.EligibilityResponse eligibility() {
         return loans.eligibility(currentUser.requireId());
-    }
-
-    /**
-     * The credit score, with the breakdown behind it.
-     *
-     * <p>This is <b>Kudi9ja's own view</b>, built only from what the customer
-     * has done with us. It is not a credit-bureau score, the Privacy Policy
-     * says so, and the same document gives the customer the right to demand a
-     * human review of any automated decision that goes against them — which is
-     * why the factors are itemised here rather than reduced to a number.
-     */
-    @GetMapping("/credit-score")
-    @Operation(summary = "The score out of 850, and what each part of it is worth")
-    public LoanDtos.CreditScoreResponse creditScore() {
-        return creditScores.explain(currentUser.requireId());
     }
 
     @GetMapping("/loans")

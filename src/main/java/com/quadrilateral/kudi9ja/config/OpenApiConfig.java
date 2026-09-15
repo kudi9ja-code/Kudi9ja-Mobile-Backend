@@ -93,7 +93,7 @@ public class OpenApiConfig {
                 - **A running plan or loan keeps the terms it was opened on.** Rate changes never \
                 rewrite history.
                 - **Interest never compounds**, on savings or on loans. It is flat, computed once.
-                - **The client computes nothing.** Balances, interest, credit scores, loan pricing \
+                - **The client computes nothing.** Balances, interest, loan pricing \
                 and eligibility are all derived here; the app displays what it is given.
                 - **Every money-moving endpoint takes an `Idempotency-Key` header** and takes the \
                 transaction PIN in the body. A retry must not double a payment, and a client's \

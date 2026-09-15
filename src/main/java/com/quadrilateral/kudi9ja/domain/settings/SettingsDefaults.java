@@ -98,26 +98,6 @@ public final class SettingsDefaults {
         s.setProcessingFeeThreshold(Money.of(500_000));
         s.setLoanProcessingFeeRate(rate("0.01"));
 
-        // What a customer is offered, before the hard maximum caps it.
-        s.setLoanBaseCap(Money.of(100_000));
-        s.setLoanSavingsMultiple(new BigDecimal("1.5000"));
-        s.setLoanScoreBaseline(500);
-        s.setLoanScorePerPoint(Money.of(400));
-        s.setLoanOfferRounding(Money.of(5_000));
-
-        // Credit score, out of 850.
-        s.setCreditBaseScore(560);
-        s.setCreditPointsPerPlan(18);
-        s.setCreditPlanPointsCap(90);
-        s.setCreditNairaPerSavingsPoint(Money.of(25_000));
-        s.setCreditSavingsPointsCap(100);
-        s.setCreditPointsPerRepaidLoan(30);
-        s.setCreditRepaidPointsCap(120);
-        s.setCreditOverduePenalty(90);
-        s.setCreditVerifiedBonus(40);
-        s.setCreditScoreFloor(300);
-        s.setCreditScoreCeiling(850);
-
         // Security.
         s.setMaxPasscodeAttempts(5);
         s.setLockTimeoutMinutes(2);

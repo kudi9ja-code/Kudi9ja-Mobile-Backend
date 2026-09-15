@@ -106,10 +106,6 @@ public class Loan {
     @Column(name = "decision_reasons", length = 2000)
     private String decisionReasons;
 
-    /** The credit score at decision time, kept as part of the record. */
-    @Column(name = "score_at_decision")
-    private Integer scoreAtDecision;
-
     @Column(name = "decided_by", length = 200)
     private String decidedBy;
 

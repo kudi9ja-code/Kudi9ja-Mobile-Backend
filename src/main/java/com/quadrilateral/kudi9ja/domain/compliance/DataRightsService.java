@@ -347,7 +347,6 @@ public class DataRightsService {
                         // What an automated decision rested on. Without these
                         // the right to a human review cannot be exercised.
                         loan.getDecisionReasons(),
-                        loan.getScoreAtDecision(),
                         loan.getWriteOffNote()))
                 .toList();
     }

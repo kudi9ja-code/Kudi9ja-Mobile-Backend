@@ -11,7 +11,6 @@ import com.quadrilateral.kudi9ja.domain.audit.AuditService;
 import com.quadrilateral.kudi9ja.domain.kyc.KycService;
 import com.quadrilateral.kudi9ja.domain.kyc.OtpPurpose;
 import com.quadrilateral.kudi9ja.domain.kyc.OtpService;
-import com.quadrilateral.kudi9ja.domain.loan.CreditScoreService;
 import com.quadrilateral.kudi9ja.domain.loan.Installment;
 import com.quadrilateral.kudi9ja.domain.loan.Loan;
 import com.quadrilateral.kudi9ja.domain.loan.LoanRepository;
@@ -56,7 +55,6 @@ public class ProfileService {
     private final SavingsPlanRepository plans;
     private final LoanRepository loans;
     private final ThriftService thrift;
-    private final CreditScoreService creditScores;
     private final NotificationService notifications;
     private final OtpService otps;
     private final KycService kyc;
@@ -71,7 +69,6 @@ public class ProfileService {
             SavingsPlanRepository plans,
             LoanRepository loans,
             ThriftService thrift,
-            CreditScoreService creditScores,
             NotificationService notifications,
             OtpService otps,
             KycService kyc,
@@ -84,7 +81,6 @@ public class ProfileService {
         this.plans = plans;
         this.loans = loans;
         this.thrift = thrift;
-        this.creditScores = creditScores;
         this.notifications = notifications;
         this.otps = otps;
         this.kyc = kyc;
@@ -278,8 +274,6 @@ public class ProfileService {
         BigDecimal totalOwed = openLoans(userId).stream()
                 .map(Loan::outstanding)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        CreditScoreService.Assessment assessment = creditScores.assess(userId);
-
         return new UserDtos.DashboardResponse(
                 balance,
                 totalSaved,
@@ -289,8 +283,6 @@ public class ProfileService {
                 Money.of(balance.add(totalSaved).subtract(totalOwed)),
                 Money.of(transactions.totalInterestEarned(userId)),
                 thrift.committed(userId),
-                assessment.score(),
-                assessment.band(),
                 plans.findByUserIdAndStatusInOrderByMaturityDateAsc(userId, List.of(SavingsStatus.ACTIVE)).size(),
                 (int) openLoans(userId).size(),
                 (int) thrift.activeCircleCount(userId),

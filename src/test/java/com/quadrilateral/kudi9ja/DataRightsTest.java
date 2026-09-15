@@ -189,10 +189,8 @@ class DataRightsTest {
             assertThat(export.get("savingsPlans").get(0).get("annualRate").decimalValue())
                     .isEqualByComparingTo("0.170000");
 
-            // The loan carries the score it was decided on, without which the
-            // right to a human review cannot be used.
+            // The loan carries the rate it was written at, not today's.
             JsonNode loan = export.get("loans").get(0);
-            assertThat(loan.get("scoreAtDecision").isNull()).isFalse();
             assertThat(loan.get("flatRate").decimalValue()).isEqualByComparingTo("0.450000");
 
             // The acceptance record the Terms rely on as evidence.

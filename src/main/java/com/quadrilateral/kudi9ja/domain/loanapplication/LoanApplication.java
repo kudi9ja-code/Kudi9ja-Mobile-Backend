@@ -214,16 +214,6 @@ public class LoanApplication {
     @Column(name = "loan_id")
     private UUID loanId;
 
-    /**
-     * What the automated assessment made of it at submission.
-     *
-     * <p>Kept because the admin decides <i>with</i> it rather than instead of
-     * it, and because a refusal that disagreed with the score is worth being
-     * able to find later.
-     */
-    @Column(name = "score_at_submission")
-    private Integer scoreAtSubmission;
-
     @Version
     @Column(name = "row_version", nullable = false)
     private long rowVersion;

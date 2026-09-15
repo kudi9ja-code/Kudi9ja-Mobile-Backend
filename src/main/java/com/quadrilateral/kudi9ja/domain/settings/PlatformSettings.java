@@ -154,58 +154,6 @@ public class PlatformSettings {
     @Column(name = "loan_processing_fee_rate", nullable = false, precision = 12, scale = 6)
     private BigDecimal loanProcessingFeeRate;
 
-    // Loan offer ------------------------------------------------------------
-
-    @Column(name = "loan_base_cap", nullable = false, precision = 19, scale = 2)
-    private BigDecimal loanBaseCap;
-
-    @Column(name = "loan_savings_multiple", nullable = false, precision = 12, scale = 4)
-    private BigDecimal loanSavingsMultiple;
-
-    @Column(name = "loan_score_baseline", nullable = false)
-    private Integer loanScoreBaseline;
-
-    @Column(name = "loan_score_per_point", nullable = false, precision = 19, scale = 2)
-    private BigDecimal loanScorePerPoint;
-
-    @Column(name = "loan_offer_rounding", nullable = false, precision = 19, scale = 2)
-    private BigDecimal loanOfferRounding;
-
-    // Credit score ----------------------------------------------------------
-
-    @Column(name = "credit_base_score", nullable = false)
-    private Integer creditBaseScore;
-
-    @Column(name = "credit_points_per_plan", nullable = false)
-    private Integer creditPointsPerPlan;
-
-    @Column(name = "credit_plan_points_cap", nullable = false)
-    private Integer creditPlanPointsCap;
-
-    @Column(name = "credit_naira_per_savings_point", nullable = false, precision = 19, scale = 2)
-    private BigDecimal creditNairaPerSavingsPoint;
-
-    @Column(name = "credit_savings_points_cap", nullable = false)
-    private Integer creditSavingsPointsCap;
-
-    @Column(name = "credit_points_per_repaid_loan", nullable = false)
-    private Integer creditPointsPerRepaidLoan;
-
-    @Column(name = "credit_repaid_points_cap", nullable = false)
-    private Integer creditRepaidPointsCap;
-
-    @Column(name = "credit_overdue_penalty", nullable = false)
-    private Integer creditOverduePenalty;
-
-    @Column(name = "credit_verified_bonus", nullable = false)
-    private Integer creditVerifiedBonus;
-
-    @Column(name = "credit_score_floor", nullable = false)
-    private Integer creditScoreFloor;
-
-    @Column(name = "credit_score_ceiling", nullable = false)
-    private Integer creditScoreCeiling;
-
     // Security --------------------------------------------------------------
 
     @Column(name = "max_passcode_attempts", nullable = false)

@@ -21,17 +21,6 @@ public interface LoanRepository extends JpaRepository<Loan, UUID> {
 
     List<Loan> findByUserIdAndStatusIn(UUID userId, List<LoanStatus> statuses);
 
-    /** The principal of every open loan: what the borrowing headroom subtracts. */
-    @Query("""
-            select coalesce(sum(l.principal), 0)
-              from Loan l
-             where l.userId = :userId
-               and l.status in (
-                   com.quadrilateral.kudi9ja.domain.loan.LoanStatus.ACTIVE,
-                   com.quadrilateral.kudi9ja.domain.loan.LoanStatus.OVERDUE)
-            """)
-    BigDecimal openPrincipal(@Param("userId") UUID userId);
-
     long countByUserIdAndStatus(UUID userId, LoanStatus status);
 
     boolean existsByUserIdAndStatus(UUID userId, LoanStatus status);

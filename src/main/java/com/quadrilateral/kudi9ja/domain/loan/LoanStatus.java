@@ -46,9 +46,4 @@ public enum LoanStatus {
     public boolean isOpen() {
         return this == ACTIVE || this == OVERDUE;
     }
-
-    /** A loan that counts against the customer's borrowing headroom. */
-    public boolean countsAgainstHeadroom() {
-        return isOpen();
-    }
 }

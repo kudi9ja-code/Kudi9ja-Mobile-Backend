@@ -143,7 +143,9 @@ public class LoanApplicationService {
 
         // The hard limits — verified identity, a priced tenure, the amount
         // bounds. These refuse now rather than after the documents are in.
-        LoanService.Assessed assessed = loans.assess(userId, submission.amount(), submission.months());
+        // Nothing else does: within them, the amount is the customer's to ask
+        // and the admin's to judge.
+        loans.assess(userId, submission.amount(), submission.months());
 
         LoanApplication application = new LoanApplication();
         application.setId(UUID.randomUUID());
@@ -158,7 +160,6 @@ public class LoanApplicationService {
         application.setMonthlyIncome(
                 submission.monthlyIncome() == null ? null : Money.of(submission.monthlyIncome()));
         application.setGuarantors(new ArrayList<>(submission.guarantors()));
-        application.setScoreAtSubmission(assessed.assessment().score());
         application.setSubmittedAt(Instant.now());
         application.setStatus(LoanApplicationStatus.PENDING);
 
@@ -273,11 +274,11 @@ public class LoanApplicationService {
     /**
      * Approves an application and disburses the loan.
      *
-     * <p>The assessment is taken again here rather than read off the row. An
-     * application may have sat in the queue for days, during which the customer
-     * could have taken another loan, been frozen, or dropped a tier — and
-     * lending on a week-old view of an account is how two loans get written
-     * against headroom for one.
+     * <p>The hard limits are checked again here rather than trusted from
+     * submission. An application may have sat in the queue for days, during
+     * which the customer could have been frozen or lending switched off — and
+     * lending on a week-old view of an account is how money leaves for an
+     * account that may no longer receive it.
      */
     @Transactional
     public LoanApplication approve(UUID applicationId, AuditService.Actor actor, String note) {

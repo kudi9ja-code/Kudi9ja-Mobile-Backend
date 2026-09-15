@@ -11,9 +11,8 @@ import java.util.TreeMap;
  * <p>The split matters. The <b>public</b> shape is what the app displays before
  * anyone has an account: the rates on the savings calculator, the loan rate
  * card, the limits, the collection account to transfer to. The <b>full</b>
- * shape adds the credit-score coefficients and the offer formula, which are the
- * inputs to a lending decision — publishing those would be publishing how to
- * game them.
+ * shape adds the operational settings — the fee schedule, the security
+ * limits, the switches — which are the panel's to read and change.
  *
  * <p>Neither shape is what prices anything. A running plan or loan keeps the
  * terms it was opened on, and these values only ever apply to the next one.

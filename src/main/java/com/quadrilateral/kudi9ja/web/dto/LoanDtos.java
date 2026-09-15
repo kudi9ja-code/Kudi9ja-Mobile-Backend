@@ -179,58 +179,22 @@ public final class LoanDtos {
     }
 
     /**
-     * What this customer may borrow, and why.
+     * Whether this customer may apply, and the range they may ask within.
      *
-     * @param factors the score breakdown, so a customer can see what would
-     *                move it rather than being handed a number
+     * <p>There is no offer and no score. A customer asks for what they need,
+     * between the smallest and the largest loan the company writes, and a
+     * person decides on the application. The only things that refuse here are
+     * the ones no application can change: an unverified identity, a frozen
+     * account, lending switched off.
      */
     public record EligibilityResponse(
             boolean eligible,
-            BigDecimal offer,
-            BigDecimal headroom,
             BigDecimal minAmount,
             BigDecimal maxAmount,
             int minMonths,
             int maxMonths,
-            int creditScore,
-            String creditBand,
-            BigDecimal totalSaved,
-            BigDecimal openPrincipal,
-            List<CreditFactor> factors,
             Map<Integer, BigDecimal> rateCard,
             String reason) {
-    }
-
-    /** One contributor to the credit score. */
-    public record CreditFactor(
-            String label,
-            String detail,
-            int points,
-            int maxPoints,
-            boolean negative,
-            double fill,
-            boolean maxed) {
-
-        public static CreditFactor of(String label, String detail, int points, int maxPoints) {
-            return of(label, detail, points, maxPoints, false);
-        }
-
-        public static CreditFactor of(
-                String label, String detail, int points, int maxPoints, boolean negative) {
-            double fill = maxPoints <= 0 ? 0 : Math.max(0, Math.min(1, (double) points / maxPoints));
-            return new CreditFactor(
-                    label, detail, points, maxPoints, negative, fill, maxPoints > 0 && points >= maxPoints);
-        }
-    }
-
-    /** The score on its own, with the breakdown behind it. */
-    public record CreditScoreResponse(
-            int score,
-            String band,
-            int floor,
-            int ceiling,
-            List<CreditFactor> factors,
-            String note) {
     }
 
     /** What happened when a loan was repaid, settled or cancelled. */

@@ -209,8 +209,6 @@ public final class AdminDtos {
             BigDecimal totalDeposited,
             BigDecimal totalOwed,
             BigDecimal pendingWithdrawals,
-            int creditScore,
-            String creditBand,
             /**
              * Running now, and ever opened.
              *

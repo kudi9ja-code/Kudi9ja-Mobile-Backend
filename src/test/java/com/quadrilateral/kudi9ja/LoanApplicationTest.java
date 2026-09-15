@@ -85,7 +85,7 @@ class LoanApplicationTest {
         return flow.signUp(ownerEmail);
     }
 
-    /** A customer with savings behind them, so the offer is not the obstacle. */
+    /** A funded, verified customer — the only kind who may apply. */
     private SignUpFlow.Session fundedCustomer(SignUpFlow.Session admin) throws Exception {
         SignUpFlow.Session customer = flow.signUp(SignUpFlow.freshEmail("borrower"));
         fundWallet(customer, admin, "1000000");

@@ -53,7 +53,6 @@ public class LoanService {
     private final LedgerService ledger;
     private final SettingsService settings;
     private final NotificationService notifications;
-    private final CreditScoreService creditScore;
     private final AuthService auth;
 
     public LoanService(
@@ -62,14 +61,12 @@ public class LoanService {
             LedgerService ledger,
             SettingsService settings,
             NotificationService notifications,
-            CreditScoreService creditScore,
             AuthService auth) {
         this.loans = loans;
         this.users = users;
         this.ledger = ledger;
         this.settings = settings;
         this.notifications = notifications;
-        this.creditScore = creditScore;
         this.auth = auth;
     }
 
@@ -142,16 +139,20 @@ public class LoanService {
 
     // ── Eligibility ────────────────────────────────────────────────────────
 
+    /**
+     * Whether this customer may apply at all, and the range they may ask in.
+     *
+     * <p>No offer is computed and no score is consulted. Kudi9ja lends on a
+     * person's reading of the application — the bank statement, the business,
+     * the guarantor — and a customer asks for what they need, from the
+     * smallest loan the company writes to the largest. What refuses here is
+     * only what no application could change.
+     */
     @Transactional(readOnly = true)
     public LoanDtos.EligibilityResponse eligibility(UUID userId) {
         PlatformSettings s = settings.currentReadOnly();
         User user = users.findById(userId)
                 .orElseThrow(() -> ApiException.notFound("That account"));
-
-        CreditScoreService.Assessment assessment = creditScore.assess(userId);
-        BigDecimal headroom = Finance.headroom(s, assessment.openPrincipal());
-        BigDecimal offer = Finance.loanOffer(
-                s, assessment.totalSaved(), assessment.score(), headroom);
 
         List<String> reasons = new ArrayList<>();
         if (!s.isLendingEnabled()) {
@@ -164,48 +165,30 @@ public class LoanService {
             reasons.add("Your account cannot borrow while it is "
                     + user.getAccountStatus().label().toLowerCase(java.util.Locale.ROOT) + ".");
         }
-        if (Money.isZeroOrLess(headroom)) {
-            reasons.add("You have reached the most we lend at one time. Repay what is open first.");
-        } else if (Money.isZeroOrLess(offer)) {
-            reasons.add("Save with us for a while and your offer will grow. "
-                    + "The smallest loan we write is " + Money.naira(s.getMinLoanAmount()) + ".");
-        }
 
         boolean eligible = reasons.isEmpty();
         return new LoanDtos.EligibilityResponse(
                 eligible,
-                eligible ? offer : Money.zero(),
-                headroom,
                 s.getMinLoanAmount(),
                 s.getMaxLoanAmount(),
                 1,
                 s.getMaxLoanTenureMonths(),
-                assessment.score(),
-                assessment.band(),
-                assessment.totalSaved(),
-                assessment.openPrincipal(),
-                creditScore.factors(s, assessment),
                 s.sortedLoanRates(),
                 eligible ? null : String.join(" ", reasons));
     }
 
-    // -- Assess, then disburse ----------------------------------------------
+    // ── Assess, then disburse ──────────────────────────────────────────────
 
     /**
-     * What the arithmetic makes of a request, before a person looks at it.
+     * The hard limits on a request, before a person looks at it.
      *
-     * <p>Everything here is re-derived from the database: the offer, the
-     * headroom, the score, the tier. The client's own view of any of them is
-     * not consulted, and never was.
-     *
-     * <p>The hard limits refuse outright, because no amount of evidence makes
-     * an unverified customer verified or brings an unpriced tenure into the
-     * rate card. The <b>offer</b> does not refuse, and that is the change: it
-     * is recorded on the application and shown to the admin as one input among
-     * the bank statement, the business and the guarantors. A thin automated
-     * offer is an argument against lending, not a veto over a person who has
-     * read the file — and turning somebody away before they have shown it is
-     * how a lender ends up declining its best customers.
+     * <p>Everything here is re-derived from the database; the client's own
+     * view of any of it is not consulted. These refuse outright because no
+     * amount of evidence makes an unverified customer verified, brings an
+     * unpriced tenure into the rate card, or turns ₦20,000 into a loan the
+     * company writes. Within them, anything goes forward: whether this
+     * customer should have this amount is the admin's call, made on the
+     * application, and nothing automated stands in front of it.
      */
     @Transactional(readOnly = true)
     public Assessed assess(UUID userId, BigDecimal amount, int months) {
@@ -246,25 +229,11 @@ public class LoanService {
                     "The largest loan we write is " + Money.naira(s.getMaxLoanAmount()) + ".");
         }
 
-        CreditScoreService.Assessment assessment = creditScore.assess(userId);
-        BigDecimal headroom = Finance.headroom(s, assessment.openPrincipal());
-        BigDecimal offer = Finance.loanOffer(s, assessment.totalSaved(), assessment.score(), headroom);
-
-        return new Assessed(user, principal, months, assessment, offer);
+        return new Assessed(user, principal, months);
     }
 
-    /**
-     * What {@link #assess} found. Carried to whoever decides.
-     *
-     * @param offer the most the automated view would lend unaided. Advice to
-     *              the admin, not a ceiling on them.
-     */
-    public record Assessed(
-            User user,
-            BigDecimal principal,
-            int months,
-            CreditScoreService.Assessment assessment,
-            BigDecimal offer) {
+    /** What {@link #assess} found. Carried to whoever decides. */
+    public record Assessed(User user, BigDecimal principal, int months) {
     }
 
     /**
@@ -274,14 +243,13 @@ public class LoanService {
      * money becomes the customer's, and nothing else in the system may call it.
      *
      * @param decidedBy the admin who approved it, by name — the loan records
-     *                  who lent, which "Automated assessment" no longer answers
+     *                  who lent
      */
     @Transactional
     public Loan disburse(UUID userId, Assessed assessed, String purpose, String decidedBy) {
         PlatformSettings s = settings.currentReadOnly();
         BigDecimal principal = assessed.principal();
         int months = assessed.months();
-        CreditScoreService.Assessment assessment = assessed.assessment();
 
         Instant now = Instant.now();
         BigDecimal rate = s.loanRateFor(months);
@@ -302,7 +270,6 @@ public class LoanService {
         loan.setAmountRepaid(Money.zero());
         loan.setRebateGranted(Money.zero());
         loan.setStatus(LoanStatus.ACTIVE);
-        loan.setScoreAtDecision(assessment.score());
         loan.setDecidedBy(decidedBy);
         Loan saved = loans.save(loan);
 

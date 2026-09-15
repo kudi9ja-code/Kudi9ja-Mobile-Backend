@@ -160,13 +160,11 @@ public final class DataRightsDtos {
     }
 
     /**
-     * @param decisionReasons why a loan was declined or reduced, and
-     *                        {@code scoreAtDecision} the figure it was decided
-     *                        on. Both are here because the Privacy Policy gives
-     *                        the customer the right to demand that a person
-     *                        looks again at an automated decision — a right
-     *                        they cannot use without knowing what the decision
-     *                        rested on.
+     * @param decisionReasons why a loan was declined or reduced. Here because
+     *                        the Privacy Policy gives the customer the right
+     *                        to demand that a person looks again at a
+     *                        decision — a right they cannot use without
+     *                        knowing what the decision rested on.
      */
     public record Loan(
             UUID id,
@@ -186,7 +184,6 @@ public final class DataRightsDtos {
             Instant dueDate,
             Instant settledAt,
             String decisionReasons,
-            Integer scoreAtDecision,
             String writeOffNote) {
     }
 

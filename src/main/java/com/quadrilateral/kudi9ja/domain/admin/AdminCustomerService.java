@@ -4,7 +4,6 @@ import com.quadrilateral.kudi9ja.common.error.ApiException;
 import com.quadrilateral.kudi9ja.common.util.Money;
 import com.quadrilateral.kudi9ja.domain.audit.AuditCategory;
 import com.quadrilateral.kudi9ja.domain.audit.AuditService;
-import com.quadrilateral.kudi9ja.domain.loan.CreditScoreService;
 import com.quadrilateral.kudi9ja.domain.loan.Loan;
 import com.quadrilateral.kudi9ja.domain.loan.LoanRepository;
 import com.quadrilateral.kudi9ja.domain.loan.LoanStatus;
@@ -54,7 +53,6 @@ public class AdminCustomerService {
     private final SavingsPlanRepository plans;
     private final LoanRepository loans;
     private final WithdrawalService withdrawals;
-    private final CreditScoreService creditScores;
     private final NotificationService notifications;
     private final AuditService audit;
 
@@ -67,7 +65,6 @@ public class AdminCustomerService {
             SavingsPlanRepository plans,
             LoanRepository loans,
             WithdrawalService withdrawals,
-            CreditScoreService creditScores,
             NotificationService notifications,
             AuditService audit) {
         this.users = users;
@@ -78,7 +75,6 @@ public class AdminCustomerService {
         this.plans = plans;
         this.loans = loans;
         this.withdrawals = withdrawals;
-        this.creditScores = creditScores;
         this.notifications = notifications;
         this.audit = audit;
     }
@@ -254,7 +250,6 @@ public class AdminCustomerService {
     @Transactional(readOnly = true)
     public AdminDtos.CustomerFinancials financials(User user) {
         UUID id = user.getId();
-        CreditScoreService.Assessment assessment = creditScores.assess(id);
 
         return new AdminDtos.CustomerFinancials(
                 ledger.balanceOf(id),
@@ -263,8 +258,6 @@ public class AdminCustomerService {
                 Money.of(transactions.totalDeposited(id)),
                 totalOwed(id),
                 withdrawals.pendingValueFor(id),
-                assessment.score(),
-                assessment.band(),
                 plans.findByUserIdAndStatusInOrderByMaturityDateAsc(
                         id, List.of(SavingsStatus.ACTIVE)).size(),
                 plans.countByUserId(id),

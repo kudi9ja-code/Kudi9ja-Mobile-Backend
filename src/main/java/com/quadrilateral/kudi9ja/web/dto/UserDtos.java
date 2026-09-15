@@ -157,8 +157,6 @@ public final class UserDtos {
             java.math.BigDecimal netWorth,
             java.math.BigDecimal totalInterestEarned,
             java.math.BigDecimal thriftCommitted,
-            int creditScore,
-            String creditBand,
             int activePlans,
             int activeLoans,
             int activeCircles,

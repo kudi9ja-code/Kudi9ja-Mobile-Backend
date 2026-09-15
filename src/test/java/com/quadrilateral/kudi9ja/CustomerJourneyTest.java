@@ -387,7 +387,6 @@ class CustomerJourneyTest {
     void loanNetsTheFeeVisibly() throws Exception {
         SignUpFlow.Session customer = flow.signUp(customerEmail);
         SignUpFlow.Session admin = owner();
-        // Savings build the offer up to where ₦200,000 is inside it.
         fundWallet(customer, admin, "1000000");
         postJson("/api/v1/savings/plans/fixed", customer, """
                 {"title": "Collateral", "principal": 500000, "days": 365, "pin": "5271"}

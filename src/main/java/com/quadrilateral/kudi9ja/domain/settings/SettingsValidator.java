@@ -86,23 +86,6 @@ public final class SettingsValidator {
         }
         requireNonNegativeRate(problems, "loanProcessingFeeRate", s.getLoanProcessingFeeRate());
 
-        // Credit score --------------------------------------------------------
-        if (s.getCreditScoreFloor() >= s.getCreditScoreCeiling()) {
-            problems.put("creditScoreFloor", "The score floor must be below the ceiling.");
-        }
-        if (s.getCreditBaseScore() < s.getCreditScoreFloor()
-                || s.getCreditBaseScore() > s.getCreditScoreCeiling()) {
-            problems.put("creditBaseScore", "The base score must sit between the floor and the ceiling.");
-        }
-        if (Money.isZeroOrLess(s.getCreditNairaPerSavingsPoint())) {
-            problems.put("creditNairaPerSavingsPoint", "This must be above zero — it is a divisor.");
-        }
-
-        // Loan offer -----------------------------------------------------------
-        if (Money.isZeroOrLess(s.getLoanOfferRounding())) {
-            problems.put("loanOfferRounding", "Offer rounding must be above zero — it is a divisor.");
-        }
-
         // Security -------------------------------------------------------------
         if (s.getMaxPasscodeAttempts() < 1) {
             problems.put("maxPasscodeAttempts", "At least one attempt must be allowed.");

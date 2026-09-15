@@ -225,7 +225,6 @@ public final class LoanApplicationDtos {
             String businessName,
             LoanApplicationStatus status,
             String statusLabel,
-            Integer scoreAtSubmission,
             Instant submittedAt,
             Instant reviewedAt,
             String reviewedBy) {
@@ -242,7 +241,6 @@ public final class LoanApplicationDtos {
                     application.getBusinessName(),
                     application.getStatus(),
                     application.getStatus().label(),
-                    application.getScoreAtSubmission(),
                     application.getSubmittedAt(),
                     application.getReviewedAt(),
                     application.getReviewedBy());
@@ -274,7 +272,6 @@ public final class LoanApplicationDtos {
             List<ApplicationDocument> businessPhotos,
             LoanApplicationStatus status,
             String statusLabel,
-            Integer scoreAtSubmission,
             Instant submittedAt,
             Instant reviewedAt,
             String reviewedBy,
@@ -315,7 +312,6 @@ public final class LoanApplicationDtos {
                     photos,
                     application.getStatus(),
                     application.getStatus().label(),
-                    application.getScoreAtSubmission(),
                     application.getSubmittedAt(),
                     application.getReviewedAt(),
                     application.getReviewedBy(),
