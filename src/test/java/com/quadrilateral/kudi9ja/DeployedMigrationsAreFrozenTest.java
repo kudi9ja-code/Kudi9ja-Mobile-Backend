@@ -47,7 +47,8 @@ class DeployedMigrationsAreFrozenTest {
             "V3__loan_applications.sql", -1240739060,
             "V4__loan_application_selfie.sql", -1806591911,
             "V5__guarantor_location.sql", 147316029,
-            "V6__statement_password.sql", -532947955);
+            "V6__statement_password.sql", -532947955,
+            "V7__no_credit_score.sql", 1058230586);
 
     @Test
     @DisplayName("no deployed migration has changed, not even a comment")
