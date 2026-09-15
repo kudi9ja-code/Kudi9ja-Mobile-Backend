@@ -166,9 +166,11 @@ class ReceiptStorageTest {
         }
 
         /**
-         * PDFs are images to Cloudinary. HEIC is not, and is kept as a raw
-         * object rather than being refused at upload — an iPhone photograph of
-         * a bank receipt is the most common thing a customer will send.
+         * Photographs are images to Cloudinary. Everything else — HEIC, a
+         * Word or Excel statement, and a PDF — is kept as a raw object that
+         * Cloudinary does not open. A PDF used to be an image, and a
+         * password-protected one, which is what banks send, was refused with
+         * "Password-protected PDFs are not supported".
          */
         @Test
         @DisplayName("resource type follows the format")
@@ -176,8 +178,25 @@ class ReceiptStorageTest {
             assertThat(CloudinaryReceiptStorage.resourceTypeFor("a/b.jpg")).isEqualTo("image");
             assertThat(CloudinaryReceiptStorage.resourceTypeFor("a/b.png")).isEqualTo("image");
             assertThat(CloudinaryReceiptStorage.resourceTypeFor("a/b.webp")).isEqualTo("image");
-            assertThat(CloudinaryReceiptStorage.resourceTypeFor("a/b.pdf")).isEqualTo("image");
+            assertThat(CloudinaryReceiptStorage.resourceTypeFor("a/b.pdf")).isEqualTo("raw");
             assertThat(CloudinaryReceiptStorage.resourceTypeFor("a/b.heic")).isEqualTo("raw");
+            assertThat(CloudinaryReceiptStorage.resourceTypeFor("a/b.docx")).isEqualTo("raw");
+        }
+
+        /**
+         * A PDF stored before the change above is under image, with a key
+         * that looks the same. Reads look in both places, newest first, so a
+         * statement nobody has opened yet is not lost to the fix.
+         */
+        @Test
+        @DisplayName("an old PDF is still looked for under image")
+        void oldPdfsAreStillFound() {
+            assertThat(CloudinaryReceiptStorage.resourceTypesToRead("a/b.pdf"))
+                    .containsExactly("raw", "image");
+            assertThat(CloudinaryReceiptStorage.resourceTypesToRead("a/b.jpg"))
+                    .containsExactly("image");
+            assertThat(CloudinaryReceiptStorage.resourceTypesToRead("a/b.docx"))
+                    .containsExactly("raw");
         }
 
         /**

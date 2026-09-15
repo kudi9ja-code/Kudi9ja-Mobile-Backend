@@ -152,14 +152,18 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
                     .body(Map.class);
 
             if (response == null || response.get("public_id") == null) {
+                log.error("Cloudinary accepted a {} upload of {} bytes as {} for {} but named no public_id: {}",
+                        extension, content.length, resourceTypeFor(key), ownerRef, response);
                 throw new ApiException(ErrorCode.INTERNAL,
                         "That receipt could not be saved. Try again.");
             }
         } catch (RestClientException e) {
             // Deliberately not surfacing the provider's message: it can carry
             // the cloud name and the key, and the customer can do nothing with
-            // either.
-            log.error("Cloudinary rejected a receipt upload for {}", ownerRef, e);
+            // either. It goes in the log with what was sent — the format, the
+            // resource type and the size are what Cloudinary refuses on.
+            log.error("Cloudinary rejected a {} upload of {} bytes as {} for {}",
+                    extension, content.length, resourceTypeFor(key), ownerRef, e);
             throw new ApiException(ErrorCode.INTERNAL, "That receipt could not be saved. Try again.");
         }
         return key;
@@ -176,38 +180,45 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
 
     @Override
     public InputStream open(String key) {
-        byte[] bytes;
-        try {
-            bytes = http.get()
-                    .uri(privateDownloadUrl(key))
-                    .retrieve()
-                    .body(byte[].class);
-        } catch (RestClientException e) {
-            log.error("Cloudinary would not return the receipt at {}", key, e);
-            throw ApiException.notFound("That receipt");
+        RestClientException last = null;
+        for (String resourceType : resourceTypesToRead(key)) {
+            byte[] bytes;
+            try {
+                bytes = http.get()
+                        .uri(privateDownloadUrl(key, resourceType))
+                        .retrieve()
+                        .body(byte[].class);
+            } catch (RestClientException e) {
+                last = e;
+                continue;
+            }
+            if (bytes != null && bytes.length > 0) {
+                return new ByteArrayInputStream(bytes);
+            }
         }
-        if (bytes == null || bytes.length == 0) {
-            throw ApiException.notFound("That receipt");
-        }
-        return new ByteArrayInputStream(bytes);
+        log.error("Cloudinary would not return the receipt at {}", key, last);
+        throw ApiException.notFound("That receipt");
     }
 
     @Override
     public boolean exists(String key) {
-        try {
-            http.get()
-                    // A URI, not a String, for the reason given on
-                    // privateDownloadUrl: the encoded public_id would be
-                    // encoded a second time on the way out.
-                    .uri(URI.create(API + config.cloudName() + "/resources/" + resourceTypeFor(key)
-                            + "/authenticated/" + encode(publicId(key))))
-                    .header(HttpHeaders.AUTHORIZATION, basicAuth())
-                    .retrieve()
-                    .toBodilessEntity();
-            return true;
-        } catch (RestClientException e) {
-            return false;
+        for (String resourceType : resourceTypesToRead(key)) {
+            try {
+                http.get()
+                        // A URI, not a String, for the reason given on
+                        // privateDownloadUrl: the encoded public_id would be
+                        // encoded a second time on the way out.
+                        .uri(URI.create(API + config.cloudName() + "/resources/" + resourceType
+                                + "/authenticated/" + encode(publicId(key))))
+                        .header(HttpHeaders.AUTHORIZATION, basicAuth())
+                        .retrieve()
+                        .toBodilessEntity();
+                return true;
+            } catch (RestClientException e) {
+                // Try the next place it might be.
+            }
         }
+        return false;
     }
 
     /**
@@ -217,19 +228,23 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
      */
     @Override
     public void delete(String key) {
-        try {
-            http.post()
-                    .uri(API + config.cloudName() + "/" + resourceTypeFor(key) + "/destroy")
-                    .header(HttpHeaders.AUTHORIZATION, basicAuth())
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(multipart(publicId(key)))
-                    .retrieve()
-                    .toBodilessEntity();
-        } catch (RestClientException e) {
-            // Matches the local backend: a receipt that will not delete is
-            // logged rather than thrown, because the caller is a retention
-            // sweep and one stuck object must not stop the rest of it.
-            log.warn("Could not delete the receipt at {}", key, e);
+        // Every place it might be. Destroying a public_id that is not there
+        // is a "not found" result, not an error, so this is safe to over-ask.
+        for (String resourceType : resourceTypesToRead(key)) {
+            try {
+                http.post()
+                        .uri(API + config.cloudName() + "/" + resourceType + "/destroy")
+                        .header(HttpHeaders.AUTHORIZATION, basicAuth())
+                        .contentType(MediaType.MULTIPART_FORM_DATA)
+                        .body(multipart(publicId(key)))
+                        .retrieve()
+                        .toBodilessEntity();
+            } catch (RestClientException e) {
+                // Matches the local backend: a receipt that will not delete is
+                // logged rather than thrown, because the caller is a retention
+                // sweep and one stuck object must not stop the rest of it.
+                log.warn("Could not delete the receipt at {} ({})", key, resourceType, e);
+            }
         }
     }
 
@@ -255,6 +270,10 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
      * cannot be checked through a live call.
      */
     URI privateDownloadUrl(String key) {
+        return privateDownloadUrl(key, resourceTypeFor(key));
+    }
+
+    URI privateDownloadUrl(String key, String resourceType) {
         long now = Instant.now().getEpochSecond();
 
         // Sorted, because the signature is defined over the parameters in
@@ -268,7 +287,7 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
         params.put("expires_at", Long.toString(now + DOWNLOAD_WINDOW.toSeconds()));
 
         return downloadUri(
-                API + config.cloudName() + "/" + resourceTypeFor(key) + "/download",
+                API + config.cloudName() + "/" + resourceType + "/download",
                 params,
                 signParameters(params),
                 config.apiKey());
@@ -371,14 +390,35 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
      * Which of Cloudinary's resource types an object belongs to.
      *
      * <p>Derived from the key rather than stored, so it cannot drift out of
-     * step with it. PDFs count as images to Cloudinary; HEIC does not, and goes
-     * to {@code raw} where it is kept byte-for-byte instead of being refused.
+     * step with it. Photographs are {@code image}; everything else is
+     * {@code raw}, where Cloudinary keeps the bytes and does not look inside.
+     *
+     * <p>PDFs were {@code image}, which Cloudinary permits and which was a
+     * mistake: as an image, a PDF is <i>opened</i> on upload so that pages can
+     * be rendered, and a PDF Cloudinary cannot open is refused — "Password-
+     * protected PDFs are not supported". A bank statement in Nigeria is very
+     * often exactly that, locked with the customer's date of birth, so every
+     * loan application carrying one was turned away at the last step. Nobody
+     * needs Cloudinary to render a statement; the admin downloads it and reads
+     * it. Raw keeps it as sent, lock and all.
      */
     static String resourceTypeFor(String key) {
         return switch (formatFor(key)) {
-            case "jpg", "jpeg", "png", "webp", "pdf" -> "image";
+            case "jpg", "jpeg", "png", "webp" -> "image";
             default -> "raw";
         };
+    }
+
+    /**
+     * Where an object might be found, newest convention first.
+     *
+     * <p>A PDF stored before the change above lives under {@code image}, and
+     * its key looks identical to one stored since. Reads try {@code raw} and
+     * then {@code image}, so a statement an admin has yet to open is not lost
+     * to the fix that made the next one storable.
+     */
+    static List<String> resourceTypesToRead(String key) {
+        return "pdf".equals(formatFor(key)) ? List.of("raw", "image") : List.of(resourceTypeFor(key));
     }
 
     private static Resource asResource(byte[] content, String filename) {
