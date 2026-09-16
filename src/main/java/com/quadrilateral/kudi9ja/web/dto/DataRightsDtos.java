@@ -57,6 +57,7 @@ public final class DataRightsDtos {
             List<Withdrawal> withdrawals,
             List<Circle> thriftCircles,
             List<Notice> notifications,
+            Review appReview,
             List<Agreement> legalAcceptances,
             List<SignIn> sessions,
             List<RecordAccess> recordAccesses,
@@ -244,6 +245,15 @@ public final class DataRightsDtos {
             Instant date,
             boolean read,
             Instant clearedAt) {
+    }
+
+    /** The customer's review of the app, as every other customer sees it. Null if none. */
+    public record Review(
+            String shownAs,
+            int rating,
+            String comment,
+            Instant writtenAt,
+            Instant lastEditedAt) {
     }
 
     /**

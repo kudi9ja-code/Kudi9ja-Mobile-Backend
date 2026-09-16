@@ -27,6 +27,7 @@ import com.quadrilateral.kudi9ja.domain.payin.PayInClaim;
 import com.quadrilateral.kudi9ja.domain.payin.PayInClaimRepository;
 import com.quadrilateral.kudi9ja.domain.payout.WithdrawalRequest;
 import com.quadrilateral.kudi9ja.domain.payout.WithdrawalRequestRepository;
+import com.quadrilateral.kudi9ja.domain.review.AppReviewRepository;
 import com.quadrilateral.kudi9ja.domain.payout.WithdrawalStatus;
 import com.quadrilateral.kudi9ja.domain.savings.SavingsPlan;
 import com.quadrilateral.kudi9ja.domain.savings.SavingsPlanRepository;
@@ -123,6 +124,7 @@ public class DataRightsService {
     private final ThriftContributionRepository contributions;
     private final NotificationRepository notifications;
     private final DeviceTokenRepository devices;
+    private final AppReviewRepository reviews;
     private final LegalAcceptanceRepository acceptances;
     private final UserSessionRepository sessions;
     private final AuditRepository auditEntries;
@@ -145,6 +147,7 @@ public class DataRightsService {
             ThriftContributionRepository contributions,
             NotificationRepository notifications,
             DeviceTokenRepository devices,
+            AppReviewRepository reviews,
             LegalAcceptanceRepository acceptances,
             UserSessionRepository sessions,
             AuditRepository auditEntries,
@@ -165,6 +168,7 @@ public class DataRightsService {
         this.contributions = contributions;
         this.notifications = notifications;
         this.devices = devices;
+        this.reviews = reviews;
         this.acceptances = acceptances;
         this.sessions = sessions;
         this.auditEntries = auditEntries;
@@ -214,6 +218,7 @@ public class DataRightsService {
                 withdrawalsOf(user),
                 circlesOf(user),
                 noticesOf(user),
+                reviewOf(user),
                 agreementsOf(user),
                 signInsOf(user),
                 recordAccessesOf(user),
@@ -433,6 +438,18 @@ public class DataRightsService {
                 .toList();
     }
 
+    /** What they said about the app, if anything. Public while it stands. */
+    private DataRightsDtos.Review reviewOf(User user) {
+        return reviews.findByUserId(user.getId())
+                .map(review -> new DataRightsDtos.Review(
+                        review.getDisplayName(),
+                        review.getRating(),
+                        review.getComment(),
+                        review.getCreatedAt(),
+                        review.getUpdatedAt()))
+                .orElse(null);
+    }
+
     private List<DataRightsDtos.Agreement> agreementsOf(User user) {
         return acceptances.findByUserIdOrderByAcceptedAtDesc(user.getId()).stream()
                 .map(DataRightsService::toAgreement)
@@ -587,6 +604,10 @@ public class DataRightsService {
         // after closure would keep buzzing about an account nobody can open.
         int devicesDropped = devices.deleteByUserId(userId);
         log.debug("Dropped {} device registration(s) on closure", devicesDropped);
+
+        // Their review goes too. It is public, it is theirs, and nothing the
+        // law requires us to keep is in it.
+        reviews.deleteByUserId(userId);
 
         audit.record(
                 new AuditService.Actor(user.getId(), user.getFullName(), user.getEmail()),
