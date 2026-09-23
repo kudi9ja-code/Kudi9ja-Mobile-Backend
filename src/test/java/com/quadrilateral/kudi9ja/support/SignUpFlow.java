@@ -85,12 +85,17 @@ public final class SignUpFlow {
 
     /** All eight steps, ending with a live session. */
     public Session signUp(String email) throws Exception {
+        return signUp(email, nextIdentityNumber(22));
+    }
+
+    /** All eight steps with a BVN the test chose, for what is matched on it. */
+    public Session signUp(String email, String bvn) throws Exception {
         String draftId = startSignup(email);
 
         step(draftId, "email", Map.of("code", mailer.requireCodeFor(email)));
 
         step(draftId, "identity", Map.of(
-                "bvn", nextIdentityNumber(22),
+                "bvn", bvn,
                 "nin", nextIdentityNumber(12),
                 "address", "14 Adeola Odeku Street, Victoria Island",
                 "state", "Lagos"));

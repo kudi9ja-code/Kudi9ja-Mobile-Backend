@@ -9,6 +9,7 @@ import com.quadrilateral.kudi9ja.domain.kyc.OtpPurpose;
 import com.quadrilateral.kudi9ja.domain.kyc.OtpService;
 import com.quadrilateral.kudi9ja.domain.legal.LegalDocumentKind;
 import com.quadrilateral.kudi9ja.domain.legal.LegalService;
+import com.quadrilateral.kudi9ja.domain.loan.LoanImportService;
 import com.quadrilateral.kudi9ja.domain.notification.NotificationService;
 import com.quadrilateral.kudi9ja.domain.notification.NotifyKind;
 import com.quadrilateral.kudi9ja.domain.wallet.LedgerService;
@@ -55,6 +56,7 @@ public class SignupService {
     private final LedgerService ledger;
     private final NotificationService notifications;
     private final AdminBootstrapService adminBootstrap;
+    private final LoanImportService loanImports;
     private final Kudi9jaProperties properties;
 
     public SignupService(
@@ -67,6 +69,7 @@ public class SignupService {
             LedgerService ledger,
             NotificationService notifications,
             AdminBootstrapService adminBootstrap,
+            LoanImportService loanImports,
             Kudi9jaProperties properties) {
         this.drafts = drafts;
         this.users = users;
@@ -77,6 +80,7 @@ public class SignupService {
         this.ledger = ledger;
         this.notifications = notifications;
         this.adminBootstrap = adminBootstrap;
+        this.loanImports = loanImports;
         this.properties = properties;
     }
 
@@ -351,6 +355,11 @@ public class SignupService {
 
         // A wallet at zero and an empty ledger. Nothing is given away.
         ledger.openWallet(saved.getId());
+
+        // Anything lent to this person on paper before they had an account
+        // lands on it now, in the same transaction: the first screen they see
+        // must not say "nothing owed" to somebody who owes.
+        loanImports.claimFor(saved);
 
         legal.acceptAll(
                 saved.getId(),

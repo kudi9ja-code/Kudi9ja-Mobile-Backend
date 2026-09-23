@@ -24,6 +24,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByBvn(String bvn);
 
+    Optional<User> findByBvn(String bvn);
+
     boolean existsByNin(String nin);
 
     /**

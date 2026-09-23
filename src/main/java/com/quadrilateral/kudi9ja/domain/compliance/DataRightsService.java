@@ -17,6 +17,8 @@ import com.quadrilateral.kudi9ja.domain.kyc.OtpPurpose;
 import com.quadrilateral.kudi9ja.domain.kyc.OtpService;
 import com.quadrilateral.kudi9ja.domain.legal.LegalAcceptance;
 import com.quadrilateral.kudi9ja.domain.legal.LegalAcceptanceRepository;
+import com.quadrilateral.kudi9ja.domain.loan.ImportedLoan;
+import com.quadrilateral.kudi9ja.domain.loan.ImportedLoanRepository;
 import com.quadrilateral.kudi9ja.domain.loan.Loan;
 import com.quadrilateral.kudi9ja.domain.loan.LoanRepository;
 import com.quadrilateral.kudi9ja.domain.loan.LoanStatus;
@@ -118,6 +120,7 @@ public class DataRightsService {
     private final WalletTransactionRepository transactions;
     private final SavingsPlanRepository plans;
     private final LoanRepository loans;
+    private final ImportedLoanRepository importedLoans;
     private final PayInClaimRepository claims;
     private final WithdrawalRequestRepository withdrawals;
     private final ThriftCircleRepository circles;
@@ -141,6 +144,7 @@ public class DataRightsService {
             WalletTransactionRepository transactions,
             SavingsPlanRepository plans,
             LoanRepository loans,
+            ImportedLoanRepository importedLoans,
             PayInClaimRepository claims,
             WithdrawalRequestRepository withdrawals,
             ThriftCircleRepository circles,
@@ -162,6 +166,7 @@ public class DataRightsService {
         this.transactions = transactions;
         this.plans = plans;
         this.loans = loans;
+        this.importedLoans = importedLoans;
         this.claims = claims;
         this.withdrawals = withdrawals;
         this.circles = circles;
@@ -686,6 +691,13 @@ public class DataRightsService {
             user.setStatusNote("Erased after the retention period ended.");
             user.setRetainUntil(null);
             users.save(user);
+
+            // A loan entered from the paper records carries the name it was
+            // entered under. The figures stay with the loan; the name goes.
+            for (ImportedLoan imported : importedLoans.findByUserId(user.getId())) {
+                imported.setFullName("Erased");
+                importedLoans.save(imported);
+            }
 
             audit.recordSystem(
                     AuditCategory.COMPLIANCE,
