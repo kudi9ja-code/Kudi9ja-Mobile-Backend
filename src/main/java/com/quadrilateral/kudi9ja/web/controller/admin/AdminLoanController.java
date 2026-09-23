@@ -53,7 +53,7 @@ public class AdminLoanController {
     }
 
     @GetMapping
-    @Operation(summary = "Open loans, filterable by status")
+    @Operation(summary = "The lending book, or one status of it")
     public PageResponse<AdminDtos.AdminLoanRow> queue(
             @RequestParam(required = false) LoanStatus status,
             @RequestParam(defaultValue = "0") int page,

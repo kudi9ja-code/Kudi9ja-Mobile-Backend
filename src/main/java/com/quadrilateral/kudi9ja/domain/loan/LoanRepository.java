@@ -43,6 +43,11 @@ public interface LoanRepository extends JpaRepository<Loan, UUID> {
             """)
     List<Loan> findAllOpen();
 
+    /** The whole book, newest first. What the panel's lending screen lists. */
+    List<Loan> findAllByOrderByRequestedAtDesc();
+
+    List<Loan> findByStatusOrderByRequestedAtDesc(LoanStatus status);
+
     long countByStatus(LoanStatus status);
 
     @Query("""

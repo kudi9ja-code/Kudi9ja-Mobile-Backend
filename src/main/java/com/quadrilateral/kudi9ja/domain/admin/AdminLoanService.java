@@ -76,13 +76,22 @@ public class AdminLoanService {
         this.properties = properties;
     }
 
+    /**
+     * The lending book, or one status of it.
+     *
+     * <p>Without a status this is every loan ever written, not only the open
+     * ones. The panel shows a book and totals it — disbursed, collected, fees —
+     * and a book that quietly omits the loans that were repaid reports a
+     * smaller company than the one that exists. Filtering to a closed status
+     * used to return nothing at all for the same reason.
+     */
     @Transactional(readOnly = true)
     public Page<AdminDtos.AdminLoanRow> queue(LoanStatus status, Pageable pageable) {
         access.requireCanView();
         Instant now = Instant.now();
         List<Loan> rows = status == null
-                ? loans.findAllOpen()
-                : loans.findAllOpen().stream().filter(l -> l.getStatus() == status).toList();
+                ? loans.findAllByOrderByRequestedAtDesc()
+                : loans.findByStatusOrderByRequestedAtDesc(status);
 
         List<AdminDtos.AdminLoanRow> mapped = rows.stream().map(loan -> toRow(loan, now)).toList();
         int from = Math.min((int) pageable.getOffset(), mapped.size());
@@ -232,6 +241,8 @@ public class AdminLoanService {
                 borrower == null ? "" : borrower.getCustomerRef(),
                 loan.getPrincipal(),
                 loan.outstanding(),
+                loan.getAmountRepaid(),
+                loan.getProcessingFee(),
                 loan.getTenureMonths(),
                 loan.getPurpose(),
                 loan.getStatus().name(),

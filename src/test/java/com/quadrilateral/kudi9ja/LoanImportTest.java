@@ -173,6 +173,45 @@ class LoanImportTest {
     }
 
     @Test
+    @DisplayName("the lending book lists an imported loan, repaid ones included")
+    void bookListsImportedLoans() throws Exception {
+        SignUpFlow.Session admin = owner();
+        String bvn = SignUpFlow.nextIdentityNumber(37);
+        SignUpFlow.Session customer = flow.signUp(SignUpFlow.freshEmail("book"), bvn);
+
+        importLoan(admin, Map.of(
+                "bvn", bvn,
+                "fullName", "Chioma Grace Adeyemi",
+                "principal", 80000,
+                "tenureMonths", 2,
+                "flatRate", 0.10,
+                "processingFee", 1600,
+                "purpose", "Equipment",
+                "disbursedAt", Instant.now().minus(300, ChronoUnit.DAYS).toString(),
+                "amountRepaid", 88000));
+
+        String customerId = customer.userId().toString();
+
+        // The book carries what the panel totals: repaid and the fee taken.
+        JsonNode book = getJson("/api/v1/admin/loans", admin);
+        JsonNode row = null;
+        for (JsonNode item : book.get("items")) {
+            if (item.get("customerId").asText().equals(customerId)) {
+                row = item;
+            }
+        }
+        assertThat(row).isNotNull();
+        assertThat(row.get("status").asText()).isEqualTo("REPAID");
+        assertThat(row.get("amountRepaid").decimalValue()).isEqualByComparingTo("88000.00");
+        assertThat(row.get("processingFee").decimalValue()).isEqualByComparingTo("1600.00");
+        assertThat(row.get("outstanding").decimalValue()).isEqualByComparingTo("0.00");
+
+        // A closed status is a filter that answers, not an empty list.
+        assertThat(getJson("/api/v1/admin/loans?status=REPAID", admin).get("items").toString())
+                .contains(customerId);
+    }
+
+    @Test
     @DisplayName("a loan past its due date with a balance arrives overdue")
     void overdueOnArrival() throws Exception {
         SignUpFlow.Session admin = owner();

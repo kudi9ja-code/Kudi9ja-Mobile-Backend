@@ -354,6 +354,16 @@ public final class AdminDtos {
             String customerRef,
             BigDecimal principal,
             BigDecimal outstanding,
+
+            /**
+             * What has come back, and what was taken as a fee. Both are on the
+             * row because the panel's lending book totals them, and a total it
+             * has to assemble from a call per loan is a total it will get
+             * wrong.
+             */
+            BigDecimal amountRepaid,
+            BigDecimal processingFee,
+
             int tenureMonths,
             String purpose,
             String status,
