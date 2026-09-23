@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quadrilateral.kudi9ja.domain.user.UserRepository;
 import com.quadrilateral.kudi9ja.support.CapturingMailer;
 import com.quadrilateral.kudi9ja.support.SignUpFlow;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -231,6 +232,40 @@ class LoanImportTest {
         JsonNode loans = getJson("/api/v1/loans", customer);
         assertThat(loans.get(0).get("status").asText()).isEqualTo("OVERDUE");
         assertThat(loans.get(0).get("outstanding").decimalValue()).isEqualByComparingTo("21500.00");
+    }
+
+    @Test
+    @DisplayName("the book reports the interest the live loans are charged")
+    void interestChargedOnTheOpenBook() throws Exception {
+        SignUpFlow.Session admin = owner();
+        String bvn = SignUpFlow.nextIdentityNumber(38);
+        SignUpFlow.Session customer = flow.signUp(SignUpFlow.freshEmail("interest"), bvn);
+
+        JsonNode bookBefore = getJson("/api/v1/admin/overview", admin).get("book");
+        BigDecimal before = bookBefore.get("totalInterestCharged").decimalValue();
+        BigDecimal paidOutBefore = bookBefore.get("totalInterestPaid").decimalValue();
+
+        // 500,000 at 20% is 100,000 of interest on a running loan.
+        importLoan(admin, Map.of(
+                "bvn", bvn,
+                "fullName", "Chioma Grace Adeyemi",
+                "principal", 500000,
+                "tenureMonths", 4,
+                "flatRate", 0.20,
+                "purpose", "Stock",
+                "disbursedAt", Instant.now().minus(5, ChronoUnit.DAYS).toString(),
+                "amountRepaid", 0));
+
+        assertThat(getJson("/api/v1/loans", customer)).hasSize(1);
+
+        JsonNode book = getJson("/api/v1/admin/overview", admin).get("book");
+        assertThat(book.get("totalInterestCharged").decimalValue())
+                .isEqualByComparingTo(before.add(new BigDecimal("100000.00")));
+
+        // Interest paid out is the savers' side. Lending does not touch it: the
+        // two figures are opposite sides of the rate card, not one number.
+        assertThat(book.get("totalInterestPaid").decimalValue())
+                .isEqualByComparingTo(paidOutBefore);
     }
 
     @Test

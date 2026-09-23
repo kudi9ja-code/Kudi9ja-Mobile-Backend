@@ -65,4 +65,18 @@ public interface LoanRepository extends JpaRepository<Loan, UUID> {
                    com.quadrilateral.kudi9ja.domain.loan.LoanStatus.OVERDUE)
             """)
     BigDecimal totalLentAcrossBook();
+
+    /**
+     * Interest charged on the loans still running: what the open book earns if
+     * it all comes back. Each loan is priced at the rate it was written at, so
+     * this is summed per loan rather than taken off the current rate card.
+     */
+    @Query("""
+            select coalesce(sum(l.principal * l.flatRate), 0)
+              from Loan l
+             where l.status in (
+                   com.quadrilateral.kudi9ja.domain.loan.LoanStatus.ACTIVE,
+                   com.quadrilateral.kudi9ja.domain.loan.LoanStatus.OVERDUE)
+            """)
+    BigDecimal totalInterestChargedAcrossBook();
 }

@@ -80,7 +80,7 @@ public class AdminLoanService {
      * The lending book, or one status of it.
      *
      * <p>Without a status this is every loan ever written, not only the open
-     * ones. The panel shows a book and totals it — disbursed, collected, fees —
+     * ones. The panel shows a book and totals it â€” disbursed, collected, fees â€”
      * and a book that quietly omits the loans that were repaid reports a
      * smaller company than the one that exists. Filtering to a closed status
      * used to return nothing at all for the same reason.

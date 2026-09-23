@@ -282,8 +282,22 @@ public final class AdminDtos {
 
     public record Book(
             BigDecimal totalSaved,
+
+            /** Interest paid <b>to</b> savers. Money the company has given up. */
             BigDecimal totalInterestPaid,
+
             BigDecimal totalLent,
+
+            /**
+             * Interest charged on the loans that are still running.
+             *
+             * <p>What the live book earns if it all comes back — contracted,
+             * not collected. It sits beside {@link #totalInterestPaid} so the
+             * panel shows both sides of the rate card rather than only what
+             * savings cost.
+             */
+            BigDecimal totalInterestCharged,
+
             BigDecimal totalOverdue,
             long activePlans,
             long maturedPlans,
