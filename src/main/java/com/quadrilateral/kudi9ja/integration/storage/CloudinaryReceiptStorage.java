@@ -203,8 +203,87 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
                 }
             }
         }
+
+        // Not where the key says. Ask Cloudinary what it actually holds under
+        // that name, in every place an upload could have landed, and read that.
+        InputStream found = findByListing(key);
+        if (found != null) {
+            return found;
+        }
         log.error("Cloudinary would not return the receipt at {}", key, last);
         throw ApiException.notFound("That receipt");
+    }
+
+    private static final List<String> DELIVERY_TYPES = List.of("authenticated", "upload", "private");
+
+    /**
+     * Finds an object by listing what Cloudinary holds under its public_id,
+     * rather than by assuming how it was stored.
+     *
+     * <p>A bank statement came back "Resource not found" as raw and as image,
+     * with and without a format, while the photographs from the same
+     * application opened. So the file exists under some other name or delivery
+     * type. The listing is by prefix, so it finds the id with or without an
+     * extension, and everything it sees is logged: that is the record of how
+     * the statement was really stored.
+     *
+     * @return the bytes, or null if nothing under that id could be read
+     */
+    private InputStream findByListing(String key) {
+        String id = publicId(key);
+        for (String resourceType : List.of("raw", "image")) {
+            for (String type : DELIVERY_TYPES) {
+                List<Map<String, Object>> resources;
+                try {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> listing = http.get()
+                            .uri(URI.create(API + config.cloudName() + "/resources/" + resourceType
+                                    + "/" + type + "?max_results=10&prefix=" + encode(id)))
+                            .header(HttpHeaders.AUTHORIZATION, basicAuth())
+                            .retrieve()
+                            .body(Map.class);
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> listed = listing == null
+                            ? List.of()
+                            : (List<Map<String, Object>>) listing.getOrDefault("resources", List.of());
+                    resources = listed;
+                } catch (RestClientException e) {
+                    log.warn("Could not list {} {}/{}: {}", id, resourceType, type, e.getMessage());
+                    continue;
+                }
+                for (Map<String, Object> resource : resources) {
+                    String publicId = String.valueOf(resource.get("public_id"));
+                    Object format = resource.get("format");
+                    log.warn("Cloudinary holds {} as {}/{} (format {})", publicId, resourceType, type, format);
+
+                    Map<String, String> params = new TreeMap<>();
+                    long now = Instant.now().getEpochSecond();
+                    params.put("public_id", publicId);
+                    if (format != null && !String.valueOf(format).isBlank()) {
+                        params.put("format", String.valueOf(format));
+                    }
+                    params.put("type", type);
+                    params.put("timestamp", Long.toString(now));
+                    params.put("expires_at", Long.toString(now + DOWNLOAD_WINDOW.toSeconds()));
+                    try {
+                        byte[] bytes = http.get()
+                                .uri(downloadUri(API + config.cloudName() + "/" + resourceType + "/download",
+                                        params, signParameters(params), config.apiKey()))
+                                .retrieve()
+                                .body(byte[].class);
+                        if (bytes != null && bytes.length > 0) {
+                            log.info("Read {} as {}/{} after the usual lookups missed", publicId, resourceType, type);
+                            return new ByteArrayInputStream(bytes);
+                        }
+                    } catch (RestClientException e) {
+                        log.warn("Listed but could not download {} as {}/{}: {}",
+                                publicId, resourceType, type, e.getMessage());
+                    }
+                }
+            }
+        }
+        log.warn("Cloudinary lists nothing readable under {}", id);
+        return null;
     }
 
     @Override
