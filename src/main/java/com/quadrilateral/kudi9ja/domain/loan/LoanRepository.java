@@ -79,4 +79,18 @@ public interface LoanRepository extends JpaRepository<Loan, UUID> {
                    com.quadrilateral.kudi9ja.domain.loan.LoanStatus.OVERDUE)
             """)
     BigDecimal totalInterestChargedAcrossBook();
+
+    /**
+     * Management fees on the loans still running. A fee is not interest: it is
+     * a one-off charge taken off the disbursement, so it is summed on its own
+     * rather than folded into {@link #totalInterestChargedAcrossBook()}.
+     */
+    @Query("""
+            select coalesce(sum(l.processingFee), 0)
+              from Loan l
+             where l.status in (
+                   com.quadrilateral.kudi9ja.domain.loan.LoanStatus.ACTIVE,
+                   com.quadrilateral.kudi9ja.domain.loan.LoanStatus.OVERDUE)
+            """)
+    BigDecimal totalFeesChargedAcrossBook();
 }

@@ -113,6 +113,7 @@ public class AdminOverviewService {
                 Money.of(plans.totalInterestPaidAcrossBook()),
                 Money.of(loans.totalLentAcrossBook()),
                 Money.of(loans.totalInterestChargedAcrossBook()),
+                Money.of(loans.totalFeesChargedAcrossBook()),
                 Money.of(loans.totalOverdueAcrossBook()),
                 plans.countByStatus(SavingsStatus.ACTIVE),
                 plans.countByStatus(SavingsStatus.MATURED),

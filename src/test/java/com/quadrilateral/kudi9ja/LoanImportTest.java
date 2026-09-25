@@ -244,6 +244,7 @@ class LoanImportTest {
         JsonNode bookBefore = getJson("/api/v1/admin/overview", admin).get("book");
         BigDecimal before = bookBefore.get("totalInterestCharged").decimalValue();
         BigDecimal paidOutBefore = bookBefore.get("totalInterestPaid").decimalValue();
+        BigDecimal feesBefore = bookBefore.get("totalFeesCharged").decimalValue();
 
         // 500,000 at 20% is 100,000 of interest on a running loan.
         importLoan(admin, Map.of(
@@ -252,6 +253,7 @@ class LoanImportTest {
                 "principal", 500000,
                 "tenureMonths", 4,
                 "flatRate", 0.20,
+                "processingFee", 7500,
                 "purpose", "Stock",
                 "disbursedAt", Instant.now().minus(5, ChronoUnit.DAYS).toString(),
                 "amountRepaid", 0));
@@ -261,6 +263,10 @@ class LoanImportTest {
         JsonNode book = getJson("/api/v1/admin/overview", admin).get("book");
         assertThat(book.get("totalInterestCharged").decimalValue())
                 .isEqualByComparingTo(before.add(new BigDecimal("100000.00")));
+
+        // The fee is its own figure. Interest above is 100,000 with no fee in it.
+        assertThat(book.get("totalFeesCharged").decimalValue())
+                .isEqualByComparingTo(feesBefore.add(new BigDecimal("7500.00")));
 
         // Interest paid out is the savers' side. Lending does not touch it: the
         // two figures are opposite sides of the rate card, not one number.

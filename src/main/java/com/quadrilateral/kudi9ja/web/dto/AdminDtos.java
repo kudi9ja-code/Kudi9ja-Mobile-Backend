@@ -298,6 +298,13 @@ public final class AdminDtos {
              */
             BigDecimal totalInterestCharged,
 
+            /**
+             * Management fees on the loans that are still running, kept apart
+             * from {@link #totalInterestCharged}: a fee is a one-off charge
+             * taken off the disbursement, not interest.
+             */
+            BigDecimal totalFeesCharged,
+
             BigDecimal totalOverdue,
             long activePlans,
             long maturedPlans,
