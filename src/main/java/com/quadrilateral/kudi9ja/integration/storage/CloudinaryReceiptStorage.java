@@ -182,18 +182,25 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
     public InputStream open(String key) {
         RestClientException last = null;
         for (String resourceType : resourceTypesToRead(key)) {
-            byte[] bytes;
-            try {
-                bytes = http.get()
-                        .uri(privateDownloadUrl(key, resourceType))
-                        .retrieve()
-                        .body(byte[].class);
-            } catch (RestClientException e) {
-                last = e;
-                continue;
-            }
-            if (bytes != null && bytes.length > 0) {
-                return new ByteArrayInputStream(bytes);
+            for (boolean withFormat : formatChoicesFor(resourceType)) {
+                byte[] bytes;
+                try {
+                    bytes = http.get()
+                            .uri(privateDownloadUrl(key, resourceType, withFormat))
+                            .retrieve()
+                            .body(byte[].class);
+                } catch (RestClientException e) {
+                    // Each miss is logged, not only the last: which of these
+                    // Cloudinary refused, and with what, is what tells a
+                    // storage problem apart from a missing file.
+                    log.warn("Cloudinary refused {} as {} ({}): {}",
+                            key, resourceType, withFormat ? "with format" : "no format", e.getMessage());
+                    last = e;
+                    continue;
+                }
+                if (bytes != null && bytes.length > 0) {
+                    return new ByteArrayInputStream(bytes);
+                }
             }
         }
         log.error("Cloudinary would not return the receipt at {}", key, last);
@@ -274,6 +281,17 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
     }
 
     URI privateDownloadUrl(String key, String resourceType) {
+        return privateDownloadUrl(key, resourceType, true);
+    }
+
+    /**
+     * @param withFormat whether to name the format. An image has one and is
+     *                   found by it. A raw file has none — Cloudinary keeps
+     *                   the bytes and never works out what they are — so
+     *                   naming one can send it looking for a file that is not
+     *                   there.
+     */
+    URI privateDownloadUrl(String key, String resourceType, boolean withFormat) {
         long now = Instant.now().getEpochSecond();
 
         // Sorted, because the signature is defined over the parameters in
@@ -281,7 +299,9 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
         // rather than something the next edit has to remember.
         Map<String, String> params = new TreeMap<>();
         params.put("public_id", publicId(key));
-        params.put("format", formatFor(key));
+        if (withFormat) {
+            params.put("format", formatFor(key));
+        }
         params.put("type", "authenticated");
         params.put("timestamp", Long.toString(now));
         params.put("expires_at", Long.toString(now + DOWNLOAD_WINDOW.toSeconds()));
@@ -419,6 +439,18 @@ public class CloudinaryReceiptStorage implements ReceiptStorage {
      */
     static List<String> resourceTypesToRead(String key) {
         return "pdf".equals(formatFor(key)) ? List.of("raw", "image") : List.of(resourceTypeFor(key));
+    }
+
+    /**
+     * The ways to ask for one object, most likely first.
+     *
+     * <p>A raw file is asked for without a format, then with one. Statements
+     * have been raw since locked PDFs had to be stored as they arrived, and
+     * every one of them failed to open: the download named a format that a raw
+     * file does not have. The second try keeps whatever was reading before.
+     */
+    static List<Boolean> formatChoicesFor(String resourceType) {
+        return "raw".equals(resourceType) ? List.of(false, true) : List.of(true);
     }
 
     private static Resource asResource(byte[] content, String filename) {

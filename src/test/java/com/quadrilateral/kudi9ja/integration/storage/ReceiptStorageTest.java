@@ -200,6 +200,20 @@ class ReceiptStorageTest {
         }
 
         /**
+         * A raw file has no format of its own. Naming one on the download sent
+         * Cloudinary looking for a file that was not there, so no bank
+         * statement opened. An image is still asked for by its format.
+         */
+        @Test
+        @DisplayName("a raw file is asked for without a format first")
+        void rawIsReadWithoutAFormatFirst() {
+            assertThat(CloudinaryReceiptStorage.formatChoicesFor("raw"))
+                    .containsExactly(false, true);
+            assertThat(CloudinaryReceiptStorage.formatChoicesFor("image"))
+                    .containsExactly(true);
+        }
+
+        /**
          * The upload body is built with plain Spring types, and this test
          * exists to keep it that way.
          *
