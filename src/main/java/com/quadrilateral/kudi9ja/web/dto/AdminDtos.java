@@ -12,6 +12,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import com.quadrilateral.kudi9ja.domain.loan.RepaymentFrequency;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -386,6 +387,7 @@ public final class AdminDtos {
             BigDecimal processingFee,
 
             int tenureMonths,
+            RepaymentFrequency repaymentFrequency,
             String purpose,
             String status,
             String statusLabel,

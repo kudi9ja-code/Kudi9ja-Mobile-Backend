@@ -1,6 +1,5 @@
 package com.quadrilateral.kudi9ja.domain.loan;
 
-import com.quadrilateral.kudi9ja.common.util.Dates;
 import com.quadrilateral.kudi9ja.common.util.Money;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -81,6 +80,10 @@ public class ImportedLoan {
 
     @Column(name = "tenure_months", nullable = false, updatable = false)
     private int tenureMonths;
+
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    @Column(name = "repayment_frequency", nullable = false, length = 16, updatable = false)
+    private RepaymentFrequency repaymentFrequency = RepaymentFrequency.MONTHLY;
 
     /** The rate that was actually charged, not the rate card's. */
     @Column(name = "flat_rate", nullable = false, precision = 12, scale = 6, updatable = false)
@@ -178,7 +181,7 @@ public class ImportedLoan {
     }
 
     public Instant dueDate() {
-        return Dates.addMonths(disbursedAt, tenureMonths);
+        return RepaymentFrequency.orMonthly(repaymentFrequency).finalDue(disbursedAt, tenureMonths);
     }
 
     public BigDecimal outstanding() {
@@ -203,6 +206,7 @@ public class ImportedLoan {
         loan.setUserId(userId);
         loan.setPrincipal(principal);
         loan.setTenureMonths(tenureMonths);
+        loan.setRepaymentFrequency(RepaymentFrequency.orMonthly(repaymentFrequency));
         loan.setFlatRate(flatRate);
         loan.setProcessingFee(processingFee);
         loan.setTransactionFee(transactionFee());

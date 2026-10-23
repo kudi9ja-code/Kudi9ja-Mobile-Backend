@@ -503,7 +503,7 @@
       "blocks": [
         {
           "type": "text",
-          "text": "The total repayable is divided into **24 or fewer equal monthly instalments**, depending on the tenure you chose. The first falls due one month after disbursement, and each one after it a month later. Your schedule, with every date and amount, is in the app from the moment the loan starts."
+          "text": "When you apply you choose how often to repay: **monthly** or **weekly**. The total repayable is the same either way — it is priced on the tenure in months, not on how often you pay. Monthly, it is divided into one equal instalment for each month of the tenure, the first due one month after disbursement and each after it a month later. Weekly, it is divided into one equal instalment for each week of the tenure (4 for one month, 13 for three, 26 for six, 52 for twelve), the first due seven days after disbursement and each after it seven days later. Your schedule, with every date and amount, is in the app from the moment the loan starts."
         },
         {
           "type": "text",
@@ -789,5 +789,5 @@
       ]
     }
   ],
-  "changeSummary": "You can now repay through Paystack — by card, bank transfer or USSD — and the payment is applied to your loan the moment Paystack confirms it. The receipt-upload route has gone. You also sign this agreement electronically when you open your account. Every loan now also carries a flat ₦2,000 transaction fee, deducted from the disbursement beside the management fee and shown on its own line. There is no longer a 24-hour cancellation: once a loan reaches your wallet it is repaid in full, with interest, though you can still settle early. Paying a loan off early now costs exactly what is still owed: there is no discount for paying early."
+  "changeSummary": "You can now repay through Paystack — by card, bank transfer or USSD — and the payment is applied to your loan the moment Paystack confirms it. The receipt-upload route has gone. You also sign this agreement electronically when you open your account. Every loan now also carries a flat ₦2,000 transaction fee, deducted from the disbursement beside the management fee and shown on its own line. There is no longer a 24-hour cancellation: once a loan reaches your wallet it is repaid in full, with interest, though you can still settle early. Paying a loan off early now costs exactly what is still owed: there is no discount for paying early. You can also choose to repay weekly instead of monthly, for the same total."
 }

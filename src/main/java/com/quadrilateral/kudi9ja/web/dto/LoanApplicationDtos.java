@@ -13,6 +13,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import com.quadrilateral.kudi9ja.domain.loan.RepaymentFrequency;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -121,6 +122,9 @@ public final class LoanApplicationDtos {
             @Max(value = 60, message = "That tenure is not offered.")
             Integer months,
 
+            /** Monthly unless the customer chose weekly. */
+            RepaymentFrequency repaymentFrequency,
+
             @NotBlank(message = "Say what the loan is for.")
             @Size(max = 200, message = "Keep the purpose short.")
             String purpose,
@@ -180,6 +184,7 @@ public final class LoanApplicationDtos {
             UUID id,
             BigDecimal amount,
             int tenureMonths,
+            RepaymentFrequency repaymentFrequency,
             String purpose,
             String businessName,
             String businessAddress,
@@ -198,6 +203,7 @@ public final class LoanApplicationDtos {
                     application.getId(),
                     application.getAmount(),
                     application.getTenureMonths(),
+                    application.getRepaymentFrequency(),
                     application.getPurpose(),
                     application.getBusinessName(),
                     application.getBusinessAddress(),
@@ -221,6 +227,7 @@ public final class LoanApplicationDtos {
             String customerRef,
             BigDecimal amount,
             int tenureMonths,
+            RepaymentFrequency repaymentFrequency,
             String purpose,
             String businessName,
             LoanApplicationStatus status,
@@ -237,6 +244,7 @@ public final class LoanApplicationDtos {
                     application.getCustomerRef(),
                     application.getAmount(),
                     application.getTenureMonths(),
+                    application.getRepaymentFrequency(),
                     application.getPurpose(),
                     application.getBusinessName(),
                     application.getStatus(),
@@ -261,6 +269,7 @@ public final class LoanApplicationDtos {
             String customerRef,
             BigDecimal amount,
             int tenureMonths,
+            RepaymentFrequency repaymentFrequency,
             String purpose,
             String businessName,
             String businessAddress,
@@ -295,6 +304,7 @@ public final class LoanApplicationDtos {
                     application.getCustomerRef(),
                     application.getAmount(),
                     application.getTenureMonths(),
+                    application.getRepaymentFrequency(),
                     application.getPurpose(),
                     application.getBusinessName(),
                     application.getBusinessAddress(),

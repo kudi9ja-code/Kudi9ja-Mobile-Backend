@@ -244,6 +244,7 @@ public class AdminLoanService {
                 loan.getAmountRepaid(),
                 loan.getProcessingFee(),
                 loan.getTenureMonths(),
+                loan.frequency(),
                 loan.getPurpose(),
                 loan.getStatus().name(),
                 loan.getStatus().label(),

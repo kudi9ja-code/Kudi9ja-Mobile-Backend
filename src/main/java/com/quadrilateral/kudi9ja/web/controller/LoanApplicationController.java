@@ -83,6 +83,7 @@ public class LoanApplicationController {
                         new LoanApplicationService.Submission(
                                 form.amount(),
                                 form.months(),
+                                form.repaymentFrequency(),
                                 form.purpose(),
                                 form.businessName(),
                                 form.businessAddress(),

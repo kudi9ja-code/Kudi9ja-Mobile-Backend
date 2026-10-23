@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import com.quadrilateral.kudi9ja.domain.loan.RepaymentFrequency;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -49,7 +50,10 @@ public final class LoanDtos {
             BigDecimal costPerMonthPct,
             BigDecimal totalInterest,
             BigDecimal totalRepayable,
-            BigDecimal monthlyRepayment,
+            RepaymentFrequency repaymentFrequency,
+            String repaymentFrequencyLabel,
+            int installmentCount,
+            BigDecimal installmentAmount,
             BigDecimal processingFee,
             String processingFeeBasis,
             BigDecimal transactionFee,
@@ -103,7 +107,10 @@ public final class LoanDtos {
             Instant settledAt,
             BigDecimal totalInterest,
             BigDecimal totalRepayable,
-            BigDecimal monthlyRepayment,
+            RepaymentFrequency repaymentFrequency,
+            String repaymentFrequencyLabel,
+            int installmentCount,
+            BigDecimal installmentAmount,
             BigDecimal amountRepaid,
             BigDecimal rebateGranted,
             BigDecimal outstanding,
@@ -143,7 +150,10 @@ public final class LoanDtos {
                     loan.getSettledAt(),
                     loan.totalInterest(),
                     loan.totalRepayable(),
-                    loan.monthlyRepayment(),
+                    loan.frequency(),
+                    loan.frequency().label(),
+                    loan.installmentCount(),
+                    loan.installmentAmount(),
                     loan.getAmountRepaid(),
                     loan.getRebateGranted(),
                     loan.outstanding(),

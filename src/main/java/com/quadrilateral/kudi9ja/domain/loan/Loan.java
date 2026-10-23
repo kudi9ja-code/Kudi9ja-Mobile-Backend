@@ -1,6 +1,5 @@
 package com.quadrilateral.kudi9ja.domain.loan;
 
-import com.quadrilateral.kudi9ja.common.util.Dates;
 import com.quadrilateral.kudi9ja.common.util.Money;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -58,6 +57,11 @@ public class Loan {
 
     @Column(name = "tenure_months", nullable = false, updatable = false)
     private int tenureMonths;
+
+    /** Monthly or weekly instalments. Chosen when applying; never changes. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "repayment_frequency", nullable = false, length = 16, updatable = false)
+    private RepaymentFrequency repaymentFrequency = RepaymentFrequency.MONTHLY;
 
     /**
      * The flat rate charged on the principal, fixed at the rate published for
@@ -130,13 +134,23 @@ public class Loan {
         return Money.add(principal, totalInterest());
     }
 
+    public RepaymentFrequency frequency() {
+        return RepaymentFrequency.orMonthly(repaymentFrequency);
+    }
+
+    /** How many instalments: one a month, or one a week, over the tenure. */
+    public int installmentCount() {
+        return frequency().installments(tenureMonths);
+    }
+
     /** One equal instalment. */
-    public BigDecimal monthlyRepayment() {
-        if (tenureMonths <= 0) {
+    public BigDecimal installmentAmount() {
+        int count = installmentCount();
+        if (count <= 0) {
             return Money.zero();
         }
         return Money.of(Money.calc(totalRepayable())
-                .divide(BigDecimal.valueOf(tenureMonths), Money.CALC_SCALE, RoundingMode.HALF_UP));
+                .divide(BigDecimal.valueOf(count), Money.CALC_SCALE, RoundingMode.HALF_UP));
     }
 
     /** What is still owed, after repayments and any rebate. Floored at zero. */
@@ -170,28 +184,30 @@ public class Loan {
     /**
      * The full schedule, derived from what has actually been repaid.
      *
-     * <p>Equal instalments, the nth due a calendar month after disbursement.
+     * <p>Equal instalments, the nth due n calendar months — or, on a weekly
+     * loan, n weeks — after disbursement.
      * Each instalment's status comes from pouring what has been repaid into
      * them oldest-first — which is why a schedule is derived rather than
      * stored: it can never disagree with the ledger.
      */
     public List<Installment> schedule(Instant now) {
-        List<Installment> schedule = new ArrayList<>(tenureMonths);
-        if (disbursedAt == null || tenureMonths <= 0) {
+        int count = installmentCount();
+        List<Installment> schedule = new ArrayList<>(Math.max(count, 0));
+        if (disbursedAt == null || count <= 0) {
             return schedule;
         }
 
-        BigDecimal each = monthlyRepayment();
+        BigDecimal each = installmentAmount();
         BigDecimal covered = Money.add(amountRepaid, rebateGranted);
 
-        for (int i = 0; i < tenureMonths; i++) {
-            Instant due = Dates.addMonths(disbursedAt, i + 1);
+        for (int i = 0; i < count; i++) {
+            Instant due = frequency().due(disbursedAt, i + 1);
 
             // The last instalment absorbs whatever rounding left over, so the
             // schedule always sums to exactly the total repayable.
-            BigDecimal amount = i == tenureMonths - 1
+            BigDecimal amount = i == count - 1
                     ? Money.subtract(totalRepayable(),
-                            Money.multiply(each, BigDecimal.valueOf(tenureMonths - 1L)))
+                            Money.multiply(each, BigDecimal.valueOf(count - 1L)))
                     : each;
 
             BigDecimal paidHere = Money.min(Money.floorAtZero(covered), amount);

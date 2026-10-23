@@ -4,6 +4,7 @@ import com.quadrilateral.kudi9ja.common.util.Dates;
 import com.quadrilateral.kudi9ja.common.util.Money;
 import com.quadrilateral.kudi9ja.domain.savings.AutoFrequency;
 import com.quadrilateral.kudi9ja.domain.settings.PlatformSettings;
+import com.quadrilateral.kudi9ja.domain.loan.RepaymentFrequency;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -107,13 +108,18 @@ public final class Finance {
         return Money.add(principal, loanInterest(s, principal, months));
     }
 
-    /** One equal instalment. The tenure is at least one month by validation. */
-    public static BigDecimal loanMonthly(PlatformSettings s, BigDecimal principal, int months) {
-        if (months <= 0) {
+    /**
+     * One equal instalment: the same total, split into one a month or one a
+     * week. How often a borrower pays never changes what the loan costs.
+     */
+    public static BigDecimal loanInstallment(
+            PlatformSettings s, BigDecimal principal, int months, RepaymentFrequency frequency) {
+        int count = RepaymentFrequency.orMonthly(frequency).installments(months);
+        if (count <= 0) {
             return Money.zero();
         }
         return Money.of(Money.calc(loanTotal(s, principal, months))
-                .divide(BigDecimal.valueOf(months), Money.CALC_SCALE, RoundingMode.HALF_UP));
+                .divide(BigDecimal.valueOf(count), Money.CALC_SCALE, RoundingMode.HALF_UP));
     }
 
     /**

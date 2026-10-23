@@ -7,6 +7,7 @@ import com.quadrilateral.kudi9ja.web.dto.LoanDtos;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import com.quadrilateral.kudi9ja.domain.loan.RepaymentFrequency;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -71,8 +72,9 @@ public class LoanController {
     @Operation(summary = "Fee, net disbursement, interest, total and the full schedule")
     public LoanDtos.QuoteResponse quote(
             @RequestParam BigDecimal amount,
-            @RequestParam int months) {
-        return loans.quote(amount, months);
+            @RequestParam int months,
+            @RequestParam(defaultValue = "MONTHLY") RepaymentFrequency frequency) {
+        return loans.quote(amount, months, frequency);
     }
 
     /**

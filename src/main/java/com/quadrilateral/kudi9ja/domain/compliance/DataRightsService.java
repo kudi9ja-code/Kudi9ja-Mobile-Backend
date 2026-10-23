@@ -443,6 +443,7 @@ public class DataRightsService {
                         loan.getId(),
                         loan.getPrincipal(),
                         loan.getTenureMonths(),
+                        loan.frequency().label(),
                         loan.getFlatRate(),
                         loan.totalInterest(),
                         loan.totalRepayable(),

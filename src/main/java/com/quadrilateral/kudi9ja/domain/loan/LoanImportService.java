@@ -127,6 +127,7 @@ public class LoanImportService {
         row.setPhone(request.phone() == null || request.phone().isBlank() ? null : request.phone().trim());
         row.setPrincipal(principal);
         row.setTenureMonths(request.tenureMonths());
+        row.setRepaymentFrequency(RepaymentFrequency.orMonthly(request.repaymentFrequency()));
         row.setFlatRate(request.flatRate());
         row.setProcessingFee(fee);
         row.setTransactionFee(transactionFee);

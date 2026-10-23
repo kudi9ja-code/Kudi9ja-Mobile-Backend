@@ -221,6 +221,7 @@ public final class DataRightsDtos {
             UUID id,
             BigDecimal principal,
             int tenureMonths,
+            String repaymentFrequency,
             BigDecimal flatRate,
             BigDecimal totalInterest,
             BigDecimal totalRepayable,

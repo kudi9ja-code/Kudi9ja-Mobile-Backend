@@ -310,6 +310,41 @@ class LoanApplicationTest {
         }
 
         @Test
+        @DisplayName("a weekly application becomes a weekly loan: same total, one instalment every seven days")
+        void weeklyRepayments() throws Exception {
+            SignUpFlow.Session admin = owner();
+            SignUpFlow.Session customer = fundedCustomer(admin);
+
+            JsonNode application = borrowing.apply(customer, "200000", 3, "Stock for the shop", "WEEKLY");
+            assertThat(application.get("repaymentFrequency").asText()).isEqualTo("WEEKLY");
+            borrowing.approve(admin, application.get("id").asText());
+
+            JsonNode loan = getJson("/api/v1/loans", customer).get(0);
+            assertThat(loan.get("repaymentFrequency").asText()).isEqualTo("WEEKLY");
+            // Priced exactly as the monthly loan would be.
+            assertThat(loan.get("totalRepayable").decimalValue()).isEqualByComparingTo("250000.00");
+            // Three months hold thirteen weeks.
+            assertThat(loan.get("installmentCount").asInt()).isEqualTo(13);
+            JsonNode schedule = loan.get("schedule");
+            assertThat(schedule).hasSize(13);
+            BigDecimal sum = BigDecimal.ZERO;
+            for (JsonNode row : schedule) {
+                sum = sum.add(row.get("amount").decimalValue());
+            }
+            assertThat(sum).isEqualByComparingTo("250000.00");
+            java.time.Instant first = java.time.Instant.parse(schedule.get(0).get("dueDate").asText());
+            java.time.Instant second = java.time.Instant.parse(schedule.get(1).get("dueDate").asText());
+            assertThat(java.time.Duration.between(first, second).toDays()).isEqualTo(7);
+            assertThat(loan.get("dueDate").asText()).isEqualTo(schedule.get(12).get("dueDate").asText());
+
+            // The quote says the same before anybody applies.
+            JsonNode quote = getJson("/api/v1/loans/quote?amount=200000&months=3&frequency=WEEKLY", customer);
+            assertThat(quote.get("installmentCount").asInt()).isEqualTo(13);
+            assertThat(quote.get("totalRepayable").decimalValue()).isEqualByComparingTo("250000.00");
+            assertThat(quote.get("installmentAmount").decimalValue()).isEqualByComparingTo("19230.77");
+        }
+
+        @Test
         @DisplayName("the same application cannot be approved twice")
         void approvalIsOnce() throws Exception {
             SignUpFlow.Session admin = owner();

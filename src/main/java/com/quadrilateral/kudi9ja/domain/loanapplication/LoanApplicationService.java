@@ -15,6 +15,7 @@ import com.quadrilateral.kudi9ja.domain.user.AuthService;
 import com.quadrilateral.kudi9ja.domain.user.User;
 import com.quadrilateral.kudi9ja.domain.user.UserRepository;
 import com.quadrilateral.kudi9ja.integration.storage.ReceiptStorage;
+import com.quadrilateral.kudi9ja.domain.loan.RepaymentFrequency;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -103,6 +104,7 @@ public class LoanApplicationService {
     public record Submission(
             BigDecimal amount,
             int months,
+            RepaymentFrequency frequency,
             String purpose,
             String businessName,
             String businessAddress,
@@ -158,6 +160,7 @@ public class LoanApplicationService {
         application.setCustomerRef(user.getCustomerRef());
         application.setAmount(Money.of(submission.amount()));
         application.setTenureMonths(submission.months());
+        application.setRepaymentFrequency(RepaymentFrequency.orMonthly(submission.frequency()));
         application.setPurpose(submission.purpose().trim());
         application.setBusinessName(submission.businessName().trim());
         application.setBusinessAddress(submission.businessAddress().trim());
@@ -294,6 +297,7 @@ public class LoanApplicationService {
         Loan loan = loans.disburse(
                 application.getUserId(),
                 assessed,
+                application.getRepaymentFrequency(),
                 application.getPurpose(),
                 actor.name());
 

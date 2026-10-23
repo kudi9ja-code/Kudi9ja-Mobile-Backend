@@ -14,6 +14,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import com.quadrilateral.kudi9ja.domain.loan.RepaymentFrequency;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -56,6 +57,9 @@ public final class LoanImportDtos {
             @Min(value = 1, message = "The tenure is at least one month.")
             @Max(value = 60, message = "The tenure is at most sixty months.")
             int tenureMonths,
+
+            /** How often they pay back. Monthly if left out. */
+            RepaymentFrequency repaymentFrequency,
 
             // The rate card runs past 100% at the long tenures (134% over 24
             // months), so the ceiling sits above it. It is still low enough to
@@ -204,6 +208,7 @@ public final class LoanImportDtos {
             String phone,
             BigDecimal principal,
             int tenureMonths,
+            RepaymentFrequency repaymentFrequency,
             BigDecimal flatRate,
             BigDecimal processingFee,
             BigDecimal transactionFee,
@@ -258,6 +263,7 @@ public final class LoanImportDtos {
                     owner != null ? owner.getPhone() : row.getPhone(),
                     row.getPrincipal(),
                     row.getTenureMonths(),
+                    RepaymentFrequency.orMonthly(row.getRepaymentFrequency()),
                     row.getFlatRate(),
                     row.getProcessingFee(),
                     row.transactionFee(),

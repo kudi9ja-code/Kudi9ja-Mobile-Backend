@@ -2,7 +2,6 @@ package com.quadrilateral.kudi9ja.domain.loan;
 
 import com.quadrilateral.kudi9ja.common.error.ApiException;
 import com.quadrilateral.kudi9ja.common.error.ErrorCode;
-import com.quadrilateral.kudi9ja.common.util.Dates;
 import com.quadrilateral.kudi9ja.common.util.Money;
 import com.quadrilateral.kudi9ja.domain.notification.NotificationService;
 import com.quadrilateral.kudi9ja.domain.notification.NotifyKind;
@@ -80,9 +79,10 @@ public class LoanService {
      * be shown one figure and charged another.
      */
     @Transactional(readOnly = true)
-    public LoanDtos.QuoteResponse quote(BigDecimal amount, int months) {
+    public LoanDtos.QuoteResponse quote(BigDecimal amount, int months, RepaymentFrequency frequency) {
         PlatformSettings s = settings.currentReadOnly();
         BigDecimal principal = Money.of(amount);
+        frequency = RepaymentFrequency.orMonthly(frequency);
 
         if (months < 1 || months > s.getMaxLoanTenureMonths()) {
             throw new ApiException(
@@ -104,6 +104,7 @@ public class LoanService {
         Loan preview = new Loan();
         preview.setPrincipal(principal);
         preview.setTenureMonths(months);
+        preview.setRepaymentFrequency(frequency);
         preview.setFlatRate(rate);
         preview.setProcessingFee(fee);
         preview.setTransactionFee(transactionFee);
@@ -123,13 +124,16 @@ public class LoanService {
                 costPerMonthPct(rate, months),
                 interest,
                 total,
-                Finance.loanMonthly(s, principal, months),
+                frequency,
+                frequency.label(),
+                frequency.installments(months),
+                Finance.loanInstallment(s, principal, months, frequency),
                 fee,
                 Finance.processingFeeBasis(s, principal),
                 transactionFee,
                 Finance.netDisbursed(s, principal),
                 schedule.isEmpty() ? null : schedule.get(0).dueDate(),
-                Dates.addMonths(now, months),
+                frequency.finalDue(now, months),
                 schedule,
                 withinLimits,
                 withinLimits
@@ -249,7 +253,9 @@ public class LoanService {
      *                  who lent
      */
     @Transactional
-    public Loan disburse(UUID userId, Assessed assessed, String purpose, String decidedBy) {
+    public Loan disburse(
+            UUID userId, Assessed assessed, RepaymentFrequency frequency, String purpose, String decidedBy) {
+        frequency = RepaymentFrequency.orMonthly(frequency);
         PlatformSettings s = settings.currentReadOnly();
         BigDecimal principal = assessed.principal();
         int months = assessed.months();
@@ -264,6 +270,7 @@ public class LoanService {
         loan.setUserId(userId);
         loan.setPrincipal(principal);
         loan.setTenureMonths(months);
+        loan.setRepaymentFrequency(frequency);
         // Frozen here, for the life of the loan.
         loan.setFlatRate(rate);
         loan.setProcessingFee(fee);
@@ -271,7 +278,7 @@ public class LoanService {
         loan.setPurpose(purpose.trim());
         loan.setRequestedAt(now);
         loan.setDisbursedAt(now);
-        loan.setDueDate(Dates.addMonths(now, months));
+        loan.setDueDate(frequency.finalDue(now, months));
         loan.setAmountRepaid(Money.zero());
         loan.setRebateGranted(Money.zero());
         loan.setStatus(LoanStatus.ACTIVE);

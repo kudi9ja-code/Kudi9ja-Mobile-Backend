@@ -16,6 +16,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import com.quadrilateral.kudi9ja.domain.loan.RepaymentFrequency;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -94,6 +95,10 @@ public class LoanApplication {
 
     @Column(name = "tenure_months", nullable = false, updatable = false)
     private int tenureMonths;
+
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    @Column(name = "repayment_frequency", nullable = false, length = 16, updatable = false)
+    private RepaymentFrequency repaymentFrequency = RepaymentFrequency.MONTHLY;
 
     @Column(name = "purpose", nullable = false, length = 200, updatable = false)
     private String purpose;

@@ -57,16 +57,27 @@ public final class BorrowFlow {
         return List.of(guarantor("Adaeze Nwosu", "08031234567", "22222222222"));
     }
 
-    /** Submits an application and returns the created row. */
+    /** Submits an application, repaid monthly, and returns the created row. */
     public JsonNode apply(
             SignUpFlow.Session customer,
             String amount,
             int months,
             String purpose) throws Exception {
+        return apply(customer, amount, months, purpose, "MONTHLY");
+    }
+
+    /** Submits an application repaid {@code frequency} — MONTHLY or WEEKLY. */
+    public JsonNode apply(
+            SignUpFlow.Session customer,
+            String amount,
+            int months,
+            String purpose,
+            String frequency) throws Exception {
 
         Map<String, Object> form = Map.of(
                 "amount", new BigDecimal(amount),
                 "months", months,
+                "repaymentFrequency", frequency,
                 "purpose", purpose,
                 "businessName", "Chioma Grace Provisions",
                 "businessAddress", "14 Adeola Odeku Street, Victoria Island, Lagos",
