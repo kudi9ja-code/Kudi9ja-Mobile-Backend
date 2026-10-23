@@ -22,6 +22,10 @@ import org.springframework.test.web.servlet.MvcResult;
  */
 public final class SignUpFlow {
 
+    /** A one-pixel PNG: the smallest real signature image. */
+    public static final String SIGNATURE =
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
     /** The password every test account is opened with. */
     public static final String PASSWORD = "Correct-Horse-9ja!";
 
@@ -110,7 +114,9 @@ public final class SignUpFlow {
                                 // The versions in force, the same ones the app
                                 // carries. A stale number here is refused.
                                 "acceptedVersions", Map.of(
-                                        "TERMS", "1.1", "PRIVACY", "1.1", "LENDING", "1.0")))))
+                                        "TERMS", "1.1", "PRIVACY", "1.1", "LENDING", "1.0"),
+                                // Every account is signed for, as on the website.
+                                "signature", Map.of("image", SIGNATURE, "typedName", "Chioma Grace Adeyemi")))))
                 .andExpect(status().isCreated())
                 .andReturn();
 

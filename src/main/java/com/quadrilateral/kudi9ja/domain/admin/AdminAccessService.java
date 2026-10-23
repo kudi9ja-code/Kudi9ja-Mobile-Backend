@@ -68,6 +68,12 @@ public class AdminAccessService {
     }
 
     /** Every admin may look. Being watched is the point of the audit log. */
+    /** Downloading reports: a bulk copy of customers' data, so owners and administrators only. */
+    public AdminUser requireCanExport() {
+        return requirePermission(AdminRole::canEditSettings,
+                "Only an owner or an administrator can download reports.");
+    }
+
     public AdminUser requireCanView() {
         return require();
     }

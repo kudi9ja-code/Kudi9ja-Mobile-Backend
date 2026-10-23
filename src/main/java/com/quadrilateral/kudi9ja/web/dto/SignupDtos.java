@@ -124,7 +124,8 @@ public final class SignupDtos {
             @NotNull(message = "You have to accept all three documents to open an account.")
             Boolean accepted,
 
-            /** The signature drawn beside the acceptance. Optional for older clients. */
+            /** The signature drawn beside the acceptance. Required: no account opens without one. */
+            @NotNull(message = "Draw your signature to sign the agreements.")
             @jakarta.validation.Valid
             SignatureInput signature) {
     }

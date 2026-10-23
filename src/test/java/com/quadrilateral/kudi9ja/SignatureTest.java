@@ -111,10 +111,22 @@ class SignatureTest {
     }
 
     @Test
-    @DisplayName("an older client that sends no signature still opens an account")
-    void optionalForOlderClients() throws Exception {
-        SignUpFlow.Session customer = flow.signUp(SignUpFlow.freshEmail("nosig"));
-        assertThat(getJson("/api/v1/me/legal/signatures", customer)).isEmpty();
+    @DisplayName("no account opens without a signature")
+    void signatureRequired() throws Exception {
+        String email = SignUpFlow.freshEmail("nosig");
+        String draftId = flow.prepareDraft(email, SignUpFlow.nextIdentityNumber(77));
+        MvcResult refused = mvc.perform(post("/api/v1/auth/signup/{id}/complete", draftId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Device", "Integration test")
+                        .content(json.writeValueAsString(Map.of("accepted", true, "acceptedVersions", VERSIONS))))
+                .andReturn();
+        assertThat(refused.getResponse().getStatus()).isEqualTo(400);
+        assertThat(refused.getResponse().getContentAsString()).contains("signature");
+        assertThat(users.findByEmailIgnoreCase(email)).isEmpty();
+
+        // Every account that does open has its signature on record.
+        SignUpFlow.Session customer = flow.signUp(SignUpFlow.freshEmail("withsig"));
+        assertThat(getJson("/api/v1/me/legal/signatures", customer)).hasSize(1);
     }
 
     // -- Plumbing -----------------------------------------------------------

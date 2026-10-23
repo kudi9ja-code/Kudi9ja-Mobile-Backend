@@ -328,9 +328,7 @@ public class SignupService {
 
         // The signature is checked before anything is created, so a bad one
         // costs nothing but a redraw.
-        byte[] signaturePng = request.signature() == null
-                ? null
-                : signatures.validate(request.signature(), draft.getFullName());
+        byte[] signaturePng = signatures.validate(request.signature(), draft.getFullName());
 
         // Re-check the things that could have changed while the wizard ran.
         User waiting = users.findByBvn(draft.getBvn()).filter(SignupService::isWaiting).orElse(null);
