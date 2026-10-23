@@ -1,6 +1,7 @@
 package com.quadrilateral.kudi9ja.domain.loan;
 
 import com.quadrilateral.kudi9ja.common.util.Money;
+import com.quadrilateral.kudi9ja.finance.Finance;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -78,6 +79,28 @@ public class Loan {
     @Column(name = "transaction_fee", nullable = false, precision = 19, scale = 2, updatable = false)
     private BigDecimal transactionFee = BigDecimal.ZERO;
 
+    /**
+     * How many instalments. Fixed on the day the loan is paid out, because a
+     * weekly count follows the calendar from that day.
+     */
+    @Column(name = "installment_count", nullable = false, updatable = false)
+    private Integer installmentCount;
+
+    /**
+     * The transaction fee on each repayment, as a fraction of the instalment:
+     * 0.02 for 2%. Frozen at disbursement. Zero on loans priced before it.
+     */
+    @Column(name = "repayment_fee_rate", nullable = false, precision = 12, scale = 6, updatable = false)
+    private BigDecimal repaymentFeeRate = BigDecimal.ZERO;
+
+    /** What the transaction fees on all the instalments add up to. Part of what is repaid. */
+    @Column(name = "repayment_fees", nullable = false, precision = 19, scale = 2, updatable = false)
+    private BigDecimal repaymentFees = BigDecimal.ZERO;
+
+    /** Priced in whole naira, every amount rounded up. True of every loan since the repayment fee. */
+    @Column(name = "whole_naira", nullable = false, updatable = false)
+    private boolean wholeNaira;
+
     @Column(name = "purpose", nullable = false, length = 200)
     private String purpose;
 
@@ -126,12 +149,32 @@ public class Loan {
 
     // Derived ----------------------------------------------------------------
 
+    /** Flat interest on the principal; in whole naira, rounded up, on loans priced in naira. */
     public BigDecimal totalInterest() {
-        return Money.multiply(principal, flatRate);
+        if (!wholeNaira) {
+            return Money.multiply(principal, flatRate);
+        }
+        BigDecimal loanTotal = Money.calc(principal).add(Money.calc(principal).multiply(flatRate))
+                .setScale(0, RoundingMode.CEILING);
+        return Money.subtract(loanTotal, principal);
     }
 
-    public BigDecimal totalRepayable() {
+    /** The loan and its interest, before any transaction fee. */
+    public BigDecimal loanAndInterest() {
         return Money.add(principal, totalInterest());
+    }
+
+    /** Everything the borrower repays: the loan, the interest, and the transaction fee on every instalment. */
+    public BigDecimal totalRepayable() {
+        return Money.add(loanAndInterest(), repaymentFees());
+    }
+
+    public BigDecimal repaymentFees() {
+        return repaymentFees == null ? Money.zero() : Money.of(repaymentFees);
+    }
+
+    public BigDecimal repaymentFeeRate() {
+        return repaymentFeeRate == null ? BigDecimal.ZERO : repaymentFeeRate;
     }
 
     public RepaymentFrequency frequency() {
@@ -140,17 +183,39 @@ public class Loan {
 
     /** How many instalments: one a month, or one a week, over the tenure. */
     public int installmentCount() {
-        return frequency().installments(tenureMonths);
+        if (installmentCount != null) {
+            return installmentCount;
+        }
+        return frequency().installments(disbursedAt != null ? disbursedAt : Instant.now(), tenureMonths);
     }
 
-    /** One equal instalment. */
+    /** Each instalment's share of the loan and interest, and the transaction fee on it. */
+    public List<Finance.InstalmentPart> instalmentPlan() {
+        return Finance.instalmentPlan(loanAndInterest(), installmentCount(), repaymentFeeRate(), wholeNaira);
+    }
+
+    /** One instalment, fee included. The last can be a little smaller: it takes the rounding. */
     public BigDecimal installmentAmount() {
-        int count = installmentCount();
-        if (count <= 0) {
-            return Money.zero();
+        List<Finance.InstalmentPart> plan = instalmentPlan();
+        return plan.isEmpty() ? Money.zero() : plan.get(0).total();
+    }
+
+    /**
+     * Fixes how this loan is repaid, on the day it is paid out: how many
+     * instalments from {@code start}, the transaction fee rate on each, and
+     * what those fees come to. Every amount is in whole naira, rounded up.
+     */
+    public void fixRepaymentTerms(Instant start, BigDecimal feeRate) {
+        this.wholeNaira = true;
+        this.repaymentFeeRate = feeRate == null ? BigDecimal.ZERO : feeRate;
+        this.installmentCount = frequency().installments(start, tenureMonths);
+        this.repaymentFees = Money.zero();
+        BigDecimal fees = Money.zero();
+        for (Finance.InstalmentPart part : instalmentPlan()) {
+            fees = Money.add(fees, part.fee());
         }
-        return Money.of(Money.calc(totalRepayable())
-                .divide(BigDecimal.valueOf(count), Money.CALC_SCALE, RoundingMode.HALF_UP));
+        this.repaymentFees = fees;
+        this.dueDate = frequency().due(start, this.installmentCount);
     }
 
     /** What is still owed, after repayments and any rebate. Floored at zero. */
@@ -197,18 +262,15 @@ public class Loan {
             return schedule;
         }
 
-        BigDecimal each = installmentAmount();
+        // The last instalment absorbs whatever rounding left over, so the
+        // schedule always sums to exactly the total repayable.
+        List<Finance.InstalmentPart> plan = instalmentPlan();
         BigDecimal covered = Money.add(amountRepaid, rebateGranted);
 
         for (int i = 0; i < count; i++) {
             Instant due = frequency().due(disbursedAt, i + 1);
-
-            // The last instalment absorbs whatever rounding left over, so the
-            // schedule always sums to exactly the total repayable.
-            BigDecimal amount = i == count - 1
-                    ? Money.subtract(totalRepayable(),
-                            Money.multiply(each, BigDecimal.valueOf(count - 1L)))
-                    : each;
+            Finance.InstalmentPart part = plan.get(i);
+            BigDecimal amount = part.total();
 
             BigDecimal paidHere = Money.min(Money.floorAtZero(covered), amount);
             covered = Money.subtract(covered, paidHere);
@@ -224,7 +286,7 @@ public class Loan {
                 status = InstallmentStatus.UPCOMING;
             }
 
-            schedule.add(new Installment(i + 1, due, amount, paidHere, status));
+            schedule.add(new Installment(i + 1, due, amount, paidHere, status, part.fee()));
         }
         return schedule;
     }

@@ -117,6 +117,11 @@ public class LoanApplicationService {
             String pin) {
     }
 
+    /** Whether this customer borrows on the loan-group terms. */
+    public boolean groupPricing(UUID userId) {
+        return loans.termsFor(userId).group();
+    }
+
     /** One file as it arrived, before it has anywhere to live. */
     public record Upload(String filename, String contentType, byte[] content) {
     }
@@ -151,7 +156,7 @@ public class LoanApplicationService {
         // bounds. These refuse now rather than after the documents are in.
         // Nothing else does: within them, the amount is the customer's to ask
         // and the admin's to judge.
-        loans.assess(userId, submission.amount(), submission.months());
+        loans.assess(userId, submission.amount(), submission.months(), submission.frequency());
 
         LoanApplication application = new LoanApplication();
         application.setId(UUID.randomUUID());
@@ -292,7 +297,8 @@ public class LoanApplicationService {
         LoanApplication application = requirePending(applicationId);
 
         LoanService.Assessed assessed = loans.assess(
-                application.getUserId(), application.getAmount(), application.getTenureMonths());
+                application.getUserId(), application.getAmount(), application.getTenureMonths(),
+                application.getRepaymentFrequency());
 
         Loan loan = loans.disburse(
                 application.getUserId(),

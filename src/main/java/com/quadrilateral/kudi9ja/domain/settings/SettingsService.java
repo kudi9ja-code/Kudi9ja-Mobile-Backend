@@ -99,6 +99,7 @@ public class SettingsService {
         // The map came off a detached parent; copy it so JPA writes a fresh
         // collection against the new version rather than moving the old rows.
         draft.setLoanRates(new LinkedHashMap<>(draft.getLoanRates()));
+        draft.setGroupLoanRates(new LinkedHashMap<>(draft.getGroupLoanRates()));
 
         PlatformSettings saved = repository.save(draft);
 

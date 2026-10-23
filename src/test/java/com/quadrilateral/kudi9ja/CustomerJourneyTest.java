@@ -395,7 +395,14 @@ class CustomerJourneyTest {
         JsonNode quote = getJson("/api/v1/loans/quote?amount=200000&months=3", customer);
         assertThat(quote.get("processingFee").decimalValue()).isEqualByComparingTo("5000.00");
         assertThat(quote.get("totalInterest").decimalValue()).isEqualByComparingTo("50000.00");
-        assertThat(quote.get("totalRepayable").decimalValue()).isEqualByComparingTo("250000.00");
+        // ₦250,000 in three monthly instalments, rounded up to the naira — ₦83,334, ₦83,334, ₦83,332 —
+        // each with a 2% transaction fee rounded up: ₦1,667 three times.
+        assertThat(quote.get("loanAndInterest").decimalValue()).isEqualByComparingTo("250000.00");
+        assertThat(quote.get("installmentBase").decimalValue()).isEqualByComparingTo("83334.00");
+        assertThat(quote.get("installmentFee").decimalValue()).isEqualByComparingTo("1667.00");
+        assertThat(quote.get("installmentAmount").decimalValue()).isEqualByComparingTo("85001.00");
+        assertThat(quote.get("totalRepaymentFees").decimalValue()).isEqualByComparingTo("5001.00");
+        assertThat(quote.get("totalRepayable").decimalValue()).isEqualByComparingTo("255001.00");
 
         BigDecimal before = balanceOf(customer);
         JsonNode application = borrowing.apply(customer, "200000", 3, "Stock for the shop");
@@ -404,11 +411,11 @@ class CustomerJourneyTest {
         borrowing.approve(admin, application.get("id").asText());
         JsonNode loan = getJson("/api/v1/loans", customer).get(0);
 
-        // ₦200,000 in; the ₦5,000 management fee and ₦2,000 transaction fee straight out.
-        // Neither fee joins the debt.
-        assertThat(balanceOf(customer)).isEqualByComparingTo(before.add(new BigDecimal("193000")));
+        // ₦200,000 in; only the ₦5,000 management fee straight out. The
+        // transaction fee is paid with each repayment instead.
+        assertThat(balanceOf(customer)).isEqualByComparingTo(before.add(new BigDecimal("195000")));
         assertThat(loan.get("principal").decimalValue()).isEqualByComparingTo("200000.00");
-        assertThat(loan.get("outstanding").decimalValue()).isEqualByComparingTo("250000.00");
+        assertThat(loan.get("outstanding").decimalValue()).isEqualByComparingTo("255001.00");
 
         JsonNode ledger = getJson("/api/v1/transactions?filter=LOANS", customer);
         assertThat(ledger.get("items")).isNotEmpty();
@@ -427,17 +434,18 @@ class CustomerJourneyTest {
                 """);
         borrowing.borrow(customer, admin, "200000", 3, "Stock for the shop");
         JsonNode loan = getJson("/api/v1/loans", customer).get(0);
-        // ₦200,000 over 3 months at 25%: ₦250,000 owed, and paying today costs all of it.
-        assertThat(loan.get("earlySettlementAmount").decimalValue()).isEqualByComparingTo("250000.00");
+        // ₦200,000 over 3 months at 25%, plus the 2% on each repayment: ₦255,001
+        // owed, and paying today costs all of it.
+        assertThat(loan.get("earlySettlementAmount").decimalValue()).isEqualByComparingTo("255001.00");
         assertThat(loan.get("earlySettlementRebate").decimalValue()).isEqualByComparingTo("0");
 
         BigDecimal before = balanceOf(customer);
         JsonNode paid = postJson("/api/v1/loans/" + loan.get("id").asText() + "/settle", customer, """
                 {"pin": "5271"}
                 """);
-        assertThat(paid.get("amountPaid").decimalValue()).isEqualByComparingTo("250000.00");
+        assertThat(paid.get("amountPaid").decimalValue()).isEqualByComparingTo("255001.00");
         assertThat(paid.get("status").asText()).isEqualTo("REPAID");
-        assertThat(balanceOf(customer)).isEqualByComparingTo(before.subtract(new BigDecimal("250000")));
+        assertThat(balanceOf(customer)).isEqualByComparingTo(before.subtract(new BigDecimal("255001")));
     }
 
     @Test
@@ -465,7 +473,7 @@ class CustomerJourneyTest {
 
         JsonNode after = getJson("/api/v1/loans", customer).get(0);
         assertThat(after.get("amountRepaid").decimalValue()).isEqualByComparingTo("50000.00");
-        assertThat(after.get("outstanding").decimalValue()).isEqualByComparingTo("200000.00");
+        assertThat(after.get("outstanding").decimalValue()).isEqualByComparingTo("205001.00");
     }
 
     @Test
@@ -477,11 +485,16 @@ class CustomerJourneyTest {
 
         // 78% flat at twelve months, on the whole principal.
         assertThat(quote.get("totalInterest").decimalValue()).isEqualByComparingTo("780000.00");
-        assertThat(quote.get("totalRepayable").decimalValue()).isEqualByComparingTo("1780000.00");
-        // 1% of the whole principal above the threshold.
+        assertThat(quote.get("loanAndInterest").decimalValue()).isEqualByComparingTo("1780000.00");
+        // Twelve monthly instalments of ₦148,334 (the last ₦148,326), each with
+        // ₦2,967 on top: 2% rounded up. ₦35,604 of transaction fees in all.
+        assertThat(quote.get("installmentAmount").decimalValue()).isEqualByComparingTo("151301.00");
+        assertThat(quote.get("totalRepaymentFees").decimalValue()).isEqualByComparingTo("35604.00");
+        assertThat(quote.get("totalRepayable").decimalValue()).isEqualByComparingTo("1815604.00");
+        // 1% of the whole principal above the threshold, and nothing else comes off.
         assertThat(quote.get("processingFee").decimalValue()).isEqualByComparingTo("10000.00");
-        assertThat(quote.get("transactionFee").decimalValue()).isEqualByComparingTo("2000.00");
-        assertThat(quote.get("netDisbursed").decimalValue()).isEqualByComparingTo("988000.00");
+        assertThat(quote.get("transactionFee").decimalValue()).isEqualByComparingTo("0.00");
+        assertThat(quote.get("netDisbursed").decimalValue()).isEqualByComparingTo("990000.00");
     }
 
     // ── The ledger ─────────────────────────────────────────────────────────

@@ -128,6 +128,7 @@ class LoanOfficerTest {
         body.put("email", email);
         body.put("principal", 150000);
         body.put("tenureMonths", 3);
+        body.put("repaymentFrequency", "MONTHLY");
         body.put("flatRate", 0.25);
         body.put("purpose", "Shop restocking");
         body.put("disbursedAt", Instant.now().minus(10, ChronoUnit.DAYS).toString());

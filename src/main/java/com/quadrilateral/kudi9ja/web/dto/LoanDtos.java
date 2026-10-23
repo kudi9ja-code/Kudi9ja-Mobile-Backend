@@ -54,6 +54,16 @@ public final class LoanDtos {
             String repaymentFrequencyLabel,
             int installmentCount,
             BigDecimal installmentAmount,
+            /** The share of the loan and interest in one instalment, and the transaction fee on top. */
+            BigDecimal installmentBase,
+            BigDecimal installmentFee,
+            /** The transaction fee on every repayment, as a fraction: 0.02 for 2%. */
+            BigDecimal repaymentFeeRate,
+            String repaymentFeeRateLabel,
+            /** What the transaction fees on all the instalments add up to. */
+            BigDecimal totalRepaymentFees,
+            /** The loan and its interest, before the transaction fees. */
+            BigDecimal loanAndInterest,
             BigDecimal processingFee,
             String processingFeeBasis,
             BigDecimal transactionFee,
@@ -73,7 +83,11 @@ public final class LoanDtos {
             BigDecimal outstanding,
             InstallmentStatus status,
             String statusLabel,
-            long daysUntilDue) {
+            long daysUntilDue,
+            /** The share of the loan and interest in this instalment. */
+            BigDecimal base,
+            /** The transaction fee in this instalment. */
+            BigDecimal fee) {
 
         public static ScheduleRow from(Installment installment, Instant now) {
             return new ScheduleRow(
@@ -84,7 +98,9 @@ public final class LoanDtos {
                     installment.outstanding(),
                     installment.status(),
                     installment.status().label(),
-                    installment.daysUntilDue(now));
+                    installment.daysUntilDue(now),
+                    installment.base(),
+                    installment.fee());
         }
     }
 
@@ -111,6 +127,16 @@ public final class LoanDtos {
             String repaymentFrequencyLabel,
             int installmentCount,
             BigDecimal installmentAmount,
+            /** The share of the loan and interest in one instalment, and the transaction fee on top. */
+            BigDecimal installmentBase,
+            BigDecimal installmentFee,
+            /** The transaction fee on every repayment, as a fraction: 0.02 for 2%. */
+            BigDecimal repaymentFeeRate,
+            String repaymentFeeRateLabel,
+            /** What the transaction fees on all the instalments add up to. */
+            BigDecimal totalRepaymentFees,
+            /** The loan and its interest, before the transaction fees. */
+            BigDecimal loanAndInterest,
             BigDecimal amountRepaid,
             BigDecimal rebateGranted,
             BigDecimal outstanding,
@@ -154,6 +180,12 @@ public final class LoanDtos {
                     loan.frequency().label(),
                     loan.installmentCount(),
                     loan.installmentAmount(),
+                    schedule.isEmpty() ? java.math.BigDecimal.ZERO : schedule.get(0).base(),
+                    schedule.isEmpty() ? java.math.BigDecimal.ZERO : schedule.get(0).fee(),
+                    loan.repaymentFeeRate(),
+                    ratePct(loan.repaymentFeeRate()),
+                    loan.repaymentFees(),
+                    loan.loanAndInterest(),
                     loan.getAmountRepaid(),
                     loan.getRebateGranted(),
                     loan.outstanding(),
@@ -196,7 +228,11 @@ public final class LoanDtos {
             int minMonths,
             int maxMonths,
             Map<Integer, BigDecimal> rateCard,
-            String reason) {
+            String reason,
+            /** True when this customer borrows on the loan-group terms. */
+            boolean groupPricing,
+            /** Everything that prices this customer's loan, standard or group. */
+            SettingsDtos.Lending terms) {
     }
 
     /** What happened when a loan was repaid, settled or cancelled. */

@@ -122,7 +122,8 @@ public final class LoanApplicationDtos {
             @Max(value = 60, message = "That tenure is not offered.")
             Integer months,
 
-            /** Monthly unless the customer chose weekly. */
+            /** Weekly or monthly. The customer has to choose. */
+            @NotNull(message = "Choose whether you will repay weekly or monthly.")
             RepaymentFrequency repaymentFrequency,
 
             @NotBlank(message = "Say what the loan is for.")
@@ -285,10 +286,12 @@ public final class LoanApplicationDtos {
             Instant reviewedAt,
             String reviewedBy,
             String rejectionReason,
-            UUID loanId) {
+            UUID loanId,
+            /** True when the applicant borrows on the loan-group terms. */
+            boolean groupPricing) {
 
         public static AdminApplicationDetail from(
-                LoanApplication application, Function<String, String> urlFor) {
+                LoanApplication application, Function<String, String> urlFor, boolean groupPricing) {
 
             List<ApplicationDocument> photos = new java.util.ArrayList<>();
             List<StoredDocument> stored = application.getBusinessPhotos();
@@ -326,7 +329,8 @@ public final class LoanApplicationDtos {
                     application.getReviewedAt(),
                     application.getReviewedBy(),
                     application.getRejectionReason(),
-                    application.getLoanId());
+                    application.getLoanId(),
+                    groupPricing);
         }
     }
 

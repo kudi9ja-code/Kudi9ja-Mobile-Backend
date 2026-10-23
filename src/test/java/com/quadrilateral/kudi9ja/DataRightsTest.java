@@ -273,7 +273,8 @@ class DataRightsTest {
             assertThat(eligibility.get("canClose").asBoolean()).isFalse();
             assertThat(eligibility.get("blockers").toString()).contains("still owe");
             assertThat(eligibility.get("outstandingOnLoans").decimalValue())
-                    .isEqualByComparingTo("145000.00");
+                    // ₦145,000 of loan and interest, plus 2% on each of the six repayments.
+                    .isEqualByComparingTo("147904.00");
             // The locked savings are named too, so the customer sees everything
             // in the way at once rather than one blocker at a time.
             assertThat(eligibility.get("lockedInSavings").decimalValue())

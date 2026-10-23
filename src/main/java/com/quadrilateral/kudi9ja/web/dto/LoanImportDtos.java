@@ -58,7 +58,8 @@ public final class LoanImportDtos {
             @Max(value = 60, message = "The tenure is at most sixty months.")
             int tenureMonths,
 
-            /** How often they pay back. Monthly if left out. */
+            /** How often they pay back. Has to be chosen. */
+            @NotNull(message = "Choose whether they repay weekly or monthly.")
             RepaymentFrequency repaymentFrequency,
 
             // The rate card runs past 100% at the long tenures (134% over 24
@@ -72,8 +73,18 @@ public final class LoanImportDtos {
             @DecimalMin(value = "0", message = "The management fee cannot be negative.")
             BigDecimal processingFee,
 
+            /**
+             * A flat fee taken off the payout. Loans are no longer given with
+             * one — the transaction fee is on each repayment — so it is only
+             * for an older paper loan that had one.
+             */
             @DecimalMin(value = "0", message = "The transaction fee cannot be negative.")
             BigDecimal transactionFee,
+
+            /** The transaction fee on each repayment, as a fraction: 0.02 for 2%. Today's rate if left out. */
+            @DecimalMin(value = "0", message = "The transaction fee on each repayment cannot be negative.")
+            @DecimalMax(value = "0.2", message = "The transaction fee on each repayment is a fraction: 0.02 for 2%.")
+            BigDecimal repaymentFeeRate,
 
             @NotBlank(message = "Say what the loan was for.")
             @Size(max = 200, message = "Keep the purpose under 200 characters.")
@@ -212,6 +223,12 @@ public final class LoanImportDtos {
             BigDecimal flatRate,
             BigDecimal processingFee,
             BigDecimal transactionFee,
+            /** The transaction fee on each repayment, as a fraction, and what those fees add up to. */
+            BigDecimal repaymentFeeRate,
+            BigDecimal repaymentFees,
+            int installmentCount,
+            /** Instalments in whole naira, rounded up — every loan since the repayment fee. */
+            boolean wholeNaira,
             BigDecimal netDisbursed,
             String purpose,
             Instant disbursedAt,
@@ -267,11 +284,15 @@ public final class LoanImportDtos {
                     row.getFlatRate(),
                     row.getProcessingFee(),
                     row.transactionFee(),
+                    row.getRepaymentFeeRate(),
+                    live == null ? row.repaymentFees() : live.repaymentFees(),
+                    live == null ? row.installmentCount() : live.installmentCount(),
+                    live == null || live.isWholeNaira(),
                     row.netDisbursed(),
                     row.getPurpose(),
                     row.getDisbursedAt(),
                     row.dueDate(),
-                    row.totalRepayable(),
+                    live == null ? row.totalRepayable() : live.totalRepayable(),
                     live == null ? row.getAmountRepaid() : live.getAmountRepaid(),
                     live == null ? row.outstanding() : live.outstanding(),
                     row.getImportedBy(),

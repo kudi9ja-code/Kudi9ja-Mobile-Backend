@@ -5,7 +5,7 @@
   "summary": "The agreement that governs your Kudi9ja account, your wallet, your savings and everything else you do in the app.",
   "version": "1.2",
   "effective": "2026-11-22T00:00:00.000",
-  "changeSummary": "Payments in and out now go through Paystack: you pay by card, bank transfer or USSD in the app and your money is credited the moment Paystack confirms it, and approved withdrawals are sent to your bank automatically. You now sign your agreements electronically when you open your account. Loans carry a flat ₦2,000 transaction fee beside the management fee.",
+  "changeSummary": "Payments in and out now go through Paystack: you pay by card, bank transfer or USSD in the app and your money is credited the moment Paystack confirms it, and approved withdrawals are sent to your bank automatically. You now sign your agreements electronically when you open your account. Loan repayments carry a transaction fee of 2% of each instalment; only the management fee comes off a loan when it is paid out.",
   "readMinutes": 19,
   "sections": [
     {
@@ -409,7 +409,7 @@
             },
             {
               "term": "Loan transaction fee",
-              "meaning": "Flat ₦2,000 on every loan, deducted from the disbursement with the management fee and never added to what you owe. For example, borrowing ₦100,000 puts ₦93,000 in your wallet; borrowing ₦600,000 puts ₦592,000 there."
+              "meaning": "2% of each loan repayment, added to every instalment and rounded up to the naira. Nothing but the management fee comes off a loan when it is paid out: borrowing ₦100,000 at 25% over three months puts ₦95,000 in your wallet, and you repay ₦42,501 a month (₦41,667 + ₦834), or about ₦10,626 a week over 12 weeks (₦10,417 + ₦209)."
             }
           ]
         },

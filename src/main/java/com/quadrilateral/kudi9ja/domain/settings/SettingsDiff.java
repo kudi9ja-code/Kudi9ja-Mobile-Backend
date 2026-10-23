@@ -45,11 +45,29 @@ public final class SettingsDiff {
 
         // Management fee -------------------------------------------------------
         money(changes, "Flat management fee", before.getFlatProcessingFee(), after.getFlatProcessingFee());
-        money(changes, "Loan transaction fee", before.getLoanTransactionFee(), after.getLoanTransactionFee());
+        pct(changes, "Transaction fee on each repayment", before.getLoanRepaymentFeeRate(), after.getLoanRepaymentFeeRate());
         money(changes, "Management fee threshold",
                 before.getProcessingFeeThreshold(), after.getProcessingFeeThreshold());
         pct(changes, "Management fee rate",
                 before.getLoanProcessingFeeRate(), after.getLoanProcessingFeeRate());
+
+        flag(changes, "Weekly repayment", before.isLoanWeeklyAllowed(), after.isLoanWeeklyAllowed());
+        flag(changes, "Monthly repayment", before.isLoanMonthlyAllowed(), after.isLoanMonthlyAllowed());
+
+        // Group loans ----------------------------------------------------------
+        rateCard(changes, "Group loan rate", before.getGroupLoanRates(), after.getGroupLoanRates());
+        num(changes, "Group loans: maximum tenure", before.getGroupMaxLoanTenureMonths(), after.getGroupMaxLoanTenureMonths(), " months");
+        money(changes, "Group loans: minimum loan", before.getGroupMinLoanAmount(), after.getGroupMinLoanAmount());
+        money(changes, "Group loans: maximum loan", before.getGroupMaxLoanAmount(), after.getGroupMaxLoanAmount());
+        money(changes, "Group loans: flat management fee", before.getGroupFlatProcessingFee(), after.getGroupFlatProcessingFee());
+        money(changes, "Group loans: management fee threshold",
+                before.getGroupProcessingFeeThreshold(), after.getGroupProcessingFeeThreshold());
+        pct(changes, "Group loans: management fee rate",
+                before.getGroupLoanProcessingFeeRate(), after.getGroupLoanProcessingFeeRate());
+        pct(changes, "Group loans: transaction fee on each repayment",
+                before.getGroupLoanRepaymentFeeRate(), after.getGroupLoanRepaymentFeeRate());
+        flag(changes, "Group loans: weekly repayment", before.isGroupLoanWeeklyAllowed(), after.isGroupLoanWeeklyAllowed());
+        flag(changes, "Group loans: monthly repayment", before.isGroupLoanMonthlyAllowed(), after.isGroupLoanMonthlyAllowed());
 
         // Security -------------------------------------------------------------
         num(changes, "Passcode attempts allowed",
@@ -81,6 +99,24 @@ public final class SettingsDiff {
         flag(changes, "Maintenance mode", before.isMaintenanceMode(), after.isMaintenanceMode());
 
         return changes;
+    }
+
+    private static void rateCard(
+            List<String> changes, String label, java.util.Map<Integer, BigDecimal> was, java.util.Map<Integer, BigDecimal> now) {
+        var tenures = new TreeSet<Integer>();
+        tenures.addAll(was.keySet());
+        tenures.addAll(now.keySet());
+        for (Integer months : tenures) {
+            BigDecimal a = was.get(months);
+            BigDecimal b = now.get(months);
+            if (a == null && b != null) {
+                changes.add(label + " at " + months + " months: added at " + percent(b));
+            } else if (a != null && b == null) {
+                changes.add(label + " at " + months + " months: removed (was " + percent(a) + ")");
+            } else if (a != null && a.compareTo(b) != 0) {
+                changes.add(label + " at " + months + " months: " + percent(a) + " → " + percent(b));
+            }
+        }
     }
 
     private static void loanRates(List<String> changes, PlatformSettings before, PlatformSettings after) {

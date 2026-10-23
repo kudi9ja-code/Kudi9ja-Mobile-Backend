@@ -5,6 +5,7 @@ import com.quadrilateral.kudi9ja.common.error.ErrorCode;
 import com.quadrilateral.kudi9ja.common.util.Money;
 import com.quadrilateral.kudi9ja.domain.notification.NotificationService;
 import com.quadrilateral.kudi9ja.domain.notification.NotifyKind;
+import com.quadrilateral.kudi9ja.domain.settings.LendingTerms;
 import com.quadrilateral.kudi9ja.domain.settings.PlatformSettings;
 import com.quadrilateral.kudi9ja.domain.settings.SettingsService;
 import com.quadrilateral.kudi9ja.domain.user.AuthService;
@@ -60,14 +61,21 @@ public class LoanService {
             LedgerService ledger,
             SettingsService settings,
             NotificationService notifications,
-            AuthService auth) {
+            AuthService auth,
+            com.quadrilateral.kudi9ja.domain.group.LoanGroupMemberRepository groupMembers,
+            com.quadrilateral.kudi9ja.domain.group.LoanGroupRepository groupRepository) {
         this.loans = loans;
         this.users = users;
         this.ledger = ledger;
         this.settings = settings;
         this.notifications = notifications;
         this.auth = auth;
+        this.groupMembers = groupMembers;
+        this.groupRepository = groupRepository;
     }
+
+    private final com.quadrilateral.kudi9ja.domain.group.LoanGroupMemberRepository groupMembers;
+    private final com.quadrilateral.kudi9ja.domain.group.LoanGroupRepository groupRepository;
 
     // ── Quote ──────────────────────────────────────────────────────────────
 
@@ -79,26 +87,27 @@ public class LoanService {
      * be shown one figure and charged another.
      */
     @Transactional(readOnly = true)
-    public LoanDtos.QuoteResponse quote(BigDecimal amount, int months, RepaymentFrequency frequency) {
+    public LoanDtos.QuoteResponse quote(UUID userId, BigDecimal amount, int months, RepaymentFrequency frequency) {
         PlatformSettings s = settings.currentReadOnly();
+        // A member of a loan group is priced on the group terms.
+        LendingTerms t = userId == null ? s.lending() : termsFor(s, userId);
         BigDecimal principal = Money.of(amount);
         frequency = RepaymentFrequency.orMonthly(frequency);
+        requireOffered(t, frequency);
 
-        if (months < 1 || months > s.getMaxLoanTenureMonths()) {
+        if (months < 1 || months > t.maxTenureMonths()) {
             throw new ApiException(
                     ErrorCode.TENURE_UNPRICED,
-                    "Loans run from 1 to " + s.getMaxLoanTenureMonths() + " months.");
+                    "Loans run from 1 to " + t.maxTenureMonths() + " months.");
         }
 
-        BigDecimal rate = s.loanRateFor(months);
-        BigDecimal interest = Finance.loanInterest(s, principal, months);
-        BigDecimal total = Money.add(principal, interest);
-        BigDecimal fee = Finance.processingFee(s, principal);
-        BigDecimal transactionFee = Finance.transactionFee(s);
+        BigDecimal rate = t.rateFor(months);
+        BigDecimal fee = Finance.processingFee(t, principal);
+        BigDecimal feeRate = Finance.repaymentFeeRate(t);
         Instant now = Instant.now();
 
-        boolean withinLimits = Money.gte(principal, s.getMinLoanAmount())
-                && Money.lte(principal, s.getMaxLoanAmount());
+        boolean withinLimits = Money.gte(principal, t.minAmount())
+                && Money.lte(principal, t.maxAmount());
 
         // A preview schedule, priced but not yet granted.
         Loan preview = new Loan();
@@ -107,10 +116,15 @@ public class LoanService {
         preview.setRepaymentFrequency(frequency);
         preview.setFlatRate(rate);
         preview.setProcessingFee(fee);
-        preview.setTransactionFee(transactionFee);
+        preview.setTransactionFee(Money.zero());
         preview.setDisbursedAt(now);
         preview.setAmountRepaid(Money.zero());
         preview.setRebateGranted(Money.zero());
+        preview.fixRepaymentTerms(now, feeRate);
+        List<Finance.InstalmentPart> plan = preview.instalmentPlan();
+        Finance.InstalmentPart first = plan.isEmpty()
+                ? new Finance.InstalmentPart(Money.zero(), Money.zero())
+                : plan.get(0);
 
         List<LoanDtos.ScheduleRow> schedule = preview.schedule(now).stream()
                 .map(installment -> LoanDtos.ScheduleRow.from(installment, now))
@@ -122,26 +136,33 @@ public class LoanService {
                 rate,
                 ratePct(rate),
                 costPerMonthPct(rate, months),
-                interest,
-                total,
+                preview.totalInterest(),
+                preview.totalRepayable(),
                 frequency,
                 frequency.label(),
-                frequency.installments(months),
-                Finance.loanInstallment(s, principal, months, frequency),
+                preview.installmentCount(),
+                first.total(),
+                first.base(),
+                first.fee(),
+                feeRate,
+                ratePct(feeRate),
+                preview.repaymentFees(),
+                preview.loanAndInterest(),
                 fee,
-                Finance.processingFeeBasis(s, principal),
-                transactionFee,
-                Finance.netDisbursed(s, principal),
+                Finance.processingFeeBasis(t, principal),
+                Money.zero(),
+                Finance.netDisbursed(t, principal),
                 schedule.isEmpty() ? null : schedule.get(0).dueDate(),
-                frequency.finalDue(now, months),
+                preview.getDueDate(),
                 schedule,
                 withinLimits,
                 withinLimits
-                        ? "The management and transaction fees come out of what we send you, never added to what you owe. "
+                        ? "Only the management fee comes out of what we send you. Each repayment carries a transaction fee of "
+                                + ratePct(feeRate) + " of the instalment, already included in every amount here. "
                                 + "There is no late fee and no penalty interest: even in default, "
                                 + "the amount you owe does not increase."
-                        : "We lend from " + Money.naira(s.getMinLoanAmount())
-                                + " to " + Money.naira(s.getMaxLoanAmount()) + ".");
+                        : "We lend from " + Money.naira(t.minAmount())
+                                + " to " + Money.naira(t.maxAmount()) + ".");
     }
 
     // ── Eligibility ────────────────────────────────────────────────────────
@@ -158,6 +179,7 @@ public class LoanService {
     @Transactional(readOnly = true)
     public LoanDtos.EligibilityResponse eligibility(UUID userId) {
         PlatformSettings s = settings.currentReadOnly();
+        LendingTerms t = termsFor(s, userId);
         User user = users.findById(userId)
                 .orElseThrow(() -> ApiException.notFound("That account"));
 
@@ -176,12 +198,14 @@ public class LoanService {
         boolean eligible = reasons.isEmpty();
         return new LoanDtos.EligibilityResponse(
                 eligible,
-                s.getMinLoanAmount(),
-                s.getMaxLoanAmount(),
+                t.minAmount(),
+                t.maxAmount(),
                 1,
-                s.getMaxLoanTenureMonths(),
-                s.sortedLoanRates(),
-                eligible ? null : String.join(" ", reasons));
+                t.maxTenureMonths(),
+                new java.util.TreeMap<>(t.rates()),
+                eligible ? null : String.join(" ", reasons),
+                t.group(),
+                com.quadrilateral.kudi9ja.web.dto.SettingsDtos.Lending.of(t));
     }
 
     // ── Assess, then disburse ──────────────────────────────────────────────
@@ -198,22 +222,24 @@ public class LoanService {
      * application, and nothing automated stands in front of it.
      */
     @Transactional(readOnly = true)
-    public Assessed assess(UUID userId, BigDecimal amount, int months) {
+    public Assessed assess(UUID userId, BigDecimal amount, int months, RepaymentFrequency frequency) {
         settings.requireNotInMaintenance();
         settings.requireLendingEnabled();
 
         PlatformSettings s = settings.currentReadOnly();
+        LendingTerms t = termsFor(s, userId);
+        requireOffered(t, frequency);
         User user = users.findById(userId)
                 .orElseThrow(() -> ApiException.notFound("That account"));
 
         BigDecimal principal = Money.of(amount);
 
-        if (months < 1 || months > s.getMaxLoanTenureMonths()) {
+        if (months < 1 || months > t.maxTenureMonths()) {
             throw new ApiException(
                     ErrorCode.TENURE_UNPRICED,
-                    "Loans run from 1 to " + s.getMaxLoanTenureMonths() + " months.");
+                    "Loans run from 1 to " + t.maxTenureMonths() + " months.");
         }
-        if (s.getLoanRates().get(months) == null) {
+        if (!t.prices(months)) {
             throw new ApiException(
                     ErrorCode.TENURE_UNPRICED, "That tenure is not priced right now.");
         }
@@ -225,22 +251,45 @@ public class LoanService {
             throw new ApiException(
                     ErrorCode.ACCOUNT_FROZEN, "Your account cannot borrow at the moment.");
         }
-        if (Money.lt(principal, s.getMinLoanAmount())) {
+        if (Money.lt(principal, t.minAmount())) {
             throw new ApiException(
                     ErrorCode.AMOUNT_TOO_SMALL,
-                    "The smallest loan we write is " + Money.naira(s.getMinLoanAmount()) + ".");
+                    "The smallest loan we write is " + Money.naira(t.minAmount()) + ".");
         }
-        if (Money.gt(principal, s.getMaxLoanAmount())) {
+        if (Money.gt(principal, t.maxAmount())) {
             throw new ApiException(
                     ErrorCode.AMOUNT_TOO_LARGE,
-                    "The largest loan we write is " + Money.naira(s.getMaxLoanAmount()) + ".");
+                    "The largest loan we write is " + Money.naira(t.maxAmount()) + ".");
         }
 
-        return new Assessed(user, principal, months);
+        return new Assessed(user, principal, months, t);
     }
 
     /** What {@link #assess} found. Carried to whoever decides. */
-    public record Assessed(User user, BigDecimal principal, int months) {
+    public record Assessed(User user, BigDecimal principal, int months, LendingTerms terms) {
+    }
+
+    /**
+     * The terms this customer borrows on: the loan-group terms for a member
+     * of an active loan group, the standard terms for everybody else.
+     */
+    public LendingTerms termsFor(UUID userId) {
+        return termsFor(settings.currentReadOnly(), userId);
+    }
+
+    private LendingTerms termsFor(PlatformSettings s, UUID userId) {
+        boolean member = groupMembers.findByUserId(userId).stream()
+                .anyMatch(m -> groupRepository.findById(m.getGroupId())
+                        .map(com.quadrilateral.kudi9ja.domain.group.LoanGroup::isActive)
+                        .orElse(false));
+        return s.lending(member);
+    }
+
+    private static void requireOffered(LendingTerms t, RepaymentFrequency frequency) {
+        if (!t.allows(frequency)) {
+            throw ApiException.validation(RepaymentFrequency.orMonthly(frequency).label()
+                    + " repayment is not offered on " + (t.group() ? "group loans" : "these loans") + " right now.");
+        }
     }
 
     /**
@@ -259,11 +308,11 @@ public class LoanService {
         PlatformSettings s = settings.currentReadOnly();
         BigDecimal principal = assessed.principal();
         int months = assessed.months();
+        LendingTerms t = assessed.terms();
 
         Instant now = Instant.now();
-        BigDecimal rate = s.loanRateFor(months);
-        BigDecimal fee = Finance.processingFee(s, principal);
-        BigDecimal transactionFee = Finance.transactionFee(s);
+        BigDecimal rate = t.rateFor(months);
+        BigDecimal fee = Finance.processingFee(t, principal);
 
         Loan loan = new Loan();
         loan.setId(UUID.randomUUID());
@@ -274,11 +323,12 @@ public class LoanService {
         // Frozen here, for the life of the loan.
         loan.setFlatRate(rate);
         loan.setProcessingFee(fee);
-        loan.setTransactionFee(transactionFee);
+        loan.setTransactionFee(Money.zero());
         loan.setPurpose(purpose.trim());
         loan.setRequestedAt(now);
         loan.setDisbursedAt(now);
-        loan.setDueDate(frequency.finalDue(now, months));
+        // The count, the fee on each repayment and the due date.
+        loan.fixRepaymentTerms(now, Finance.repaymentFeeRate(t));
         loan.setAmountRepaid(Money.zero());
         loan.setRebateGranted(Money.zero());
         loan.setStatus(LoanStatus.ACTIVE);
@@ -296,22 +346,17 @@ public class LoanService {
                     LedgerService.Entry.of("Management fee deducted from loan", "Kudi9ja Credit")
                             .related(LedgerService.Related.LOAN, saved.getId()));
         }
-        if (Money.isPositive(transactionFee)) {
-            ledger.debit(userId, transactionFee, TxKind.FEE,
-                    LedgerService.Entry.of("Transaction fee deducted from loan", "Kudi9ja Credit")
-                            .related(LedgerService.Related.LOAN, saved.getId()));
-        }
 
         notifications.push(
                 userId,
                 NotifyKind.GENERAL,
                 "Loan disbursed",
                 Money.naira(saved.netDisbursed()) + " reached your wallet after the "
-                        + Money.naira(fee) + " management fee"
-                        + (Money.isPositive(transactionFee) ? " and " + Money.naira(transactionFee) + " transaction fee" : "")
-                        + ". You repay "
-                        + Money.naira(saved.totalRepayable()) + " over " + months
-                        + (months == 1 ? " month" : " months") + ".",
+                        + Money.naira(fee) + " management fee. You repay "
+                        + Money.naira(saved.totalRepayable()) + " in " + saved.installmentCount() + " "
+                        + saved.frequency().label().toLowerCase(java.util.Locale.ROOT) + " instalments of "
+                        + Money.naira(saved.installmentAmount()) + ", each including a transaction fee of "
+                        + ratePct(saved.repaymentFeeRate()) + ".",
                 saved.netDisbursed());
 
         log.info("Disbursed loan {} of {} over {} months at {}",

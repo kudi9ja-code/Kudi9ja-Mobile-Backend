@@ -288,17 +288,18 @@ class FinanceTest {
 
         /**
          * What reaches the wallet: the loan, less the management fee (₦5,000 up
-         * to ₦500,000, then 1%) and the flat ₦2,000 transaction fee.
+         * to ₦500,000, then 1%). Nothing else comes off: the transaction fee is
+         * paid with each repayment.
          */
         @ParameterizedTest(name = "₦{0} borrowed → ₦{1} received")
         @CsvSource({
-                "100000, 93000.00",
-                "500000, 493000.00",
-                "600000, 592000.00"
+                "100000, 95000.00",
+                "500000, 495000.00",
+                "600000, 594000.00"
         })
-        @DisplayName("the management fee and the transaction fee both come off what is paid out")
-        void bothFeesComeOff(BigDecimal principal, BigDecimal received) {
-            assertThat(Finance.transactionFee(settings)).isEqualByComparingTo("2000.00");
+        @DisplayName("only the management fee comes off what is paid out")
+        void onlyTheManagementFeeComesOff(BigDecimal principal, BigDecimal received) {
+            assertThat(Finance.repaymentFeeRate(settings)).isEqualByComparingTo("0.02");
             assertThat(Finance.netDisbursed(settings, principal)).isEqualByComparingTo(received);
         }
 
@@ -308,12 +309,12 @@ class FinanceTest {
          * ₦493,000.
          */
         @Test
-        @DisplayName("both fees are deducted from the disbursement, never added to the debt")
+        @DisplayName("the management fee is deducted from the disbursement, never added to the debt")
         void feeIsNettedFromDisbursement() {
             BigDecimal principal = new BigDecimal("500000");
 
             assertThat(Finance.netDisbursed(settings, principal))
-                    .isEqualByComparingTo("493000.00");
+                    .isEqualByComparingTo("495000.00");
             // The debt is priced on the gross principal, not the net.
             assertThat(Finance.loanTotal(settings, principal, 3))
                     .isEqualByComparingTo("625000.00");

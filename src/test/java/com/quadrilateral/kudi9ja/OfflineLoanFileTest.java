@@ -95,7 +95,7 @@ class OfflineLoanFileTest {
         body.put("tenureMonths", 4);
         body.put("flatRate", 0.32);
         body.put("processingFee", 5000);
-        body.put("transactionFee", 2000);
+        body.put("repaymentFrequency", "MONTHLY");
         body.put("purpose", "Shop restocking");
         body.put("disbursedAt", Instant.now().minus(40, ChronoUnit.DAYS).toString());
         body.put("amountRepaid", 0);
@@ -133,12 +133,17 @@ class OfflineLoanFileTest {
         // Masked like every other BVN and NIN the API returns: only the last four show.
         assertThat(entered.get("ninLast4").asText()).matches("\\*+" + ninFor(bvn).substring(7));
         assertThat(entered.get("guarantors").get(0).get("fullName").asText()).isEqualTo("Emeka Obi");
-        // 200,000 at 32% over four months.
-        assertThat(entered.get("totalRepayable").decimalValue()).isEqualByComparingTo("264000.00");
-        // Both fees on their own lines, and what was actually paid out.
+        // 200,000 at 32% over four months is 264,000: four instalments of
+        // 66,000, each with today's 2% transaction fee on top — 1,320 — so
+        // 5,280 of fees and 269,280 to repay.
+        assertThat(entered.get("repaymentFeeRate").decimalValue()).isEqualByComparingTo("0.02");
+        assertThat(entered.get("repaymentFees").decimalValue()).isEqualByComparingTo("5280.00");
+        assertThat(entered.get("installmentCount").asInt()).isEqualTo(4);
+        assertThat(entered.get("totalRepayable").decimalValue()).isEqualByComparingTo("269280.00");
+        // Only the management fee came off what was paid out.
         assertThat(entered.get("processingFee").decimalValue()).isEqualByComparingTo("5000.00");
-        assertThat(entered.get("transactionFee").decimalValue()).isEqualByComparingTo("2000.00");
-        assertThat(entered.get("netDisbursed").decimalValue()).isEqualByComparingTo("193000.00");
+        assertThat(entered.get("transactionFee").decimalValue()).isEqualByComparingTo("0.00");
+        assertThat(entered.get("netDisbursed").decimalValue()).isEqualByComparingTo("195000.00");
 
         // A document goes on the file and comes back with a signed link.
         JsonNode doc = json.readTree(mvc.perform(multipart("/api/v1/admin/loans/imports/" + id + "/documents")
@@ -161,7 +166,7 @@ class OfflineLoanFileTest {
         JsonNode file = send(admin, post("/api/v1/admin/loans/imports/" + id + "/repayments"),
                 Map.of("amount", 66000, "method", "CASH", "reference", "Receipt book 0012"), 200);
         assertThat(file.get("loan").get("amountRepaid").decimalValue()).isEqualByComparingTo("66000.00");
-        assertThat(file.get("loan").get("outstanding").decimalValue()).isEqualByComparingTo("198000.00");
+        assertThat(file.get("loan").get("outstanding").decimalValue()).isEqualByComparingTo("203280.00");
         assertThat(file.get("repayments")).hasSize(1);
         assertThat(file.get("documents")).hasSize(1);
 
@@ -193,7 +198,8 @@ class OfflineLoanFileTest {
 
         JsonNode loan = getJson("/api/v1/loans/" + loanId, customer);
         assertThat(loan.get("amountRepaid").decimalValue()).isEqualByComparingTo("100000.00");
-        assertThat(loan.get("outstanding").decimalValue()).isEqualByComparingTo("164000.00");
+        // 269,280 owed with the fees on each repayment, less the 100,000 paid.
+        assertThat(loan.get("outstanding").decimalValue()).isEqualByComparingTo("169280.00");
 
         // Never through the wallet.
         assertThat(getJson("/api/v1/wallet", customer).get("balance").decimalValue()).isEqualByComparingTo("0.00");
@@ -221,7 +227,8 @@ class OfflineLoanFileTest {
         body.put("tenureMonths", 24);
         body.put("flatRate", 1.34);
         JsonNode entered = send(admin, post("/api/v1/admin/loans/imports"), body, 201);
-        assertThat(entered.get("totalRepayable").decimalValue()).isEqualByComparingTo("468000.00");
+        // 468,000 of loan and interest, and ₦390 on each of 24 repayments.
+        assertThat(entered.get("totalRepayable").decimalValue()).isEqualByComparingTo("477360.00");
 
         body.put("flatRate", 32);
         send(admin, post("/api/v1/admin/loans/imports"), body, 400);

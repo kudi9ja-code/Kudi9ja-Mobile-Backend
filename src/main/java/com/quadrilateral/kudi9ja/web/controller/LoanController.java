@@ -74,7 +74,9 @@ public class LoanController {
             @RequestParam BigDecimal amount,
             @RequestParam int months,
             @RequestParam(defaultValue = "MONTHLY") RepaymentFrequency frequency) {
-        return loans.quote(amount, months, frequency);
+        return loans.quote(
+                currentUser.find().map(com.quadrilateral.kudi9ja.security.auth.AuthPrincipal::userId).orElse(null),
+                amount, months, frequency);
     }
 
     /**

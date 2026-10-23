@@ -407,11 +407,19 @@ class LoanImportTest {
 
     // -- Plumbing -----------------------------------------------------------
 
+    /** Monthly, and with no fee on the repayments, unless the test says otherwise. */
+    private static Map<String, Object> withTerms(Map<String, Object> body) {
+        Map<String, Object> copy = new java.util.HashMap<>(body);
+        copy.putIfAbsent("repaymentFrequency", "MONTHLY");
+        copy.putIfAbsent("repaymentFeeRate", 0);
+        return copy;
+    }
+
     private JsonNode importLoan(SignUpFlow.Session admin, Map<String, Object> body) throws Exception {
         MvcResult result = mvc.perform(post("/api/v1/admin/loans/imports")
                         .header("Authorization", admin.bearer())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json.writeValueAsString(body)))
+                        .content(json.writeValueAsString(withTerms(body))))
                 .andExpect(status().isCreated())
                 .andReturn();
         return json.readTree(result.getResponse().getContentAsString());
@@ -422,7 +430,7 @@ class LoanImportTest {
         assertThat(mvc.perform(post("/api/v1/admin/loans/imports")
                         .header("Authorization", session.bearer())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json.writeValueAsString(body)))
+                        .content(json.writeValueAsString(withTerms(body))))
                 .andReturn().getResponse().getStatus())
                 .as("entering %s", body)
                 .isEqualTo(status);

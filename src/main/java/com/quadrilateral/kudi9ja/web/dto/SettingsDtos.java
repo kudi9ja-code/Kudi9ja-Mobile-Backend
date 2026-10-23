@@ -34,6 +34,8 @@ public final class SettingsDtos {
             long version,
             Savings savings,
             Lending lending,
+            /** What members of a loan group borrow on. */
+            Lending groupLending,
             Wallet wallet,
             Thrift thrift,
             CollectionAccount collectionAccount,
@@ -58,15 +60,8 @@ public final class SettingsDtos {
                             s.getTargetTierLong(),
                             s.getMinTargetMonths(),
                             s.getDaysPerSavingsMonth()),
-                    new Lending(
-                            new TreeMap<>(s.getLoanRates()),
-                            s.getMaxLoanTenureMonths(),
-                            s.getMinLoanAmount(),
-                            s.getMaxLoanAmount(),
-                            s.getFlatProcessingFee(),
-                            s.getProcessingFeeThreshold(),
-                            s.getLoanProcessingFeeRate(),
-                            s.getLoanTransactionFee()),
+                    Lending.of(s.lending()),
+                    Lending.of(s.groupLending()),
                     new Wallet(
                             s.getMinDepositAmount(),
                             s.getMinWithdrawalAmount()),
@@ -124,8 +119,24 @@ public final class SettingsDtos {
             BigDecimal flatProcessingFee,
             BigDecimal processingFeeThreshold,
             BigDecimal processingFeeRate,
-            /** Flat, on every loan, beside the management fee. */
-            BigDecimal transactionFee) {
+            /** The transaction fee on every repayment, as a fraction of the instalment: 0.02 for 2%. */
+            BigDecimal repaymentFeeRate,
+            boolean weeklyAllowed,
+            boolean monthlyAllowed) {
+
+        public static Lending of(com.quadrilateral.kudi9ja.domain.settings.LendingTerms t) {
+            return new Lending(
+                    new TreeMap<>(t.rates()),
+                    t.maxTenureMonths(),
+                    t.minAmount(),
+                    t.maxAmount(),
+                    t.flatProcessingFee(),
+                    t.processingFeeThreshold(),
+                    t.processingFeeRate(),
+                    t.repaymentFeeRate(),
+                    t.weeklyAllowed(),
+                    t.monthlyAllowed());
+        }
     }
 
     public record Wallet(

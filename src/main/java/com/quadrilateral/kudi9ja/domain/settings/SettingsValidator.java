@@ -85,11 +85,47 @@ public final class SettingsValidator {
             problems.put("flatProcessingFee", "The flat fee cannot be negative.");
         }
         requireNonNegativeRate(problems, "loanProcessingFeeRate", s.getLoanProcessingFeeRate());
-        if (s.getLoanTransactionFee() == null || s.getLoanTransactionFee().signum() < 0) {
-            problems.put("loanTransactionFee", "The transaction fee cannot be empty or negative.");
-        } else if (s.getMinLoanAmount() != null && s.getFlatProcessingFee() != null
-                && Money.gte(Money.add(s.getLoanTransactionFee(), s.getFlatProcessingFee()), s.getMinLoanAmount())) {
-            problems.put("loanTransactionFee", "The fees would swallow the smallest loan.");
+        if (s.getLoanRepaymentFeeRate() == null || s.getLoanRepaymentFeeRate().signum() < 0) {
+            problems.put("loanRepaymentFeeRate", "The transaction fee cannot be empty or negative.");
+        } else if (s.getLoanRepaymentFeeRate().compareTo(new BigDecimal("0.2")) > 0) {
+            problems.put("loanRepaymentFeeRate", "The transaction fee is a fraction of each repayment: 0.02 for 2%, at most 0.2.");
+        }
+
+        if (!s.isLoanWeeklyAllowed() && !s.isLoanMonthlyAllowed()) {
+            problems.put("loanWeeklyAllowed", "Offer weekly repayment, monthly repayment, or both.");
+        }
+
+        // Group loans ---------------------------------------------------------
+        if (s.getGroupMinLoanAmount() == null || s.getGroupMaxLoanAmount() == null
+                || Money.gte(s.getGroupMinLoanAmount(), s.getGroupMaxLoanAmount())) {
+            problems.put("groupMinLoanAmount", "The smallest group loan must be smaller than the largest.");
+        }
+        if (s.getGroupMaxLoanTenureMonths() == null || s.getGroupMaxLoanTenureMonths() < 1) {
+            problems.put("groupMaxLoanTenureMonths", "Group loans must run for at least a month.");
+        } else {
+            for (int months = 1; months <= s.getGroupMaxLoanTenureMonths(); months++) {
+                BigDecimal rate = s.getGroupLoanRates().get(months);
+                if (rate == null) {
+                    problems.put("groupLoanRates." + months, "Month " + months + " has no group rate.");
+                } else if (rate.signum() <= 0) {
+                    problems.put("groupLoanRates." + months, "A rate must be above zero.");
+                }
+            }
+        }
+        if (s.getGroupProcessingFeeThreshold() == null || Money.isZeroOrLess(s.getGroupProcessingFeeThreshold())) {
+            problems.put("groupProcessingFeeThreshold", "The fee threshold must be above zero.");
+        }
+        if (s.getGroupFlatProcessingFee() == null || s.getGroupFlatProcessingFee().signum() < 0) {
+            problems.put("groupFlatProcessingFee", "The flat fee cannot be negative.");
+        }
+        requireNonNegativeRate(problems, "groupLoanProcessingFeeRate", s.getGroupLoanProcessingFeeRate());
+        if (s.getGroupLoanRepaymentFeeRate() == null || s.getGroupLoanRepaymentFeeRate().signum() < 0) {
+            problems.put("groupLoanRepaymentFeeRate", "The transaction fee cannot be empty or negative.");
+        } else if (s.getGroupLoanRepaymentFeeRate().compareTo(new BigDecimal("0.2")) > 0) {
+            problems.put("groupLoanRepaymentFeeRate", "The transaction fee is a fraction of each repayment: 0.02 for 2%, at most 0.2.");
+        }
+        if (!s.isGroupLoanWeeklyAllowed() && !s.isGroupLoanMonthlyAllowed()) {
+            problems.put("groupLoanWeeklyAllowed", "Offer weekly repayment, monthly repayment, or both.");
         }
 
         // Security -------------------------------------------------------------

@@ -3,9 +3,11 @@ package com.quadrilateral.kudi9ja;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.quadrilateral.kudi9ja.domain.user.UserRepository;
 import com.quadrilateral.kudi9ja.support.CapturingMailer;
 import com.quadrilateral.kudi9ja.support.SignUpFlow;
@@ -128,6 +130,57 @@ class LoanGroupTest {
         assertThat(detail.get("members")).hasSize(2);
     }
 
+    @Test
+    @DisplayName("members of a group borrow on the group terms; everybody else keeps the standard terms")
+    void groupPricing() throws Exception {
+        SignUpFlow.Session owner = owner();
+        JsonNode original = send(owner, get("/api/v1/admin/settings"), null, 200);
+
+        // Group loans: 15% over three months, a 1% fee on each repayment, weekly only.
+        ObjectNode edited = original.deepCopy();
+        ((ObjectNode) edited.get("groupLoanRates")).put("3", 0.15);
+        edited.put("groupLoanRepaymentFeeRate", 0.01);
+        edited.put("groupLoanMonthlyAllowed", false);
+        saveSettings(owner, edited);
+        try {
+            String ownerAdminId = idOf(send(owner, get("/api/v1/admin/officers"), null, 200), "owner@kudi9ja.test");
+            int number = send(owner, get("/api/v1/admin/groups/next-number"), null, 200).get("number").asInt();
+            String groupId = send(owner, post("/api/v1/admin/groups"),
+                    Map.of("number", number, "name", "Pricing market", "officerId", ownerAdminId), 201)
+                    .get("group").get("id").asText();
+            SignUpFlow.Session member = flow.signUp(SignUpFlow.freshEmail("groupprice"));
+            send(owner, post("/api/v1/admin/groups/" + groupId + "/customers"),
+                    Map.of("customerRef", users.findById(member.userId()).orElseThrow().getCustomerRef()), 200);
+            SignUpFlow.Session outsider = flow.signUp(SignUpFlow.freshEmail("standardprice"));
+
+            JsonNode terms = send(member, get("/api/v1/loans/eligibility"), null, 200);
+            assertThat(terms.get("groupPricing").asBoolean()).isTrue();
+            assertThat(terms.get("terms").get("monthlyAllowed").asBoolean()).isFalse();
+
+            JsonNode groupQuote = send(member, get("/api/v1/loans/quote?amount=100000&months=3&frequency=WEEKLY"), null, 200);
+            assertThat(groupQuote.get("flatRate").decimalValue()).isEqualByComparingTo("0.15");
+            assertThat(groupQuote.get("loanAndInterest").decimalValue()).isEqualByComparingTo("115000.00");
+            assertThat(groupQuote.get("repaymentFeeRate").decimalValue()).isEqualByComparingTo("0.01");
+            // Monthly is not offered on group loans now.
+            send(member, get("/api/v1/loans/quote?amount=100000&months=3&frequency=MONTHLY"), null, 400);
+
+            JsonNode standard = send(outsider, get("/api/v1/loans/quote?amount=100000&months=3&frequency=MONTHLY"), null, 200);
+            assertThat(standard.get("flatRate").decimalValue()).isEqualByComparingTo("0.25");
+            assertThat(standard.get("repaymentFeeRate").decimalValue()).isEqualByComparingTo("0.02");
+            assertThat(send(outsider, get("/api/v1/loans/eligibility"), null, 200).get("groupPricing").asBoolean()).isFalse();
+        } finally {
+            saveSettings(owner, original.deepCopy());
+        }
+    }
+
+    private void saveSettings(SignUpFlow.Session owner, JsonNode settings) throws Exception {
+        long version = send(owner, get("/api/v1/admin/settings"), null, 200).get("version").asLong();
+        Map<String, Object> body = new HashMap<>();
+        body.put("expectedVersion", version);
+        body.put("settings", settings);
+        send(owner, put("/api/v1/admin/settings"), body, 200);
+    }
+
     // -- Plumbing -----------------------------------------------------------
 
     private static String idOf(JsonNode options, String email) {
@@ -147,6 +200,7 @@ class LoanGroupTest {
         body.put("phone", SignUpFlow.freshPhone());
         body.put("principal", 100000);
         body.put("tenureMonths", 4);
+        body.put("repaymentFrequency", "WEEKLY");
         body.put("flatRate", 0.2);
         body.put("purpose", "Business");
         body.put("disbursedAt", Instant.now().minus(5, ChronoUnit.DAYS).toString());

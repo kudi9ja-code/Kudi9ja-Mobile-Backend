@@ -96,6 +96,10 @@ public class ImportedLoan {
     @Column(name = "transaction_fee", nullable = false, precision = 19, scale = 2, updatable = false)
     private BigDecimal transactionFee = BigDecimal.ZERO;
 
+    /** The transaction fee on each repayment, as a fraction of the instalment. */
+    @Column(name = "repayment_fee_rate", nullable = false, precision = 12, scale = 6, updatable = false)
+    private BigDecimal repaymentFeeRate = BigDecimal.ZERO;
+
     @Column(name = "purpose", nullable = false, length = 200)
     private String purpose;
 
@@ -176,12 +180,38 @@ public class ImportedLoan {
 
     // Derived ---------------------------------------------------------------------
 
+    /** The loan, its interest and the transaction fee on every repayment, priced as on its account. */
     public BigDecimal totalRepayable() {
-        return Money.add(principal, Money.multiply(principal, flatRate));
+        return terms().totalRepayable();
     }
 
+    public BigDecimal repaymentFees() {
+        return terms().repaymentFees();
+    }
+
+    public int installmentCount() {
+        return terms().installmentCount();
+    }
+
+    /** The loan on the terms it was entered with, before it is on an account. */
+    private Loan terms() {
+        Loan loan = new Loan();
+        loan.setPrincipal(principal);
+        loan.setTenureMonths(tenureMonths);
+        loan.setRepaymentFrequency(RepaymentFrequency.orMonthly(repaymentFrequency));
+        loan.setFlatRate(flatRate);
+        loan.setProcessingFee(processingFee);
+        loan.setTransactionFee(transactionFee());
+        loan.setDisbursedAt(disbursedAt);
+        loan.setAmountRepaid(amountRepaid);
+        loan.setRebateGranted(Money.zero());
+        loan.fixRepaymentTerms(disbursedAt, repaymentFeeRate);
+        return loan;
+    }
+
+
     public Instant dueDate() {
-        return RepaymentFrequency.orMonthly(repaymentFrequency).finalDue(disbursedAt, tenureMonths);
+        return disbursedAt == null ? null : terms().getDueDate();
     }
 
     public BigDecimal outstanding() {
@@ -213,9 +243,10 @@ public class ImportedLoan {
         loan.setPurpose(purpose);
         loan.setRequestedAt(disbursedAt);
         loan.setDisbursedAt(disbursedAt);
-        loan.setDueDate(dueDate());
         loan.setAmountRepaid(amountRepaid);
         loan.setRebateGranted(Money.zero());
+        // The count, the fee on each repayment and the due date.
+        loan.fixRepaymentTerms(disbursedAt, repaymentFeeRate);
         loan.setDecidedBy("Imported from the paper records by " + importedBy);
 
         if (Money.isZeroOrLess(loan.outstanding())) {

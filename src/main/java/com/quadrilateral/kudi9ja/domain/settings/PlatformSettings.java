@@ -161,12 +161,61 @@ public class PlatformSettings {
     private BigDecimal loanProcessingFeeRate;
 
     /**
-     * A flat transaction fee on every loan, beside the management fee, for what
-     * the payment provider charges to move the money. Deducted from the
-     * disbursement and shown on its own line.
+     * The transaction fee on every loan repayment, as a fraction of the
+     * instalment: 0.02 for 2%. It covers what the payment provider charges to
+     * move the money, is added to each instalment, and is frozen onto a loan
+     * when it is paid out. Nothing but the management fee comes off a payout.
      */
-    @Column(name = "loan_transaction_fee", nullable = false, precision = 19, scale = 2)
-    private BigDecimal loanTransactionFee;
+    @Column(name = "loan_repayment_fee_rate", nullable = false, precision = 12, scale = 6)
+    private BigDecimal loanRepaymentFeeRate;
+
+    /** Whether weekly repayment is offered on standard loans. */
+    @Column(name = "loan_weekly_allowed", nullable = false)
+    private boolean loanWeeklyAllowed = true;
+
+    /** Whether monthly repayment is offered on standard loans. */
+    @Column(name = "loan_monthly_allowed", nullable = false)
+    private boolean loanMonthlyAllowed = true;
+
+    // Group loans -----------------------------------------------------------
+    //
+    // Members of a loan group borrow on their own copy of everything above.
+    // It started as an exact copy and is edited on its own.
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "platform_group_loan_rate",
+            joinColumns = @JoinColumn(name = "settings_version"))
+    @MapKeyColumn(name = "tenure_months")
+    @Column(name = "flat_rate", nullable = false, precision = 12, scale = 6)
+    private Map<Integer, BigDecimal> groupLoanRates = new LinkedHashMap<>();
+
+    @Column(name = "group_max_loan_tenure_months", nullable = false)
+    private Integer groupMaxLoanTenureMonths;
+
+    @Column(name = "group_min_loan_amount", nullable = false, precision = 19, scale = 2)
+    private BigDecimal groupMinLoanAmount;
+
+    @Column(name = "group_max_loan_amount", nullable = false, precision = 19, scale = 2)
+    private BigDecimal groupMaxLoanAmount;
+
+    @Column(name = "group_flat_processing_fee", nullable = false, precision = 19, scale = 2)
+    private BigDecimal groupFlatProcessingFee;
+
+    @Column(name = "group_processing_fee_threshold", nullable = false, precision = 19, scale = 2)
+    private BigDecimal groupProcessingFeeThreshold;
+
+    @Column(name = "group_loan_processing_fee_rate", nullable = false, precision = 12, scale = 6)
+    private BigDecimal groupLoanProcessingFeeRate;
+
+    @Column(name = "group_loan_repayment_fee_rate", nullable = false, precision = 12, scale = 6)
+    private BigDecimal groupLoanRepaymentFeeRate;
+
+    @Column(name = "group_loan_weekly_allowed", nullable = false)
+    private boolean groupLoanWeeklyAllowed = true;
+
+    @Column(name = "group_loan_monthly_allowed", nullable = false)
+    private boolean groupLoanMonthlyAllowed = true;
 
     // Security --------------------------------------------------------------
 
@@ -239,26 +288,44 @@ public class PlatformSettings {
      * {@link SettingsValidator} refuses a save that leaves one out.
      */
     public BigDecimal loanRateFor(int months) {
-        int wanted = Math.max(months, 1);
-        BigDecimal exact = loanRates.get(wanted);
-        if (exact != null) {
-            return exact;
-        }
+        return LendingTerms.rateFrom(loanRates, months);
+    }
 
-        int bestMonths = 0;
-        BigDecimal best = null;
-        for (Map.Entry<Integer, BigDecimal> entry : loanRates.entrySet()) {
-            if (entry.getKey() <= wanted && entry.getKey() > bestMonths) {
-                bestMonths = entry.getKey();
-                best = entry.getValue();
-            }
-        }
-        if (best != null) {
-            return best;
-        }
+    /** What prices a standard loan. */
+    public LendingTerms lending() {
+        return new LendingTerms(
+                false,
+                loanRates,
+                maxLoanTenureMonths,
+                minLoanAmount,
+                maxLoanAmount,
+                flatProcessingFee,
+                processingFeeThreshold,
+                loanProcessingFeeRate,
+                loanRepaymentFeeRate,
+                loanWeeklyAllowed,
+                loanMonthlyAllowed);
+    }
 
-        // Nothing at or below the tenure asked for: take the shortest we have.
-        return new TreeMap<>(loanRates).firstEntry().getValue();
+    /** What prices a loan to a member of a loan group. */
+    public LendingTerms groupLending() {
+        return new LendingTerms(
+                true,
+                groupLoanRates,
+                groupMaxLoanTenureMonths,
+                groupMinLoanAmount,
+                groupMaxLoanAmount,
+                groupFlatProcessingFee,
+                groupProcessingFeeThreshold,
+                groupLoanProcessingFeeRate,
+                groupLoanRepaymentFeeRate,
+                groupLoanWeeklyAllowed,
+                groupLoanMonthlyAllowed);
+    }
+
+    /** The standard terms, or the group terms for a member of a loan group. */
+    public LendingTerms lending(boolean groupMember) {
+        return groupMember ? groupLending() : lending();
     }
 
     /** The bonus rate a Target plan of {@code months} earns. */

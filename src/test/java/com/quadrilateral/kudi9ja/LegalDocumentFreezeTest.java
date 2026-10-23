@@ -111,9 +111,12 @@ class LegalDocumentFreezeTest {
         assertThat(lending.getBodyJson())
                 .doesNotContain("submitting the claim with your receipt")
                 .contains("Through Paystack")
-                .contains("Less transaction fee")
-                .contains("₦193,000");
-        assertThat(terms.getBodyJson()).contains("Loan transaction fee");
+                // The transaction fee is on each repayment now, not off the payout.
+                .doesNotContain("Less transaction fee")
+                .contains("2% of each repayment")
+                .contains("₦10,626")
+                .contains("₦255,001");
+        assertThat(terms.getBodyJson()).contains("Loan transaction fee").contains("2% of each loan repayment").doesNotContain("₦93,000");
         // No third-party identity provider is used, so none is named.
         assertThat(terms.getBodyJson()).doesNotContain("Dojah");
         assertThat(privacy.getBodyJson())

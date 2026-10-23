@@ -46,11 +46,11 @@
             },
             {
               "term": "Transaction fee",
-              "meaning": "A flat **₦2,000** on every loan, beside the management fee, for what the payment provider charges to move the money. It is deducted from the disbursement together with the management fee, shown as its own line before you confirm, and never added to what you owe."
+              "meaning": "**2% of each repayment**, for what the payment provider charges to move the money. It is added to every instalment — weekly or monthly — and rounded up to the naira, as each instalment is. Nothing but the management fee comes off the money we send you. The fee on every instalment is shown before you confirm and included in the total you repay."
             },
             {
               "term": "Net disbursement",
-              "meaning": "What actually reaches your wallet: the principal less the management fee and the transaction fee."
+              "meaning": "What actually reaches your wallet: the principal less the management fee."
             },
             {
               "term": "Interest",
@@ -58,7 +58,7 @@
             },
             {
               "term": "Total repayable",
-              "meaning": "Principal plus interest. This is the whole of what you owe, and it never increases."
+              "meaning": "The principal, the interest and the transaction fee on every instalment: everything you repay, fixed on the day you borrow."
             },
             {
               "term": "Tenure",
@@ -117,7 +117,7 @@
             },
             {
               "term": "Transaction fee",
-              "meaning": "A flat **₦2,000** on every loan, beside the management fee, for what the payment provider charges to move the money. It is deducted from the disbursement together with the management fee, shown as its own line before you confirm, and never added to what you owe."
+              "meaning": "**2% of each repayment**, for what the payment provider charges to move the money. It is added to every instalment — weekly or monthly — and rounded up to the naira, as each instalment is. Nothing but the management fee comes off the money we send you. The fee on every instalment is shown before you confirm and included in the total you repay."
             }
           ]
         },
@@ -130,31 +130,31 @@
           "entries": [
             {
               "term": "Over 1 month",
-              "meaning": "**12.5% flat** — the equivalent of 12.50% a month. Borrow ₦200,000 and you repay ₦225,000."
+              "meaning": "**12.5% flat** — the equivalent of 12.50% a month. Borrow ₦200,000 and the loan and interest come to ₦225,000., before the 2% on each repayment."
             },
             {
               "term": "Over 2 months",
-              "meaning": "**17% flat** — the equivalent of 8.50% a month. Borrow ₦200,000 and you repay ₦234,000."
+              "meaning": "**17% flat** — the equivalent of 8.50% a month. Borrow ₦200,000 and the loan and interest come to ₦234,000., before the 2% on each repayment."
             },
             {
               "term": "Over 3 months",
-              "meaning": "**25% flat** — the equivalent of 8.33% a month. Borrow ₦200,000 and you repay ₦250,000."
+              "meaning": "**25% flat** — the equivalent of 8.33% a month. Borrow ₦200,000 and the loan and interest come to ₦250,000., before the 2% on each repayment."
             },
             {
               "term": "Over 6 months",
-              "meaning": "**45% flat** — the equivalent of 7.50% a month. Borrow ₦200,000 and you repay ₦290,000."
+              "meaning": "**45% flat** — the equivalent of 7.50% a month. Borrow ₦200,000 and the loan and interest come to ₦290,000., before the 2% on each repayment."
             },
             {
               "term": "Over 12 months",
-              "meaning": "**78% flat** — the equivalent of 6.50% a month. Borrow ₦200,000 and you repay ₦356,000."
+              "meaning": "**78% flat** — the equivalent of 6.50% a month. Borrow ₦200,000 and the loan and interest come to ₦356,000., before the 2% on each repayment."
             },
             {
               "term": "Over 18 months",
-              "meaning": "**107% flat** — the equivalent of 5.94% a month. Borrow ₦200,000 and you repay ₦414,000."
+              "meaning": "**107% flat** — the equivalent of 5.94% a month. Borrow ₦200,000 and the loan and interest come to ₦414,000., before the 2% on each repayment."
             },
             {
               "term": "Over 24 months",
-              "meaning": "**134% flat** — the equivalent of 5.58% a month. Borrow ₦200,000 and you repay ₦468,000."
+              "meaning": "**134% flat** — the equivalent of 5.58% a month. Borrow ₦200,000 and the loan and interest come to ₦468,000., before the 2% on each repayment."
             }
           ]
         },
@@ -210,36 +210,36 @@
               "value": "- ₦5,000"
             },
             {
-              "label": "Less transaction fee",
-              "value": "- ₦2,000"
-            },
-            {
               "label": "Reaches your wallet",
-              "value": "₦43,000"
+              "value": "₦45,000"
             },
             {
               "label": "Interest (flat)",
               "value": "₦6,250"
             },
             {
+              "label": "Transaction fee, 2% of each repayment",
+              "value": "₦1,125"
+            },
+            {
               "label": "Total you repay",
-              "value": "₦56,250"
+              "value": "₦57,375"
             },
             {
               "label": "Repayment",
-              "value": "One payment of ₦56,250 after 1 month"
+              "value": "One payment of ₦57,375 (₦56,250 + ₦1,125 transaction fee) after 1 month"
             },
             {
               "label": "Total cost of the credit",
-              "value": "₦11,250"
+              "value": "₦12,375"
             },
             {
               "label": "Cost over 1 month",
-              "value": "25.0% of what you received"
+              "value": "27.5% of what you received"
             },
             {
               "label": "Equivalent annual rate",
-              "value": "300% per year"
+              "value": "330% per year"
             }
           ]
         },
@@ -256,36 +256,36 @@
               "value": "- ₦5,000"
             },
             {
-              "label": "Less transaction fee",
-              "value": "- ₦2,000"
-            },
-            {
               "label": "Reaches your wallet",
-              "value": "₦193,000"
+              "value": "₦195,000"
             },
             {
               "label": "Interest (flat)",
               "value": "₦25,000"
             },
             {
+              "label": "Transaction fee, 2% of each repayment",
+              "value": "₦4,500"
+            },
+            {
               "label": "Total you repay",
-              "value": "₦225,000"
+              "value": "₦229,500"
             },
             {
               "label": "Repayment",
-              "value": "One payment of ₦225,000 after 1 month"
+              "value": "One payment of ₦229,500 (₦225,000 + ₦4,500 transaction fee) after 1 month"
             },
             {
               "label": "Total cost of the credit",
-              "value": "₦30,000"
+              "value": "₦34,500"
             },
             {
               "label": "Cost over 1 month",
-              "value": "15.4% of what you received"
+              "value": "17.7% of what you received"
             },
             {
               "label": "Equivalent annual rate",
-              "value": "185% per year"
+              "value": "212% per year"
             }
           ]
         },
@@ -302,36 +302,82 @@
               "value": "- ₦5,000"
             },
             {
-              "label": "Less transaction fee",
-              "value": "- ₦2,000"
-            },
-            {
               "label": "Reaches your wallet",
-              "value": "₦193,000"
+              "value": "₦195,000"
             },
             {
               "label": "Interest (flat)",
               "value": "₦50,000"
             },
             {
+              "label": "Transaction fee, 2% of each repayment",
+              "value": "₦5,001"
+            },
+            {
               "label": "Total you repay",
-              "value": "₦250,000"
+              "value": "₦255,001"
             },
             {
               "label": "Repayment",
-              "value": "3 monthly payments of ₦83,333.33"
+              "value": "3 monthly payments of ₦85,001 (₦83,334 + ₦1,667 transaction fee), the last ₦84,999"
             },
             {
               "label": "Total cost of the credit",
-              "value": "₦55,000"
+              "value": "₦60,001"
             },
             {
               "label": "Cost over 3 months",
-              "value": "28.2% of what you received"
+              "value": "30.8% of what you received"
             },
             {
               "label": "Equivalent annual rate",
-              "value": "113% per year"
+              "value": "123% per year"
+            }
+          ]
+        },
+        {
+          "type": "example",
+          "title": "Borrowing ₦100,000 over 3 months, repaid weekly",
+          "rows": [
+            {
+              "label": "Loan amount",
+              "value": "₦100,000"
+            },
+            {
+              "label": "Less management fee",
+              "value": "- ₦5,000"
+            },
+            {
+              "label": "Reaches your wallet",
+              "value": "₦95,000"
+            },
+            {
+              "label": "Interest (flat)",
+              "value": "₦25,000"
+            },
+            {
+              "label": "Transaction fee, 2% of each repayment",
+              "value": "₦2,508"
+            },
+            {
+              "label": "Total you repay",
+              "value": "₦127,508"
+            },
+            {
+              "label": "Repayment",
+              "value": "12 weekly payments of ₦10,626 (₦10,417 + ₦209 transaction fee), the last ₦10,622 — where the three months hold 12 whole weeks; the app shows your exact count"
+            },
+            {
+              "label": "Total cost of the credit",
+              "value": "₦32,508"
+            },
+            {
+              "label": "Cost over 3 months",
+              "value": "34.2% of what you received"
+            },
+            {
+              "label": "Equivalent annual rate",
+              "value": "137% per year"
             }
           ]
         },
@@ -348,36 +394,36 @@
               "value": "- ₦5,000"
             },
             {
-              "label": "Less transaction fee",
-              "value": "- ₦2,000"
-            },
-            {
               "label": "Reaches your wallet",
-              "value": "₦193,000"
+              "value": "₦195,000"
             },
             {
               "label": "Interest (flat)",
               "value": "₦156,000"
             },
             {
+              "label": "Transaction fee, 2% of each repayment",
+              "value": "₦7,128"
+            },
+            {
               "label": "Total you repay",
-              "value": "₦356,000"
+              "value": "₦363,128"
             },
             {
               "label": "Repayment",
-              "value": "12 monthly payments of ₦29,666.67"
+              "value": "12 monthly payments of ₦30,261 (₦29,667 + ₦594 transaction fee), the last ₦30,257"
             },
             {
               "label": "Total cost of the credit",
-              "value": "₦161,000"
+              "value": "₦168,128"
             },
             {
               "label": "Cost over 12 months",
-              "value": "82.6% of what you received"
+              "value": "86.2% of what you received"
             },
             {
               "label": "Equivalent annual rate",
-              "value": "83% per year"
+              "value": "86% per year"
             }
           ]
         },
@@ -394,36 +440,36 @@
               "value": "- ₦5,000"
             },
             {
-              "label": "Less transaction fee",
-              "value": "- ₦2,000"
-            },
-            {
               "label": "Reaches your wallet",
-              "value": "₦193,000"
+              "value": "₦195,000"
             },
             {
               "label": "Interest (flat)",
               "value": "₦268,000"
             },
             {
+              "label": "Transaction fee, 2% of each repayment",
+              "value": "₦9,360"
+            },
+            {
               "label": "Total you repay",
-              "value": "₦468,000"
+              "value": "₦477,360"
             },
             {
               "label": "Repayment",
-              "value": "24 monthly payments of ₦19,500"
+              "value": "24 monthly payments of ₦19,890 (₦19,500 + ₦390 transaction fee)"
             },
             {
               "label": "Total cost of the credit",
-              "value": "₦273,000"
+              "value": "₦282,360"
             },
             {
               "label": "Cost over 24 months",
-              "value": "140.0% of what you received"
+              "value": "144.8% of what you received"
             },
             {
               "label": "Equivalent annual rate",
-              "value": "70% per year"
+              "value": "72% per year"
             }
           ]
         },
@@ -440,36 +486,36 @@
               "value": "- ₦50,000"
             },
             {
-              "label": "Less transaction fee",
-              "value": "- ₦2,000"
-            },
-            {
               "label": "Reaches your wallet",
-              "value": "₦4,948,000"
+              "value": "₦4,950,000"
             },
             {
               "label": "Interest (flat)",
               "value": "₦6,700,000"
             },
             {
+              "label": "Transaction fee, 2% of each repayment",
+              "value": "₦234,000"
+            },
+            {
               "label": "Total you repay",
-              "value": "₦11,700,000"
+              "value": "₦11,934,000"
             },
             {
               "label": "Repayment",
-              "value": "24 monthly payments of ₦487,500"
+              "value": "24 monthly payments of ₦497,250 (₦487,500 + ₦9,750 transaction fee)"
             },
             {
               "label": "Total cost of the credit",
-              "value": "₦6,750,000"
+              "value": "₦6,984,000"
             },
             {
               "label": "Cost over 24 months",
-              "value": "136.4% of what you received"
+              "value": "141.1% of what you received"
             },
             {
               "label": "Equivalent annual rate",
-              "value": "68% per year"
+              "value": "71% per year"
             }
           ]
         },
@@ -503,7 +549,7 @@
       "blocks": [
         {
           "type": "text",
-          "text": "When you apply you choose how often to repay: **monthly** or **weekly**. The total repayable is the same either way — it is priced on the tenure in months, not on how often you pay. Monthly, it is divided into one equal instalment for each month of the tenure, the first due one month after disbursement and each after it a month later. Weekly, it is divided into one equal instalment for each week of the tenure (4 for one month, 13 for three, 26 for six, 52 for twelve), the first due seven days after disbursement and each after it seven days later. Your schedule, with every date and amount, is in the app from the moment the loan starts."
+          "text": "When you apply you must choose how often to repay: **weekly** or **monthly**. The loan and interest are the same either way — they are priced on the tenure in months, not on how often you pay. **Monthly**, they are divided into one instalment for each month of the tenure, the first due one month after disbursement and each after it a month later. **Weekly**, they are divided into one instalment for each whole week the calendar holds between the day the money reaches your wallet and the same date at the end of the tenure — 13 weeks for most three-month loans, 12 when the three months are short — the first due seven days after disbursement and each after it seven days later. Each instalment is rounded up to the naira, the last one taking whatever the rounding left over, and **every instalment carries a transaction fee of 2% of itself**, also rounded up. Your schedule, with every date, every amount and the fee in each, is shown before you confirm and in the app from the moment the loan starts."
         },
         {
           "type": "text",
@@ -540,7 +586,7 @@
         },
         {
           "type": "text",
-          "text": "Paying early is the same as paying on time, only sooner: you pay **everything still outstanding, interest included**. There is no discount for paying early and no charge for it either. The app shows the exact figure before you confirm."
+          "text": "Paying early is the same as paying on time, only sooner: you pay **everything still outstanding, interest and the transaction fee on the remaining instalments included**. There is no discount for paying early and no charge for it either. The app shows the exact figure before you confirm."
         },
         {
           "type": "example",
@@ -548,15 +594,15 @@
           "rows": [
             {
               "label": "Total repayable",
-              "value": "₦250,000"
+              "value": "₦255,001"
             },
             {
               "label": "Already paid",
-              "value": "₦83,333.33"
+              "value": "₦85,001"
             },
             {
               "label": "You pay to clear it",
-              "value": "₦166,666.67"
+              "value": "₦170,000"
             }
           ]
         },
@@ -789,5 +835,5 @@
       ]
     }
   ],
-  "changeSummary": "You can now repay through Paystack — by card, bank transfer or USSD — and the payment is applied to your loan the moment Paystack confirms it. The receipt-upload route has gone. You also sign this agreement electronically when you open your account. Every loan now also carries a flat ₦2,000 transaction fee, deducted from the disbursement beside the management fee and shown on its own line. There is no longer a 24-hour cancellation: once a loan reaches your wallet it is repaid in full, with interest, though you can still settle early. Paying a loan off early now costs exactly what is still owed: there is no discount for paying early. You can also choose to repay weekly instead of monthly, for the same total."
+  "changeSummary": "You can now repay through Paystack — by card, bank transfer or USSD — and the payment is applied to your loan the moment Paystack confirms it. The receipt-upload route has gone. You also sign this agreement electronically when you open your account. Every repayment now carries a transaction fee of 2% of the instalment, added to each instalment and shown before you confirm; only the management fee comes off the money we send you. Instalments and fees are rounded up to the naira. There is no longer a 24-hour cancellation: once a loan reaches your wallet it is repaid in full, with interest, though you can still settle early. Paying a loan off early now costs exactly what is still owed: there is no discount for paying early. You now choose to repay weekly or monthly; the loan and interest are the same either way."
 }

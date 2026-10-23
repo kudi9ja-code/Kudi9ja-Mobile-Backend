@@ -90,8 +90,7 @@ public class AdminLoanApplicationController {
     @Operation(summary = "One application, with signed links to the statement and photos")
     public LoanApplicationDtos.AdminApplicationDetail detail(@PathVariable UUID applicationId) {
         access.requireCanView();
-        return LoanApplicationDtos.AdminApplicationDetail.from(
-                applications.get(applicationId), applications::documentUrl);
+        return detailOf(applications.get(applicationId));
     }
 
     @PostMapping("/{applicationId}/approve")
@@ -101,12 +100,10 @@ public class AdminLoanApplicationController {
             @RequestBody(required = false) LoanApplicationDtos.ApproveApplicationRequest request) {
 
         AdminUser actor = access.requireCanActOnLoans();
-        return LoanApplicationDtos.AdminApplicationDetail.from(
-                applications.approve(
-                        applicationId,
-                        actorOf(actor),
-                        request == null ? null : request.note()),
-                applications::documentUrl);
+        return detailOf(applications.approve(
+                applicationId,
+                actorOf(actor),
+                request == null ? null : request.note()));
     }
 
     @PostMapping("/{applicationId}/reject")
@@ -116,9 +113,13 @@ public class AdminLoanApplicationController {
             @Valid @RequestBody LoanApplicationDtos.RejectApplicationRequest request) {
 
         AdminUser actor = access.requireCanActOnLoans();
+        return detailOf(applications.reject(applicationId, actorOf(actor), request.reason()));
+    }
+
+    private LoanApplicationDtos.AdminApplicationDetail detailOf(
+            com.quadrilateral.kudi9ja.domain.loanapplication.LoanApplication application) {
         return LoanApplicationDtos.AdminApplicationDetail.from(
-                applications.reject(applicationId, actorOf(actor), request.reason()),
-                applications::documentUrl);
+                application, applications::documentUrl, applications.groupPricing(application.getUserId()));
     }
 
     private static AuditService.Actor actorOf(AdminUser actor) {

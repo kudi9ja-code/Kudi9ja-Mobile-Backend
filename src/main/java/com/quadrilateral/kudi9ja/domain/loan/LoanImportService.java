@@ -74,7 +74,8 @@ public class LoanImportService {
             LoanOfficerService officers,
             LoanGroupService groups,
             LedgerService ledger,
-            EnteredLoanRemoval removal) {
+            EnteredLoanRemoval removal,
+            com.quadrilateral.kudi9ja.domain.settings.SettingsService settings) {
         this.imports = imports;
         this.loans = loans;
         this.users = users;
@@ -85,7 +86,10 @@ public class LoanImportService {
         this.groups = groups;
         this.ledger = ledger;
         this.removal = removal;
+        this.settings = settings;
     }
+
+    private final com.quadrilateral.kudi9ja.domain.settings.SettingsService settings;
 
     // ── Admin ──────────────────────────────────────────────────────────────
 
@@ -128,6 +132,11 @@ public class LoanImportService {
         row.setPrincipal(principal);
         row.setTenureMonths(request.tenureMonths());
         row.setRepaymentFrequency(RepaymentFrequency.orMonthly(request.repaymentFrequency()));
+        // The transaction fee on each repayment: what was agreed, or today's rate.
+        row.setRepaymentFeeRate(request.repaymentFeeRate() != null
+                ? request.repaymentFeeRate()
+                : com.quadrilateral.kudi9ja.finance.Finance.repaymentFeeRate(
+                        settings.currentReadOnly().lending(request.groupId() != null)));
         row.setFlatRate(request.flatRate());
         row.setProcessingFee(fee);
         row.setTransactionFee(transactionFee);

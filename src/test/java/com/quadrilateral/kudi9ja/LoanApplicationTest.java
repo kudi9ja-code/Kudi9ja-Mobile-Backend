@@ -118,6 +118,30 @@ class LoanApplicationTest {
         }
 
         @Test
+        @DisplayName("is refused until weekly or monthly repayment is chosen")
+        void frequencyRequired() throws Exception {
+            SignUpFlow.Session admin = owner();
+            SignUpFlow.Session customer = fundedCustomer(admin);
+
+            Map<String, Object> form = new LinkedHashMap<>(json.readValue(
+                    formPart("200000", 3, BorrowFlow.oneGuarantor()).getBytes(), Map.class));
+            form.remove("repaymentFrequency");
+            MvcResult refused = mvc.perform(multipart("/api/v1/loans/applications")
+                            .file(new MockMultipartFile("form", "form.json", MediaType.APPLICATION_JSON_VALUE,
+                                    json.writeValueAsBytes(form)))
+                            .file(statement())
+                            .file(selfie())
+                            .file(photo("front.jpg"))
+                            .file(photo("inside.jpg"))
+                            .file(photo("stock.jpg"))
+                            .header("Authorization", customer.bearer()))
+                    .andExpect(status().isBadRequest())
+                    .andReturn();
+            assertThat(refused.getResponse().getContentAsString()).contains("weekly or monthly");
+            assertThat(getJson("/api/v1/loans/applications", customer)).isEmpty();
+        }
+
+        @Test
         @DisplayName("is refused without a bank statement")
         void statementRequired() throws Exception {
             SignUpFlow.Session admin = owner();
@@ -300,13 +324,14 @@ class LoanApplicationTest {
             assertThat(decided.get("status").asText()).isEqualTo("APPROVED");
             assertThat(decided.get("loanId").isNull()).isFalse();
 
-            // 200,000 in; the 5,000 management fee and 2,000 transaction fee straight out.
+            // 200,000 in; only the 5,000 management fee straight out.
             assertThat(balanceOf(customer))
-                    .isEqualByComparingTo(before.add(new BigDecimal("193000")));
+                    .isEqualByComparingTo(before.add(new BigDecimal("195000")));
 
             JsonNode loan = getJson("/api/v1/loans", customer).get(0);
             assertThat(loan.get("status").asText()).isEqualTo("ACTIVE");
-            assertThat(loan.get("outstanding").decimalValue()).isEqualByComparingTo("250000.00");
+            // ₦250,000 plus 2% on each of the three repayments.
+            assertThat(loan.get("outstanding").decimalValue()).isEqualByComparingTo("255001.00");
         }
 
         @Test
@@ -321,27 +346,45 @@ class LoanApplicationTest {
 
             JsonNode loan = getJson("/api/v1/loans", customer).get(0);
             assertThat(loan.get("repaymentFrequency").asText()).isEqualTo("WEEKLY");
-            // Priced exactly as the monthly loan would be.
-            assertThat(loan.get("totalRepayable").decimalValue()).isEqualByComparingTo("250000.00");
-            // Three months hold thirteen weeks.
-            assertThat(loan.get("installmentCount").asInt()).isEqualTo(13);
+            // The same loan and interest as monthly.
+            assertThat(loan.get("loanAndInterest").decimalValue()).isEqualByComparingTo("250000.00");
+            // As many weeks as the calendar holds between today and three months on.
+            java.time.Instant disbursed = java.time.Instant.parse(loan.get("disbursedAt").asText());
+            long days = java.time.temporal.ChronoUnit.DAYS.between(disbursed,
+                    com.quadrilateral.kudi9ja.common.util.Dates.addMonths(disbursed, 3));
+            int weeks = (int) (days / 7);
+            assertThat(loan.get("installmentCount").asInt()).isEqualTo(weeks);
             JsonNode schedule = loan.get("schedule");
-            assertThat(schedule).hasSize(13);
+            assertThat(schedule).hasSize(weeks);
+
+            // Each instalment: its share rounded up to the naira, plus 2% of it rounded up.
+            BigDecimal share = new BigDecimal("250000").divide(BigDecimal.valueOf(weeks), 0, java.math.RoundingMode.CEILING);
+            BigDecimal fee = share.multiply(new BigDecimal("0.02")).setScale(0, java.math.RoundingMode.CEILING);
+            assertThat(schedule.get(0).get("base").decimalValue()).isEqualByComparingTo(share);
+            assertThat(schedule.get(0).get("fee").decimalValue()).isEqualByComparingTo(fee);
+            assertThat(schedule.get(0).get("amount").decimalValue()).isEqualByComparingTo(share.add(fee));
+
             BigDecimal sum = BigDecimal.ZERO;
+            BigDecimal fees = BigDecimal.ZERO;
             for (JsonNode row : schedule) {
                 sum = sum.add(row.get("amount").decimalValue());
+                fees = fees.add(row.get("fee").decimalValue());
             }
-            assertThat(sum).isEqualByComparingTo("250000.00");
+            // The schedule adds up to exactly what is owed: the loan, interest and every fee.
+            assertThat(sum).isEqualByComparingTo(loan.get("totalRepayable").decimalValue());
+            assertThat(fees).isEqualByComparingTo(loan.get("totalRepaymentFees").decimalValue());
+            assertThat(loan.get("totalRepayable").decimalValue()).isEqualByComparingTo(new BigDecimal("250000").add(fees));
+
             java.time.Instant first = java.time.Instant.parse(schedule.get(0).get("dueDate").asText());
             java.time.Instant second = java.time.Instant.parse(schedule.get(1).get("dueDate").asText());
             assertThat(java.time.Duration.between(first, second).toDays()).isEqualTo(7);
-            assertThat(loan.get("dueDate").asText()).isEqualTo(schedule.get(12).get("dueDate").asText());
+            assertThat(loan.get("dueDate").asText()).isEqualTo(schedule.get(weeks - 1).get("dueDate").asText());
 
             // The quote says the same before anybody applies.
             JsonNode quote = getJson("/api/v1/loans/quote?amount=200000&months=3&frequency=WEEKLY", customer);
-            assertThat(quote.get("installmentCount").asInt()).isEqualTo(13);
-            assertThat(quote.get("totalRepayable").decimalValue()).isEqualByComparingTo("250000.00");
-            assertThat(quote.get("installmentAmount").decimalValue()).isEqualByComparingTo("19230.77");
+            assertThat(quote.get("installmentCount").asInt()).isEqualTo(weeks);
+            assertThat(quote.get("installmentAmount").decimalValue()).isEqualByComparingTo(share.add(fee));
+            assertThat(quote.get("totalRepayable").decimalValue()).isEqualByComparingTo(loan.get("totalRepayable").decimalValue());
         }
 
         @Test
@@ -504,6 +547,7 @@ class LoanApplicationTest {
         Map<String, Object> form = new LinkedHashMap<>();
         form.put("amount", new BigDecimal(amount));
         form.put("months", months);
+        form.put("repaymentFrequency", "MONTHLY");
         form.put("purpose", "Stock for the shop");
         form.put("businessName", "Chioma Grace Provisions");
         form.put("businessAddress", "14 Adeola Odeku Street, Victoria Island, Lagos");

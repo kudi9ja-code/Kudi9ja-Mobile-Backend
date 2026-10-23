@@ -97,7 +97,21 @@ public final class SettingsDefaults {
         s.setFlatProcessingFee(Money.of(5_000));
         s.setProcessingFeeThreshold(Money.of(500_000));
         s.setLoanProcessingFeeRate(rate("0.01"));
-        s.setLoanTransactionFee(Money.of(2_000));
+        s.setLoanRepaymentFeeRate(rate("0.02"));
+        s.setLoanWeeklyAllowed(true);
+        s.setLoanMonthlyAllowed(true);
+
+        // Group loans start as an exact copy of the above.
+        s.setGroupLoanRates(loanRates());
+        s.setGroupMaxLoanTenureMonths(24);
+        s.setGroupMinLoanAmount(Money.of(50_000));
+        s.setGroupMaxLoanAmount(Money.of(5_000_000));
+        s.setGroupFlatProcessingFee(Money.of(5_000));
+        s.setGroupProcessingFeeThreshold(Money.of(500_000));
+        s.setGroupLoanProcessingFeeRate(rate("0.01"));
+        s.setGroupLoanRepaymentFeeRate(rate("0.02"));
+        s.setGroupLoanWeeklyAllowed(true);
+        s.setGroupLoanMonthlyAllowed(true);
 
         // Security.
         s.setMaxPasscodeAttempts(5);
