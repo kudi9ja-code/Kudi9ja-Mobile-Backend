@@ -25,6 +25,9 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
 
     Optional<WalletTransaction> findByReference(String reference);
 
+    /** Every row of one kind except those in the given status, newest first. */
+    List<WalletTransaction> findByKindAndStatusNotOrderByOccurredAtDesc(TxKind kind, TxStatus status);
+
     long countByUserId(UUID userId);
 
     /**

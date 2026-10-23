@@ -212,6 +212,16 @@ class OfflineLoanFileTest {
         assertThat(onRecord.get("documents")).hasSize(1);
         assertThat(onRecord.get("repayments")).hasSize(3);
 
+        // So does the repayment history, every one recorded by hand, all under the customer.
+        JsonNode cash = getJson("/api/v1/admin/repayments?query=0012", admin);
+        assertThat(cash.get("page").get("items")).hasSize(1);
+        assertThat(cash.get("page").get("items").get(0).get("source").asText()).isEqualTo("RECORDED");
+        assertThat(cash.get("page").get("items").get(0).get("customerId").asText()).isEqualTo(customer.userId().toString());
+        JsonNode transfer = getJson("/api/v1/admin/repayments?query=ZEN-88213&source=RECORDED", admin);
+        assertThat(transfer.get("summary").get("total").decimalValue()).isEqualByComparingTo("30000.00");
+        assertThat(getJson("/api/v1/admin/repayments?query=ZEN-88213&source=PAYSTACK", admin)
+                .get("page").get("items")).isEmpty();
+
         // Every step is on the audit log.
         assertThat(getJson("/api/v1/admin/audit?size=30", admin).get("items").toString())
                 .contains("Document attached to a loan file")

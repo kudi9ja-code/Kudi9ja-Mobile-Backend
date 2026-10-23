@@ -16,6 +16,7 @@ import com.quadrilateral.kudi9ja.domain.user.AccountStatus;
 import com.quadrilateral.kudi9ja.domain.user.UserRepository;
 import com.quadrilateral.kudi9ja.domain.wallet.WalletRepository;
 import com.quadrilateral.kudi9ja.web.dto.AdminDtos;
+import com.quadrilateral.kudi9ja.web.dto.RepaymentDtos;
 import java.time.Duration;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -61,6 +62,7 @@ public class AdminOverviewService {
     private final WithdrawalService withdrawals;
     private final AuditRepository auditEntries;
     private final ImportedLoanRepository imports;
+    private final RepaymentHistoryService repayments;
 
     public AdminOverviewService(
             AdminAccessService access,
@@ -72,7 +74,8 @@ public class AdminOverviewService {
             PayInService payIns,
             WithdrawalService withdrawals,
             AuditRepository auditEntries,
-            ImportedLoanRepository imports) {
+            ImportedLoanRepository imports,
+            RepaymentHistoryService repayments) {
         this.access = access;
         this.wallets = wallets;
         this.users = users;
@@ -83,6 +86,7 @@ public class AdminOverviewService {
         this.withdrawals = withdrawals;
         this.auditEntries = auditEntries;
         this.imports = imports;
+        this.repayments = repayments;
     }
 
     @Transactional(readOnly = true)
@@ -115,6 +119,7 @@ public class AdminOverviewService {
 
     private AdminDtos.Book book() {
         PaperBook paper = paperBook(Instant.now());
+        RepaymentDtos.Summary repaid = repayments.allTime();
         return new AdminDtos.Book(
                 Money.of(plans.totalSavedAcrossBook()),
                 Money.of(plans.totalInterestPaidAcrossBook()),
@@ -126,7 +131,10 @@ public class AdminOverviewService {
                 plans.countByStatus(SavingsStatus.MATURED),
                 loans.countByStatus(LoanStatus.ACTIVE) + paper.active(),
                 loans.countByStatus(LoanStatus.OVERDUE) + paper.overdueCount(),
-                loans.countByStatus(LoanStatus.REPAID) + paper.repaid());
+                loans.countByStatus(LoanStatus.REPAID) + paper.repaid(),
+                repaid.total(),
+                repaid.count(),
+                repaid.thisMonth());
     }
 
     /**

@@ -296,7 +296,9 @@ public class WithdrawalService {
             transfer = gateway.transfer(kobo, recipient, transferReference,
                     "Kudi9ja withdrawal " + request.getReference());
         } catch (PaystackGateway.PaystackException e) {
-            throw new ApiException(ErrorCode.CONFLICT, e.getMessage() + " Nothing was sent; the request is still waiting.");
+            String said = e.getMessage().strip();
+            if (!said.endsWith(".")) said += ".";
+            throw new ApiException(ErrorCode.CONFLICT, said + " Nothing was sent; the request is still waiting.");
         }
 
         request.setPayoutProvider("PAYSTACK");

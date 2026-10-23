@@ -311,7 +311,12 @@ public final class AdminDtos {
             long maturedPlans,
             long activeLoans,
             long overdueLoans,
-            long repaidLoans) {
+            long repaidLoans,
+
+            /** Every repayment customers have made, through the app or recorded by hand. */
+            BigDecimal totalRepaid,
+            long repayments,
+            BigDecimal repaidThisMonth) {
     }
 
     public record People(

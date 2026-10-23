@@ -446,6 +446,22 @@ class CustomerJourneyTest {
         assertThat(paid.get("amountPaid").decimalValue()).isEqualByComparingTo("255001.00");
         assertThat(paid.get("status").asText()).isEqualTo("REPAID");
         assertThat(balanceOf(customer)).isEqualByComparingTo(before.subtract(new BigDecimal("255001")));
+
+        // The panel's repayment history has it, paid from the wallet.
+        JsonNode history = getJson("/api/v1/admin/repayments?size=200", admin);
+        java.util.List<JsonNode> theirs = new java.util.ArrayList<>();
+        history.get("page").get("items").forEach(r -> {
+            if (customer.userId().toString().equals(r.get("customerId").asText())) {
+                theirs.add(r);
+            }
+        });
+        assertThat(theirs).hasSize(1);
+        assertThat(theirs.get(0).get("source").asText()).isEqualTo("WALLET");
+        assertThat(theirs.get(0).get("amount").decimalValue()).isEqualByComparingTo("255001.00");
+        assertThat(theirs.get(0).get("loanPurpose").asText()).isEqualTo("Stock for the shop");
+        assertThat(history.get("summary").get("total").decimalValue()).isGreaterThanOrEqualTo(new BigDecimal("255001"));
+        assertThat(getJson("/api/v1/admin/overview", admin).get("book").get("totalRepaid").decimalValue())
+                .isGreaterThanOrEqualTo(new BigDecimal("255001"));
     }
 
     @Test
