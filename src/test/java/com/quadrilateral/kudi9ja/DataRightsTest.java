@@ -11,6 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quadrilateral.kudi9ja.domain.compliance.DataRightsService;
+import com.quadrilateral.kudi9ja.domain.group.LoanGroupMemberRepository;
+import com.quadrilateral.kudi9ja.domain.support.SupportConversationRepository;
 import com.quadrilateral.kudi9ja.domain.user.AccountStatus;
 import com.quadrilateral.kudi9ja.domain.user.User;
 import com.quadrilateral.kudi9ja.domain.user.UserRepository;
@@ -72,6 +74,12 @@ class DataRightsTest {
 
     @Autowired
     private DataRightsService dataRights;
+
+    @Autowired
+    private SupportConversationRepository conversations;
+
+    @Autowired
+    private LoanGroupMemberRepository groupMembers;
 
     private SignUpFlow flow;
     private BorrowFlow borrowing;
@@ -390,6 +398,122 @@ class DataRightsTest {
                                     {"code": "000000", "password": "%s"}
                                     """.formatted(SignUpFlow.PASSWORD)))
                     .andExpect(status().isUnauthorized());
+        }
+    }
+
+    // ── Help & complaints, and loan groups ─────────────────────────────────
+
+    @Nested
+    @DisplayName("Conversations with the team and loan groups")
+    class ChatsAndGroups {
+
+        @Test
+        @DisplayName("are in the export, with the files sent in the chat")
+        void exported() throws Exception {
+            SignUpFlow.Session customer = flow.signUp(email);
+            String id = openComplaint(customer);
+            sendPhoto(customer, id);
+            int number = joinGroup(customer);
+
+            JsonNode export = exportFor(customer);
+
+            JsonNode chat = export.get("helpAndComplaints");
+            assertThat(chat).hasSize(1);
+            assertThat(chat.get(0).get("reference").asText()).startsWith("CMP-");
+            assertThat(chat.get(0).get("subject").asText()).isEqualTo("Withdrawal not received");
+            JsonNode messages = chat.get(0).get("messages");
+            assertThat(messages.toString()).contains("I withdrew on Monday");
+            JsonNode photo = null;
+            for (JsonNode m : messages) {
+                if (!m.path("fileName").isNull() && m.has("fileName")) {
+                    photo = m;
+                }
+            }
+            assertThat(photo).as("the photo is listed: %s", messages).isNotNull();
+            assertThat(photo.get("fileName").asText()).isEqualTo("proof.png");
+            assertThat(photo.get("fileType").asText()).isEqualTo(MediaType.IMAGE_PNG_VALUE);
+            assertThat(photo.get("fileDownload").asText()).startsWith("/api/v1/support/attachments/");
+            assertThat(photo.get("from").asText()).isEqualTo("You");
+
+            JsonNode groups = export.get("loanGroups");
+            assertThat(groups).hasSize(1);
+            assertThat(groups.get(0).get("groupNumber").asInt()).isEqualTo(number);
+            assertThat(groups.get(0).get("groupName").asText()).isEqualTo("Data rights market");
+
+            assertThat(export.has("signatures")).isTrue();
+            assertThat(export.has("paystackPayments")).isTrue();
+        }
+
+        @Test
+        @DisplayName("on closing: the group place goes, open chats are closed off, and the chats are kept")
+        void closing() throws Exception {
+            SignUpFlow.Session customer = flow.signUp(email);
+            String id = openComplaint(customer);
+            joinGroup(customer);
+
+            JsonNode closed = json.readTree(
+                    attemptClose(customer).andExpect(status().isOk())
+                            .andReturn().getResponse().getContentAsString());
+            assertThat(closed.get("redacted").toString()).contains("loan group");
+            assertThat(closed.get("retained").toString()).contains("conversations and complaints");
+
+            assertThat(groupMembers.findByUserId(customer.userId())).isEmpty();
+            var kept = conversations.findById(java.util.UUID.fromString(id)).orElseThrow();
+            assertThat(kept.isResolved()).isTrue();
+            assertThat(kept.getResolutionNote()).contains("closed their account");
+            assertThat(kept.getStaffUnread()).isZero();
+        }
+
+        @Test
+        @DisplayName("are deleted, files and all, when the retention period ends")
+        void erased() throws Exception {
+            SignUpFlow.Session customer = flow.signUp(email);
+            openComplaint(customer);
+            attemptClose(customer).andExpect(status().isOk());
+
+            User closed = users.findById(customer.userId()).orElseThrow();
+            closed.setRetainUntil(Instant.now().minus(1, ChronoUnit.DAYS));
+            users.save(closed);
+
+            assertThat(dataRights.erase(Instant.now())).isEqualTo(1);
+            assertThat(conversations.findByUserIdOrderByLastMessageAtDesc(customer.userId())).isEmpty();
+        }
+
+        private String openComplaint(SignUpFlow.Session customer) throws Exception {
+            return postJson(customer, "/api/v1/support/conversations", """
+                    {"kind": "COMPLAINT", "category": "Withdrawals", "subject": "Withdrawal not received",
+                     "message": "I withdrew on Monday and nothing has arrived."}
+                    """).at("/conversation/id").asText();
+        }
+
+        private void sendPhoto(SignUpFlow.Session customer, String conversationId) throws Exception {
+            MockMultipartFile photo = new MockMultipartFile(
+                    "file", "proof.png", MediaType.IMAGE_PNG_VALUE, java.util.Base64.getDecoder().decode(
+                            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="));
+            mvc.perform(multipart("/api/v1/support/conversations/" + conversationId + "/attachments")
+                            .file(photo)
+                            .param("body", "Here is the proof.")
+                            .header(HttpHeaders.AUTHORIZATION, customer.bearer()))
+                    .andExpect(status().isCreated());
+        }
+
+        /** Puts the customer in a fresh group run by the owner; returns its number. */
+        private int joinGroup(SignUpFlow.Session customer) throws Exception {
+            SignUpFlow.Session owner = owner();
+            String officerId = null;
+            for (JsonNode o : getJson(owner, "/api/v1/admin/officers")) {
+                if (o.get("email").asText().equalsIgnoreCase("owner@kudi9ja.test")) {
+                    officerId = o.get("id").asText();
+                }
+            }
+            int number = getJson(owner, "/api/v1/admin/groups/next-number").get("number").asInt();
+            String groupId = postJson(owner, "/api/v1/admin/groups", json.writeValueAsString(java.util.Map.of(
+                    "number", number, "name", "Data rights market", "officerId", officerId)))
+                    .at("/group/id").asText();
+            String ref = users.findById(customer.userId()).orElseThrow().getCustomerRef();
+            postJson(owner, "/api/v1/admin/groups/" + groupId + "/customers",
+                    json.writeValueAsString(java.util.Map.of("customerRef", ref)));
+            return number;
         }
     }
 

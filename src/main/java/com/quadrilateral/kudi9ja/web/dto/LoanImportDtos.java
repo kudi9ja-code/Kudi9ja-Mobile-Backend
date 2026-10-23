@@ -2,6 +2,8 @@ package com.quadrilateral.kudi9ja.web.dto;
 
 import com.quadrilateral.kudi9ja.common.util.Masks;
 import com.quadrilateral.kudi9ja.domain.loan.ImportedLoan;
+import com.quadrilateral.kudi9ja.domain.loan.OfflineGuarantor;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
@@ -9,10 +11,13 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -52,13 +57,19 @@ public final class LoanImportDtos {
             @Max(value = 60, message = "The tenure is at most sixty months.")
             int tenureMonths,
 
+            // The rate card runs past 100% at the long tenures (134% over 24
+            // months), so the ceiling sits above it. It is still low enough to
+            // catch a percentage typed where a fraction belongs: 10, not 0.10.
             @NotNull(message = "Enter the flat rate that was charged, as a fraction: 0.10 for 10%.")
             @DecimalMin(value = "0", message = "The rate cannot be negative.")
-            @DecimalMax(value = "0.999999", message = "The rate is a fraction: 0.10 for 10%, not 10.")
+            @DecimalMax(value = "3", message = "The rate is a fraction: 0.10 for 10%, not 10.")
             BigDecimal flatRate,
 
-            @DecimalMin(value = "0", message = "The processing fee cannot be negative.")
+            @DecimalMin(value = "0", message = "The management fee cannot be negative.")
             BigDecimal processingFee,
+
+            @DecimalMin(value = "0", message = "The transaction fee cannot be negative.")
+            BigDecimal transactionFee,
 
             @NotBlank(message = "Say what the loan was for.")
             @Size(max = 200, message = "Keep the purpose under 200 characters.")
@@ -68,10 +79,123 @@ public final class LoanImportDtos {
             Instant disbursedAt,
 
             @DecimalMin(value = "0", message = "The amount repaid cannot be negative.")
-            BigDecimal amountRepaid) {
+            BigDecimal amountRepaid,
+
+            // ── The borrower's file. All optional. ──────────────────────────
+
+            @Pattern(regexp = "^$|^\\d{11}$", message = "A NIN is eleven digits.")
+            String nin,
+
+            @Past(message = "The date of birth must be in the past.")
+            LocalDate dateOfBirth,
+
+            @Size(max = 40, message = "Keep the gender under 40 characters.")
+            String gender,
+
+            @Size(max = 400, message = "Keep the address under 400 characters.")
+            String address,
+
+            @Size(max = 60, message = "Keep the state under 60 characters.")
+            String state,
+
+            @Size(max = 160, message = "Keep the occupation under 160 characters.")
+            String occupation,
+
+            @Size(max = 200, message = "Keep the business name under 200 characters.")
+            String businessName,
+
+            @Size(max = 400, message = "Keep the business address under 400 characters.")
+            String businessAddress,
+
+            @DecimalMin(value = "0", message = "The monthly income cannot be negative.")
+            BigDecimal monthlyIncome,
+
+            @Size(max = 120, message = "Keep the bank name under 120 characters.")
+            String payoutBank,
+
+            @Pattern(regexp = "^$|^\\d{10}$", message = "An account number is ten digits.")
+            String payoutAccountNumber,
+
+            @Size(max = 2000, message = "Keep the notes under 2,000 characters.")
+            String notes,
+
+            @Size(max = 4, message = "Up to four guarantors.")
+            List<@Valid OfflineGuarantorPayload> guarantors,
+
+            /** The loan officers to look after this borrower; the first leads. Empty means whoever enters it. */
+            @Size(max = 10, message = "Up to ten loan officers.")
+            List<UUID> officerIds,
+
+            /** The loan group this borrower belongs to, if any. */
+            UUID groupId) {
     }
 
-    /** What the admin sees. The BVN is never shown whole, even to the person who typed it. */
+    /** A guarantor as the admin types it. Only the name is required. */
+    public record OfflineGuarantorPayload(
+            @NotBlank(message = "Enter the guarantor's full name.")
+            @Size(max = 160, message = "Keep the guarantor's name under 160 characters.")
+            String fullName,
+
+            @Pattern(regexp = "^$|^0[7-9][01]\\d{8}$",
+                    message = "Enter the guarantor's Nigerian mobile number, like 08012345678.")
+            String phone,
+
+            @Size(max = 400, message = "Keep the guarantor's address under 400 characters.")
+            String address,
+
+            @Size(max = 60, message = "Keep the guarantor's state under 60 characters.")
+            String state,
+
+            @Size(max = 120, message = "Keep the local government under 120 characters.")
+            String localGovernment,
+
+            @Size(max = 200, message = "Keep the landmark under 200 characters.")
+            String landmark,
+
+            @Size(max = 120, message = "Keep the relationship under 120 characters.")
+            String relationship,
+
+            @Pattern(regexp = "^$|^\\d{11}$", message = "A guarantor's BVN is eleven digits.")
+            String bvn,
+
+            @Size(max = 160, message = "Keep the guarantor's occupation under 160 characters.")
+            String occupation,
+
+            @Email(message = "That is not a valid email address for the guarantor.")
+            @Size(max = 200, message = "That email address is too long.")
+            String email) {
+
+        public OfflineGuarantor toEntity() {
+            OfflineGuarantor g = new OfflineGuarantor();
+            g.setFullName(fullName.trim());
+            g.setPhone(blankToNull(phone));
+            g.setAddress(blankToNull(address));
+            g.setState(blankToNull(state));
+            g.setLocalGovernment(blankToNull(localGovernment));
+            g.setLandmark(blankToNull(landmark));
+            g.setRelationship(blankToNull(relationship));
+            g.setBvn(blankToNull(bvn));
+            g.setOccupation(blankToNull(occupation));
+            g.setEmail(blankToNull(email));
+            return g;
+        }
+
+        public static OfflineGuarantorPayload from(OfflineGuarantor g) {
+            return new OfflineGuarantorPayload(
+                    g.getFullName(),
+                    g.getPhone(),
+                    g.getAddress(),
+                    g.getState(),
+                    g.getLocalGovernment(),
+                    g.getLandmark(),
+                    g.getRelationship(),
+                    g.getBvn(),
+                    g.getOccupation(),
+                    g.getEmail());
+        }
+    }
+
+    /** What the admin sees. The BVN and NIN are never shown whole, even to the person who typed them. */
     public record ImportedLoanResponse(
             UUID id,
             String bvnLast4,
@@ -82,6 +206,8 @@ public final class LoanImportDtos {
             int tenureMonths,
             BigDecimal flatRate,
             BigDecimal processingFee,
+            BigDecimal transactionFee,
+            BigDecimal netDisbursed,
             String purpose,
             Instant disbursedAt,
             Instant dueDate,
@@ -93,31 +219,78 @@ public final class LoanImportDtos {
             boolean claimed,
             Instant claimedAt,
             UUID customerId,
-            UUID loanId) {
+            UUID loanId,
+            String ninLast4,
+            LocalDate dateOfBirth,
+            String gender,
+            String address,
+            String state,
+            String occupation,
+            String businessName,
+            String businessAddress,
+            BigDecimal monthlyIncome,
+            String payoutBank,
+            String payoutAccountNumber,
+            String notes,
+            List<OfflineGuarantorPayload> guarantors) {
 
         public static ImportedLoanResponse from(ImportedLoan row) {
+            return from(row, null, null);
+        }
+
+        /**
+         * With the live loan when the entry is on an account: what has been
+         * repaid and what is still owed come from the loan as it stands, not
+         * from the day it was entered.
+         */
+        public static ImportedLoanResponse from(
+                ImportedLoan row,
+                com.quadrilateral.kudi9ja.domain.loan.Loan live,
+                com.quadrilateral.kudi9ja.domain.user.User owner) {
+            // Once on an account, who the borrower is lives there.
+            String bvn = owner != null ? owner.getBvn() : row.getBvn();
+            String nin = owner != null ? owner.getNin() : row.getNin();
             return new ImportedLoanResponse(
                     row.getId(),
-                    row.getBvn() == null ? null : Masks.lastFour(row.getBvn()),
+                    bvn == null ? null : Masks.lastFour(bvn),
                     row.getFullName(),
-                    row.getEmail(),
-                    row.getPhone(),
+                    owner != null ? owner.getEmail() : row.getEmail(),
+                    owner != null ? owner.getPhone() : row.getPhone(),
                     row.getPrincipal(),
                     row.getTenureMonths(),
                     row.getFlatRate(),
                     row.getProcessingFee(),
+                    row.transactionFee(),
+                    row.netDisbursed(),
                     row.getPurpose(),
                     row.getDisbursedAt(),
                     row.dueDate(),
                     row.totalRepayable(),
-                    row.getAmountRepaid(),
-                    row.outstanding(),
+                    live == null ? row.getAmountRepaid() : live.getAmountRepaid(),
+                    live == null ? row.outstanding() : live.outstanding(),
                     row.getImportedBy(),
                     row.getImportedAt(),
                     row.isClaimed(),
                     row.getClaimedAt(),
                     row.getUserId(),
-                    row.getLoanId());
+                    row.getLoanId(),
+                    nin == null ? null : Masks.lastFour(nin),
+                    owner != null ? owner.getDateOfBirth() : row.getDateOfBirth(),
+                    row.getGender(),
+                    row.getAddress(),
+                    row.getState(),
+                    row.getOccupation(),
+                    row.getBusinessName(),
+                    row.getBusinessAddress(),
+                    row.getMonthlyIncome(),
+                    row.getPayoutBank(),
+                    row.getPayoutAccountNumber(),
+                    row.getNotes(),
+                    row.getGuarantors().stream().map(OfflineGuarantorPayload::from).toList());
         }
+    }
+
+    static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

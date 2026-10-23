@@ -35,4 +35,13 @@ public class LoggingPushSender implements PushSender {
         log.info("[push disabled] would send '{}' — '{}' to {} device(s)", title, body, tokens.size());
         return new Result(tokens.size(), List.of());
     }
+
+    @Override
+    public Result send(
+            List<String> tokens, String title, String body, Map<String, String> data, String imageUrl) {
+        if (imageUrl != null && !tokens.isEmpty()) {
+            log.info("[push disabled] the next message would carry the picture {}", imageUrl);
+        }
+        return send(tokens, title, body, data);
+    }
 }

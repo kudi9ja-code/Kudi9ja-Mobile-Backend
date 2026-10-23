@@ -18,6 +18,7 @@ import com.quadrilateral.kudi9ja.domain.user.User;
 import com.quadrilateral.kudi9ja.domain.user.UserRepository;
 import com.quadrilateral.kudi9ja.domain.wallet.LedgerService;
 import com.quadrilateral.kudi9ja.domain.wallet.TxKind;
+import com.quadrilateral.kudi9ja.integration.paystack.PaystackGateway;
 import com.quadrilateral.kudi9ja.integration.storage.ReceiptStorage;
 import com.quadrilateral.kudi9ja.web.dto.PayInDtos;
 import java.math.BigDecimal;
@@ -30,6 +31,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -67,6 +69,7 @@ public class PayInService {
     private final AuditService audit;
     private final ReceiptStorage receipts;
     private final Kudi9jaProperties properties;
+    private final ObjectProvider<PaystackGateway> paystack;
 
     public PayInService(
             PayInClaimRepository claims,
@@ -80,7 +83,8 @@ public class PayInService {
             NotificationService notifications,
             AuditService audit,
             ReceiptStorage receipts,
-            Kudi9jaProperties properties) {
+            Kudi9jaProperties properties,
+            ObjectProvider<PaystackGateway> paystack) {
         this.claims = claims;
         this.references = references;
         this.unmatched = unmatched;
@@ -93,6 +97,7 @@ public class PayInService {
         this.audit = audit;
         this.receipts = receipts;
         this.properties = properties;
+        this.paystack = paystack;
     }
 
     // ── Mint a reference ───────────────────────────────────────────────────
@@ -209,6 +214,15 @@ public class PayInService {
             byte[] receiptBytes) {
 
         settings.requireNotInMaintenance();
+        if (paystack.getIfAvailable() != null) {
+            // Paystack confirms a payment itself and credits it at once, so there
+            // is nothing for a receipt to prove and nothing for an admin to approve.
+            // Claims already waiting are still reviewed; no new ones are taken.
+            throw new ApiException(
+                    ErrorCode.FEATURE_DISABLED,
+                    "Pay in through Paystack instead — by card, bank transfer or USSD. It is credited the "
+                            + "moment it is confirmed, with no receipt to upload.");
+        }
         PlatformSettings s = settings.currentReadOnly();
         User user = requireUser(userId);
 

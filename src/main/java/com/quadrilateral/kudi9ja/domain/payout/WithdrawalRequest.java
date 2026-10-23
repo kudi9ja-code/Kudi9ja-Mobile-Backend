@@ -34,7 +34,8 @@ import lombok.Setter;
         indexes = {
                 @Index(name = "ix_withdrawal_user", columnList = "user_id, requested_at"),
                 @Index(name = "ix_withdrawal_status", columnList = "status, requested_at"),
-                @Index(name = "ix_withdrawal_reference", columnList = "reference")
+                @Index(name = "ix_withdrawal_reference", columnList = "reference"),
+                @Index(name = "ix_withdrawal_transfer_reference", columnList = "transfer_reference")
         })
 @Getter
 @Setter
@@ -92,6 +93,31 @@ public class WithdrawalRequest {
     /** The bank's reference for the outward transfer, once it is sent. */
     @Column(name = "payout_reference", length = 120)
     private String payoutReference;
+
+    // ── The payout ────────────────────────────────────────────────────────
+    //
+    // How the money actually left. MANUAL when an admin paid it by hand from
+    // the company account; PAYSTACK when approval sent it as a transfer. A
+    // Paystack payout is PROCESSING until Paystack reports the outcome: the
+    // wallet debit stays pending until then, and a FAILED transfer is refunded.
+
+    @Column(name = "payout_provider", length = 20)
+    private String payoutProvider;
+
+    @Column(name = "payout_status", length = 16)
+    private String payoutStatus;
+
+    @Column(name = "transfer_reference", length = 64)
+    private String transferReference;
+
+    @Column(name = "transfer_code", length = 64)
+    private String transferCode;
+
+    @Column(name = "payout_failure", length = 500)
+    private String payoutFailure;
+
+    @Column(name = "paid_out_at")
+    private Instant paidOutAt;
 
     @Version
     @Column(name = "row_version", nullable = false)

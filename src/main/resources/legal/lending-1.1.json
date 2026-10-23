@@ -1,0 +1,793 @@
+{
+  "id": "lending",
+  "title": "Lending Agreement",
+  "shortTitle": "Lending Agreement",
+  "summary": "The contract for money you borrow from Kudi9ja: what it costs, how and when you repay it, what happens if you do not, and the standards we hold ourselves to while collecting.",
+  "version": "1.1",
+  "effective": "2026-11-22T00:00:00.000",
+  "readMinutes": 16,
+  "sections": [
+    {
+      "title": "The parties, and what this document is",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "This Lending Agreement is between **Quadrilateral Technologies Limited** (**RC 1657731**) of Kudi9ja Limited, Lagos, Nigeria, trading as Kudi9ja — \"the Lender\", \"we\", \"us\" — and the customer who accepts it — \"the Borrower\", \"you\"."
+        },
+        {
+          "type": "text",
+          "text": "It applies every time you take a loan through Kudi9ja. You sign it electronically when you open your account, and you accept it again for each loan when you confirm the request with your transaction PIN. The specific amount, tenure, fee, interest and repayment dates shown to you on that confirmation screen are part of this agreement, and they are what you are agreeing to."
+        },
+        {
+          "type": "text",
+          "text": "Our Terms of Service and Privacy Policy also apply. Where they conflict with this document about your loan, this document wins."
+        },
+        {
+          "type": "note",
+          "text": "Read the confirmation screen before you press confirm. It shows exactly what will reach your wallet, exactly what you will repay, and exactly when. Nothing is added afterwards.",
+          "title": "Before you borrow",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "title": "Definitions",
+      "blocks": [
+        {
+          "type": "definitions",
+          "entries": [
+            {
+              "term": "Principal",
+              "meaning": "The amount of the loan, before the fees are taken off."
+            },
+            {
+              "term": "Processing fee",
+              "meaning": "Also called the **management fee**: a one-off charge for assessing and disbursing the loan, deducted from the disbursement. The two names mean the same charge."
+            },
+            {
+              "term": "Transaction fee",
+              "meaning": "A flat **₦2,000** on every loan, beside the management fee, for what the payment provider charges to move the money. It is deducted from the disbursement together with the management fee, shown as its own line before you confirm, and never added to what you owe."
+            },
+            {
+              "term": "Net disbursement",
+              "meaning": "What actually reaches your wallet: the principal less the management fee and the transaction fee."
+            },
+            {
+              "term": "Interest",
+              "meaning": "A single flat charge on the principal. It does not compound and it does not grow with time."
+            },
+            {
+              "term": "Total repayable",
+              "meaning": "Principal plus interest. This is the whole of what you owe, and it never increases."
+            },
+            {
+              "term": "Tenure",
+              "meaning": "The number of months over which the total repayable is spread."
+            },
+            {
+              "term": "Instalment",
+              "meaning": "The total repayable divided by the tenure, due one month apart from the day the loan was disbursed."
+            },
+            {
+              "term": "Outstanding",
+              "meaning": "The total repayable less everything you have paid so far."
+            },
+            {
+              "term": "Default",
+              "meaning": "Failing to pay an instalment in full by its due date, or any of the other events listed in this agreement."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "What we lend, and to whom",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "We lend from **₦50,000** to **₦5,000,000**, over **1 to 24 months**, to verified Kudi9ja customers."
+        },
+        {
+          "type": "text",
+          "text": "A loan request is an offer from you. There is no loan until we accept it and the money reaches your wallet. We may approve less than you asked for, offer a different tenure, or decline outright — and we do not have to give reasons, though we will where we can."
+        },
+        {
+          "type": "text",
+          "text": "We assess affordability before lending. That means we may decline you even where you meet every published criterion, because we do not believe the repayments are sustainable for you. That is not a judgement about you; it is us lending responsibly."
+        }
+      ]
+    },
+    {
+      "title": "What a loan costs",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Our pricing is deliberately simple. There are exactly three charges, all fixed at the moment you borrow and all shown before you confirm:"
+        },
+        {
+          "type": "definitions",
+          "entries": [
+            {
+              "term": "Interest",
+              "meaning": "A single **flat charge on the amount borrowed**, at the rate published for the tenure you choose. It does not compound, and it does not change once your loan has started."
+            },
+            {
+              "term": "Processing fee (management fee)",
+              "meaning": "A flat **₦5,000** on every loan from ₦50,000 up to and including ₦500,000. Above that figure — and ₦500,001 is already above it — the fee is **1% of the whole amount borrowed**, not of the part above the threshold. It is deducted from the money we send you, never added to what you owe."
+            },
+            {
+              "term": "Transaction fee",
+              "meaning": "A flat **₦2,000** on every loan, beside the management fee, for what the payment provider charges to move the money. It is deducted from the disbursement together with the management fee, shown as its own line before you confirm, and never added to what you owe."
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The interest rate depends **only on the tenure**, never on the amount. **Every month from 1 to 24 is priced separately**, and the rate for the tenure you are looking at is shown in the app before you borrow. These are the rates at some of those points today:"
+        },
+        {
+          "type": "definitions",
+          "entries": [
+            {
+              "term": "Over 1 month",
+              "meaning": "**12.5% flat** — the equivalent of 12.50% a month. Borrow ₦200,000 and you repay ₦225,000."
+            },
+            {
+              "term": "Over 2 months",
+              "meaning": "**17% flat** — the equivalent of 8.50% a month. Borrow ₦200,000 and you repay ₦234,000."
+            },
+            {
+              "term": "Over 3 months",
+              "meaning": "**25% flat** — the equivalent of 8.33% a month. Borrow ₦200,000 and you repay ₦250,000."
+            },
+            {
+              "term": "Over 6 months",
+              "meaning": "**45% flat** — the equivalent of 7.50% a month. Borrow ₦200,000 and you repay ₦290,000."
+            },
+            {
+              "term": "Over 12 months",
+              "meaning": "**78% flat** — the equivalent of 6.50% a month. Borrow ₦200,000 and you repay ₦356,000."
+            },
+            {
+              "term": "Over 18 months",
+              "meaning": "**107% flat** — the equivalent of 5.94% a month. Borrow ₦200,000 and you repay ₦414,000."
+            },
+            {
+              "term": "Over 24 months",
+              "meaning": "**134% flat** — the equivalent of 5.58% a month. Borrow ₦200,000 and you repay ₦468,000."
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The tenures not listed above sit between these points and are published in the app in exactly the same way. The rate that binds you is the one displayed on the screen you confirm, and it is fixed for the life of that loan — a later change to our rate card never touches a loan already running."
+        },
+        {
+          "type": "note",
+          "text": "Each tenure is priced separately, so compare the cost per month as well as the total — the table above gives you both, and the app shows the exact figures for your own loan before you confirm.",
+          "title": "Compare the tenures",
+          "tone": "neutral"
+        },
+        {
+          "type": "text",
+          "text": "There is nothing else. Specifically, we do not charge:"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "an application fee or an insurance premium;",
+            "a fee for repaying early — paying early costs exactly what you still owe, no more and no less;",
+            "penalty interest or a late fee if you miss a due date; or",
+            "any charge that was not on the screen you confirmed."
+          ]
+        },
+        {
+          "type": "note",
+          "text": "The total repayable is fixed on the day you borrow. However long the loan is outstanding, and whatever happens afterwards, the debt itself does not grow. Interest never accrues on top of interest.",
+          "title": "Your debt cannot grow",
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "title": "The cost, in figures",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Flat interest is easy to understand but easy to underestimate, so here is the same pricing expressed several ways. The **equivalent annual rate** shows what the loan would cost if you borrowed at the same cost per month for a whole year — it is the fairest way to compare us against any other lender."
+        },
+        {
+          "type": "example",
+          "title": "Borrowing ₦50,000 over 1 month",
+          "rows": [
+            {
+              "label": "Loan amount",
+              "value": "₦50,000"
+            },
+            {
+              "label": "Less management fee",
+              "value": "- ₦5,000"
+            },
+            {
+              "label": "Less transaction fee",
+              "value": "- ₦2,000"
+            },
+            {
+              "label": "Reaches your wallet",
+              "value": "₦43,000"
+            },
+            {
+              "label": "Interest (flat)",
+              "value": "₦6,250"
+            },
+            {
+              "label": "Total you repay",
+              "value": "₦56,250"
+            },
+            {
+              "label": "Repayment",
+              "value": "One payment of ₦56,250 after 1 month"
+            },
+            {
+              "label": "Total cost of the credit",
+              "value": "₦11,250"
+            },
+            {
+              "label": "Cost over 1 month",
+              "value": "25.0% of what you received"
+            },
+            {
+              "label": "Equivalent annual rate",
+              "value": "300% per year"
+            }
+          ]
+        },
+        {
+          "type": "example",
+          "title": "Borrowing ₦200,000 over 1 month",
+          "rows": [
+            {
+              "label": "Loan amount",
+              "value": "₦200,000"
+            },
+            {
+              "label": "Less management fee",
+              "value": "- ₦5,000"
+            },
+            {
+              "label": "Less transaction fee",
+              "value": "- ₦2,000"
+            },
+            {
+              "label": "Reaches your wallet",
+              "value": "₦193,000"
+            },
+            {
+              "label": "Interest (flat)",
+              "value": "₦25,000"
+            },
+            {
+              "label": "Total you repay",
+              "value": "₦225,000"
+            },
+            {
+              "label": "Repayment",
+              "value": "One payment of ₦225,000 after 1 month"
+            },
+            {
+              "label": "Total cost of the credit",
+              "value": "₦30,000"
+            },
+            {
+              "label": "Cost over 1 month",
+              "value": "15.4% of what you received"
+            },
+            {
+              "label": "Equivalent annual rate",
+              "value": "185% per year"
+            }
+          ]
+        },
+        {
+          "type": "example",
+          "title": "Borrowing ₦200,000 over 3 months",
+          "rows": [
+            {
+              "label": "Loan amount",
+              "value": "₦200,000"
+            },
+            {
+              "label": "Less management fee",
+              "value": "- ₦5,000"
+            },
+            {
+              "label": "Less transaction fee",
+              "value": "- ₦2,000"
+            },
+            {
+              "label": "Reaches your wallet",
+              "value": "₦193,000"
+            },
+            {
+              "label": "Interest (flat)",
+              "value": "₦50,000"
+            },
+            {
+              "label": "Total you repay",
+              "value": "₦250,000"
+            },
+            {
+              "label": "Repayment",
+              "value": "3 monthly payments of ₦83,333.33"
+            },
+            {
+              "label": "Total cost of the credit",
+              "value": "₦55,000"
+            },
+            {
+              "label": "Cost over 3 months",
+              "value": "28.2% of what you received"
+            },
+            {
+              "label": "Equivalent annual rate",
+              "value": "113% per year"
+            }
+          ]
+        },
+        {
+          "type": "example",
+          "title": "Borrowing ₦200,000 over 12 months",
+          "rows": [
+            {
+              "label": "Loan amount",
+              "value": "₦200,000"
+            },
+            {
+              "label": "Less management fee",
+              "value": "- ₦5,000"
+            },
+            {
+              "label": "Less transaction fee",
+              "value": "- ₦2,000"
+            },
+            {
+              "label": "Reaches your wallet",
+              "value": "₦193,000"
+            },
+            {
+              "label": "Interest (flat)",
+              "value": "₦156,000"
+            },
+            {
+              "label": "Total you repay",
+              "value": "₦356,000"
+            },
+            {
+              "label": "Repayment",
+              "value": "12 monthly payments of ₦29,666.67"
+            },
+            {
+              "label": "Total cost of the credit",
+              "value": "₦161,000"
+            },
+            {
+              "label": "Cost over 12 months",
+              "value": "82.6% of what you received"
+            },
+            {
+              "label": "Equivalent annual rate",
+              "value": "83% per year"
+            }
+          ]
+        },
+        {
+          "type": "example",
+          "title": "Borrowing ₦200,000 over 24 months",
+          "rows": [
+            {
+              "label": "Loan amount",
+              "value": "₦200,000"
+            },
+            {
+              "label": "Less management fee",
+              "value": "- ₦5,000"
+            },
+            {
+              "label": "Less transaction fee",
+              "value": "- ₦2,000"
+            },
+            {
+              "label": "Reaches your wallet",
+              "value": "₦193,000"
+            },
+            {
+              "label": "Interest (flat)",
+              "value": "₦268,000"
+            },
+            {
+              "label": "Total you repay",
+              "value": "₦468,000"
+            },
+            {
+              "label": "Repayment",
+              "value": "24 monthly payments of ₦19,500"
+            },
+            {
+              "label": "Total cost of the credit",
+              "value": "₦273,000"
+            },
+            {
+              "label": "Cost over 24 months",
+              "value": "140.0% of what you received"
+            },
+            {
+              "label": "Equivalent annual rate",
+              "value": "70% per year"
+            }
+          ]
+        },
+        {
+          "type": "example",
+          "title": "Borrowing ₦5,000,000 over 24 months",
+          "rows": [
+            {
+              "label": "Loan amount",
+              "value": "₦5,000,000"
+            },
+            {
+              "label": "Less management fee",
+              "value": "- ₦50,000"
+            },
+            {
+              "label": "Less transaction fee",
+              "value": "- ₦2,000"
+            },
+            {
+              "label": "Reaches your wallet",
+              "value": "₦4,948,000"
+            },
+            {
+              "label": "Interest (flat)",
+              "value": "₦6,700,000"
+            },
+            {
+              "label": "Total you repay",
+              "value": "₦11,700,000"
+            },
+            {
+              "label": "Repayment",
+              "value": "24 monthly payments of ₦487,500"
+            },
+            {
+              "label": "Total cost of the credit",
+              "value": "₦6,750,000"
+            },
+            {
+              "label": "Cost over 24 months",
+              "value": "136.4% of what you received"
+            },
+            {
+              "label": "Equivalent annual rate",
+              "value": "68% per year"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "These are illustrations. Before you confirm anything, the app shows you the exact figures for the amount and tenure you actually chose."
+        },
+        {
+          "type": "note",
+          "text": "Short-term credit is expensive credit. The processing fee weighs most heavily on the smallest, shortest loans, which is why their equivalent annual rate is the highest of all. Borrow only what you need, for only as long as you need it, and only when a cheaper option is not open to you.",
+          "title": "Be honest with yourself about this",
+          "tone": "caution"
+        }
+      ]
+    },
+    {
+      "title": "Disbursement",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Once approved, we credit the net disbursement to your Kudi9ja wallet, usually within minutes. From your wallet you can put it to use or withdraw it to your own bank account, which we send through Paystack as our Terms of Service describe."
+        },
+        {
+          "type": "text",
+          "text": "We may withhold disbursement, or cancel an approval before the money leaves, if something material changes between approval and payout — for example we discover the information you gave us was wrong, or your account is frozen for a fraud check."
+        }
+      ]
+    },
+    {
+      "title": "How you repay",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "The total repayable is divided into **24 or fewer equal monthly instalments**, depending on the tenure you chose. The first falls due one month after disbursement, and each one after it a month later. Your schedule, with every date and amount, is in the app from the moment the loan starts."
+        },
+        {
+          "type": "text",
+          "text": "You can repay in either of two ways:"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "**From your wallet** — the fastest way, and it settles immediately.",
+            "**Through Paystack** — by card, bank transfer or USSD, started from the loan in the app. The payment is applied to your loan the moment Paystack confirms it, usually within seconds."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Payments are applied to the oldest amount due first, and then to the rest of the outstanding balance. You may pay more than an instalment, or clear the whole thing, whenever you like."
+        },
+        {
+          "type": "text",
+          "text": "Where you have asked us to collect repayments automatically, you authorise us to debit your wallet for the instalment on each due date. If the wallet is short we take what is there, tell you, and you remain responsible for the rest. You can turn automatic collection off at any time; doing so does not change what you owe."
+        },
+        {
+          "type": "text",
+          "text": "We remind you before every due date, in the app and by email."
+        }
+      ]
+    },
+    {
+      "title": "Paying off early",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "You may pay off a loan in full at any time, from your wallet or through Paystack."
+        },
+        {
+          "type": "text",
+          "text": "Paying early is the same as paying on time, only sooner: you pay **everything still outstanding, interest included**. There is no discount for paying early and no charge for it either. The app shows the exact figure before you confirm."
+        },
+        {
+          "type": "example",
+          "title": "Paying off ₦200,000 over 3 months, after the first payment",
+          "rows": [
+            {
+              "label": "Total repayable",
+              "value": "₦250,000"
+            },
+            {
+              "label": "Already paid",
+              "value": "₦83,333.33"
+            },
+            {
+              "label": "You pay to clear it",
+              "value": "₦166,666.67"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Paying off early is recorded on your account as good performance."
+        }
+      ]
+    },
+    {
+      "title": "Once your loan is paid out",
+      "blocks": [
+        {
+          "type": "note",
+          "tone": "neutral",
+          "title": "No cancellation after payout",
+          "text": "Once an approved loan reaches your wallet, you have taken it. You repay the full amount, with the interest shown on the screen you confirmed, on the schedule you agreed. Read the figures before you confirm with your PIN: the management fee, the transaction fee, what reaches your wallet, and what you repay."
+        },
+        {
+          "type": "text",
+          "text": "If you no longer need the money, you can pay the loan off early at any time — see **Paying off early**. You pay what is still outstanding, interest included."
+        }
+      ]
+    },
+    {
+      "title": "If you cannot pay",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Talk to us **before** the due date. Difficulty is common and it is not shameful; what makes it worse is silence."
+        },
+        {
+          "type": "text",
+          "text": "Where you are in genuine difficulty we will look at your situation and, where we reasonably can, agree a way forward — a revised schedule, a short pause, or a reduced settlement. Any arrangement we reach will be confirmed to you in writing."
+        },
+        {
+          "type": "text",
+          "text": "We will not agree to something we can see you cannot afford, and entering an arrangement does not by itself write off what you owe. But we would far rather restructure a loan than pursue one."
+        }
+      ]
+    },
+    {
+      "title": "Default, and what follows it",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "You are in default if:"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "an instalment is not paid in full by its due date;",
+            "you gave us information in your application that was false or materially misleading;",
+            "you become insolvent, or a court orders your assets to be seized; or",
+            "you breach the Terms of Service in a way that seriously affects our ability to be repaid."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "If you are in default, we may:"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "demand the whole outstanding balance immediately, rather than by instalments;",
+            "**set off** what you owe against money in your wallet, and against money released from a savings plan when it matures;",
+            "suspend your access to further credit;",
+            "report the default to licensed credit bureaux, which will affect your ability to borrow anywhere in Nigeria;",
+            "instruct a recovery partner, or take legal action; and",
+            "recover the reasonable costs we actually incur in enforcing this agreement, which we will evidence to you."
+          ]
+        },
+        {
+          "type": "note",
+          "text": "Even in default, **the amount you owe does not increase**. There is no penalty interest and no late fee. What you owed on the due date is what you owe, plus only such enforcement costs as we can actually evidence.",
+          "title": null,
+          "tone": "positive"
+        },
+        {
+          "type": "text",
+          "text": "We will always contact you and give you a reasonable chance to put things right before we escalate."
+        }
+      ]
+    },
+    {
+      "title": "How we will treat you when collecting",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Debt collection in Nigeria has a bad reputation, much of it deserved. These are commitments, not aspirations, and they bind our staff and every partner acting for us."
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "We will **never contact your friends, family, employer or phone contacts** about your debt. Your borrowing is between you and us.",
+            "We will never post about you, publish your name or photograph, or shame you on any platform.",
+            "We will never threaten you, abuse you, or claim powers of arrest we do not have.",
+            "We will never impersonate a court, the police or a regulator, or send a document dressed up to look official when it is not.",
+            "We will contact you only between **8am and 8pm**, and not on public holidays, unless you ask us to call at another time.",
+            "We will not contact you repeatedly in a way designed to distress you.",
+            "Every collections call is logged, and every partner acting for us is contractually bound by these same rules."
+          ]
+        },
+        {
+          "type": "note",
+          "text": "If anybody collecting a Kudi9ja debt breaks any of this, report it to **legal@kudi9ja.com**. We will investigate, tell you what we found, and end our relationship with a partner who does it. You may also complain to the Federal Competition and Consumer Protection Commission.",
+          "title": "Hold us to it",
+          "tone": "positive"
+        }
+      ]
+    },
+    {
+      "title": "Credit reporting",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "You agree that we may share information about this loan — that it exists, how it is performing, and how it ended — with credit bureaux licensed by the Central Bank of Nigeria, and that we may obtain your credit report from them when assessing you."
+        },
+        {
+          "type": "text",
+          "text": "This cuts both ways. Repaying on time builds a record that helps you borrow more cheaply, from us and from anybody else. Defaulting follows you."
+        },
+        {
+          "type": "text",
+          "text": "If you believe something we reported about you is wrong, tell us at support@kudi9ja.com. We will check it, correct it if we are wrong, and ask the bureau to update its record."
+        }
+      ]
+    },
+    {
+      "title": "Your promises to us",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Each time you take a loan, you confirm that:"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "the information in your application is true, complete and current;",
+            "you are borrowing for yourself, not for anybody else, and not for any unlawful purpose;",
+            "you have told us about any other loan you are currently repaying;",
+            "you have read the schedule and reasonably expect to be able to meet it; and",
+            "the phone number and email in your profile reach you, and you will update them if they change."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "You also undertake to tell us promptly if your circumstances change in a way that will make repayment difficult."
+        }
+      ]
+    },
+    {
+      "title": "Set-off and recovery from your Kudi9ja balances",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "You authorise us, where an amount is due and unpaid, to apply against it:"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "money in your Kudi9ja wallet;",
+            "money released from a Target Savings plan you end early; and",
+            "the principal of a Fixed Savings plan **when it matures** — not before."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "We will tell you before or at the time we do this, and we will leave your wallet no worse than the debt requires. We will not break a Fixed Savings plan early to recover a debt."
+        }
+      ]
+    },
+    {
+      "title": "Death and incapacity",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "If you die or become permanently incapacitated while a loan is outstanding, we will not pursue your family for the shortfall beyond what your estate can meet under Nigerian law. Your estate may settle the outstanding balance."
+        }
+      ]
+    },
+    {
+      "title": "Our right to transfer this loan",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "We may transfer, assign or sell our rights under this agreement to another party, provided your rights and the cost of your loan do not change, and provided the transferee is bound by the collections standards above. We will tell you if this happens. You may not transfer your obligations to anybody else."
+        }
+      ]
+    },
+    {
+      "title": "Complaints and disputes",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "If something about your loan is wrong — a payment not credited, a schedule that looks incorrect, a collections contact that crossed a line — raise it with support in the app, on WhatsApp, or at support@kudi9ja.com. We acknowledge within 24 hours and answer within 10 working days."
+        },
+        {
+          "type": "text",
+          "text": "Unresolved matters can be escalated to legal@kudi9ja.com, and then to the Federal Competition and Consumer Protection Commission or the Central Bank of Nigeria consumer protection department."
+        },
+        {
+          "type": "text",
+          "text": "This agreement is governed by the laws of the **Federal Republic of Nigeria**. Disputes are resolved as set out in the Terms of Service — arbitration seated in Lagos, with the courts of Lagos State having jurisdiction over anything not arbitrated. Nothing here prevents you from complaining to a regulator at any time."
+        }
+      ]
+    },
+    {
+      "title": "Acceptance and record",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "You sign this agreement electronically when you open your account — typing your full name and drawing your signature — and you accept it for each loan by confirming the request with your transaction PIN. Under section 93 of the Evidence Act 2011, both carry the same legal weight as a signature on paper."
+        },
+        {
+          "type": "text",
+          "text": "We record the version of this agreement you accepted, your signature, the loan terms displayed to you, and the date and time of acceptance. A copy of your schedule stays in the app for as long as the loan exists, and we will send you a copy of this agreement on request at any time."
+        },
+        {
+          "type": "note",
+          "text": "By confirming a loan you are saying: I have read what this loan costs, I have seen every repayment date and amount, nobody has pressured me, and I intend to repay.",
+          "title": "Borrower's declaration",
+          "tone": "neutral"
+        }
+      ]
+    }
+  ],
+  "changeSummary": "You can now repay through Paystack — by card, bank transfer or USSD — and the payment is applied to your loan the moment Paystack confirms it. The receipt-upload route has gone. You also sign this agreement electronically when you open your account. Every loan now also carries a flat ₦2,000 transaction fee, deducted from the disbursement beside the management fee and shown on its own line. There is no longer a 24-hour cancellation: once a loan reaches your wallet it is repaid in full, with interest, though you can still settle early. Paying a loan off early now costs exactly what is still owed: there is no discount for paying early."
+}

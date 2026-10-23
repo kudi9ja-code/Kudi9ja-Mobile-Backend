@@ -31,8 +31,8 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>Approving <b>disburses immediately</b> — the loan is written and the
  * wallet credited in the same transaction, through the same path that has
- * always written a loan. There is no second step and no undo; the borrower's
- * own change-of-mind window is the only way back, exactly as before.
+ * always written a loan. There is no second step and no undo: once the money
+ * is in the wallet, the loan is repaid in full, with interest.
  *
  * <p>Declining <b>requires a reason</b>, and the customer is shown it word for
  * word. That is not a formality. A refusal somebody can act on brings them back

@@ -287,88 +287,36 @@ class FinanceTest {
         }
 
         /**
-         * The fee comes out of the disbursement and is never added to the debt.
+         * What reaches the wallet: the loan, less the management fee (₦5,000 up
+         * to ₦500,000, then 1%) and the flat ₦2,000 transaction fee.
+         */
+        @ParameterizedTest(name = "₦{0} borrowed → ₦{1} received")
+        @CsvSource({
+                "100000, 93000.00",
+                "500000, 493000.00",
+                "600000, 592000.00"
+        })
+        @DisplayName("the management fee and the transaction fee both come off what is paid out")
+        void bothFeesComeOff(BigDecimal principal, BigDecimal received) {
+            assertThat(Finance.transactionFee(settings)).isEqualByComparingTo("2000.00");
+            assertThat(Finance.netDisbursed(settings, principal)).isEqualByComparingTo(received);
+        }
+
+        /**
+         * The fees come out of the disbursement and are never added to the debt.
          * Somebody borrowing ₦500,000 owes interest on ₦500,000 and receives
-         * ₦495,000.
+         * ₦493,000.
          */
         @Test
-        @DisplayName("the fee is deducted from the disbursement, never added to the debt")
+        @DisplayName("both fees are deducted from the disbursement, never added to the debt")
         void feeIsNettedFromDisbursement() {
             BigDecimal principal = new BigDecimal("500000");
 
             assertThat(Finance.netDisbursed(settings, principal))
-                    .isEqualByComparingTo("495000.00");
+                    .isEqualByComparingTo("493000.00");
             // The debt is priced on the gross principal, not the net.
             assertThat(Finance.loanTotal(settings, principal, 3))
                     .isEqualByComparingTo("625000.00");
-        }
-    }
-
-    // ── Early settlement ───────────────────────────────────────────────────
-
-    @Nested
-    @DisplayName("Settling early earns a rebate, never a charge")
-    class EarlySettlement {
-
-        /**
-         * ₦1,000,000 over 12 months at 78% carries ₦780,000 of interest.
-         *
-         * <p>Three whole months in, the month now running is not rebated —
-         * only the eight that never started — so the rebate is
-         * 780,000 × 8/12 × 0.5 = ₦260,000.
-         *
-         * <p>The disbursement date is pinned to exactly three calendar months
-         * ago rather than to ninety days ago. Ninety days is two whole months
-         * and change for most of the year, which would quietly test a different
-         * case than the comment claimed.
-         */
-        @Test
-        @DisplayName("half the interest on the months that never started comes back")
-        void rebatesUnearnedInterest() {
-            Instant now = Instant.now();
-            Instant disbursed = now.atZone(java.time.ZoneOffset.UTC)
-                    .minusMonths(3)
-                    .toInstant();
-
-            BigDecimal rebate = Finance.earlyPayoffRebate(
-                    settings, new BigDecimal("780000"), new BigDecimal("1500000"), 12, disbursed, now);
-
-            assertThat(rebate).isEqualByComparingTo("260000.00");
-        }
-
-        @Test
-        @DisplayName("the rebate is capped at what is still owed")
-        void neverExceedsTheOutstanding() {
-            BigDecimal outstanding = new BigDecimal("50000");
-
-            BigDecimal rebate = Finance.earlyPayoffRebate(
-                    settings,
-                    new BigDecimal("780000"),
-                    outstanding,
-                    12,
-                    Instant.now().minus(30, ChronoUnit.DAYS),
-                    Instant.now());
-
-            assertThat(rebate).isLessThanOrEqualTo(outstanding);
-        }
-
-        /**
-         * A rebate is never negative. There is no early-settlement charge in
-         * this product, so the worst outcome of settling early is that it saves
-         * nothing — never that it costs something.
-         */
-        @Test
-        @DisplayName("settling in the final month costs nothing extra")
-        void isNeverACharge() {
-            BigDecimal rebate = Finance.earlyPayoffRebate(
-                    settings,
-                    new BigDecimal("125000"),
-                    new BigDecimal("100000"),
-                    3,
-                    Instant.now().minus(85, ChronoUnit.DAYS),
-                    Instant.now());
-
-            assertThat(rebate).isGreaterThanOrEqualTo(BigDecimal.ZERO);
         }
     }
 }

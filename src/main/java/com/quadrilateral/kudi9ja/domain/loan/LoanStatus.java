@@ -23,9 +23,9 @@ public enum LoanStatus {
     REJECTED("Declined"),
 
     /**
-     * Cancelled inside the change-of-mind window: what was received and the fee
-     * came back, no interest was charged, and the loan leaves the record as a
-     * closed row rather than being deleted.
+     * Cancelled inside the change-of-mind window that loans once had. No new
+     * loan reaches this state: a loan in the wallet is repaid in full, with
+     * interest. Kept for the loans already cancelled.
      */
     CANCELLED("Cancelled"),
 

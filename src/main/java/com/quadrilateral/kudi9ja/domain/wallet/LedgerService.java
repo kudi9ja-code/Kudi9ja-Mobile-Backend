@@ -102,6 +102,12 @@ public class LedgerService {
         return write(wallet, userId, amount, kind, entry, status);
     }
 
+    /** One row of the ledger, by id. */
+    @Transactional(readOnly = true)
+    public java.util.Optional<WalletTransaction> find(UUID transactionId) {
+        return transactions.findById(transactionId);
+    }
+
     /**
      * Settles a pending row. The balance already moved when it was written, so
      * approval only changes what the statement says about it.

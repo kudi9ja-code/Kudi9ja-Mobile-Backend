@@ -85,6 +85,12 @@ public final class SettingsValidator {
             problems.put("flatProcessingFee", "The flat fee cannot be negative.");
         }
         requireNonNegativeRate(problems, "loanProcessingFeeRate", s.getLoanProcessingFeeRate());
+        if (s.getLoanTransactionFee() == null || s.getLoanTransactionFee().signum() < 0) {
+            problems.put("loanTransactionFee", "The transaction fee cannot be empty or negative.");
+        } else if (s.getMinLoanAmount() != null && s.getFlatProcessingFee() != null
+                && Money.gte(Money.add(s.getLoanTransactionFee(), s.getFlatProcessingFee()), s.getMinLoanAmount())) {
+            problems.put("loanTransactionFee", "The fees would swallow the smallest loan.");
+        }
 
         // Security -------------------------------------------------------------
         if (s.getMaxPasscodeAttempts() < 1) {

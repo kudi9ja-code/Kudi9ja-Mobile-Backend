@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -111,6 +112,12 @@ public class FirebasePushSender implements PushSender {
 
     @Override
     public Result send(List<String> tokens, String title, String body, Map<String, String> data) {
+        return send(tokens, title, body, data, null);
+    }
+
+    @Override
+    public Result send(
+            List<String> tokens, String title, String body, Map<String, String> data, String imageUrl) {
         if (tokens == null || tokens.isEmpty()) {
             return Result.none();
         }
@@ -134,7 +141,7 @@ public class FirebasePushSender implements PushSender {
                         .uri(url)
                         .header("Authorization", "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .body(message(token, title, body, data))
+                        .body(message(token, title, body, data, imageUrl))
                         .retrieve()
                         .toBodilessEntity();
                 delivered++;
@@ -164,22 +171,30 @@ public class FirebasePushSender implements PushSender {
     }
 
     private Map<String, Object> message(
-            String token, String title, String body, Map<String, String> data) {
+            String token, String title, String body, Map<String, String> data, String imageUrl) {
+
+        Map<String, Object> notification = new HashMap<>(Map.of("title", title, "body", body));
+        Map<String, Object> apns = new HashMap<>(Map.of("payload", Map.of("aps", Map.of(
+                "sound", "default",
+                // Lets iOS show the message on a locked screen without
+                // the app having been opened since it was installed.
+                "mutable-content", 1))));
+        if (imageUrl != null) {
+            // Android reads it from here. iOS needs it repeated under apns.
+            notification.put("image", imageUrl);
+            apns.put("fcm_options", Map.of("image", imageUrl));
+        }
 
         return Map.of("message", Map.of(
                 "token", token,
-                "notification", Map.of("title", title, "body", body),
+                "notification", notification,
                 // Read by the app when the notification is tapped, so it opens
                 // the plan or the claim rather than the home screen.
                 "data", data == null ? Map.of() : data,
                 "android", Map.of("priority", "high", "notification", Map.of(
                         "channel_id", properties.push().androidChannelId(),
                         "sound", "default")),
-                "apns", Map.of("payload", Map.of("aps", Map.of(
-                        "sound", "default",
-                        // Lets iOS show the message on a locked screen without
-                        // the app having been opened since it was installed.
-                        "mutable-content", 1)))));
+                "apns", apns));
     }
 
     /** A cached OAuth token, minted from the service account when it lapses. */

@@ -60,7 +60,8 @@ public class User {
     private String fullName;
 
     /** Lowercased on the way in. It is the identity the admin panel matches on. */
-    @Column(name = "email", nullable = false, length = 190)
+    /** Blank only on an account the team opened that the customer has not yet activated. */
+    @Column(name = "email", length = 190)
     private String email;
 
     /**

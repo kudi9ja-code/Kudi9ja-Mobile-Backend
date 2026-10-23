@@ -1,5 +1,6 @@
 package com.quadrilateral.kudi9ja.domain.loanapplication;
 
+import com.quadrilateral.kudi9ja.domain.officer.LoanOfficerService;
 import com.quadrilateral.kudi9ja.common.error.ApiException;
 import com.quadrilateral.kudi9ja.common.error.ErrorCode;
 import com.quadrilateral.kudi9ja.common.util.Money;
@@ -66,6 +67,7 @@ public class LoanApplicationService {
     private final AuditService audit;
     private final ReceiptStorage documents;
     private final Kudi9jaProperties properties;
+    private final LoanOfficerService officers;
 
     public LoanApplicationService(
             LoanApplicationRepository applications,
@@ -75,7 +77,8 @@ public class LoanApplicationService {
             NotificationService notifications,
             AuditService audit,
             ReceiptStorage documents,
-            Kudi9jaProperties properties) {
+            Kudi9jaProperties properties,
+            LoanOfficerService officers) {
         this.applications = applications;
         this.users = users;
         this.loans = loans;
@@ -84,6 +87,7 @@ public class LoanApplicationService {
         this.audit = audit;
         this.documents = documents;
         this.properties = properties;
+        this.officers = officers;
     }
 
     // -- Applying -----------------------------------------------------------
@@ -298,6 +302,10 @@ public class LoanApplicationService {
         application.setReviewedBy(actor.describe());
         application.setLoanId(loan.getId());
         LoanApplication saved = applications.save(application);
+        // A borrower without a loan officer gets the one who approved them.
+        if (actor.id() != null) {
+            officers.ensureForCustomer(application.getUserId(), actor.id());
+        }
 
         // No notification here: disburse() already tells the customer the money
         // has landed, with the figures on it. Two in the same second about the

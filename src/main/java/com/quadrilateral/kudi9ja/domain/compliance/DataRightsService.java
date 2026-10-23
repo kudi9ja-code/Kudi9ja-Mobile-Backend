@@ -50,6 +50,17 @@ import com.quadrilateral.kudi9ja.security.auth.UserSession;
 import com.quadrilateral.kudi9ja.security.auth.UserSessionRepository;
 import com.quadrilateral.kudi9ja.security.crypto.SecretHasher;
 import com.quadrilateral.kudi9ja.web.dto.DataRightsDtos;
+import com.quadrilateral.kudi9ja.domain.group.LoanGroup;
+import com.quadrilateral.kudi9ja.domain.group.LoanGroupMember;
+import com.quadrilateral.kudi9ja.domain.group.LoanGroupMemberRepository;
+import com.quadrilateral.kudi9ja.domain.group.LoanGroupRepository;
+import com.quadrilateral.kudi9ja.domain.legal.AgreementSignatureRepository;
+import com.quadrilateral.kudi9ja.domain.payin.PaystackPaymentRepository;
+import com.quadrilateral.kudi9ja.domain.support.SupportConversation;
+import com.quadrilateral.kudi9ja.domain.support.SupportConversationRepository;
+import com.quadrilateral.kudi9ja.domain.support.SupportMessage;
+import com.quadrilateral.kudi9ja.domain.support.SupportMessageRepository;
+import com.quadrilateral.kudi9ja.integration.storage.ReceiptStorage;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -159,7 +170,14 @@ public class DataRightsService {
             OtpService otps,
             SecretHasher hasher,
             AuditService audit,
-            Kudi9jaProperties properties) {
+            Kudi9jaProperties properties,
+            SupportConversationRepository supportConversations,
+            SupportMessageRepository supportMessages,
+            LoanGroupMemberRepository groupMembers,
+            LoanGroupRepository groups,
+            AgreementSignatureRepository signatures,
+            PaystackPaymentRepository paystackPayments,
+            ReceiptStorage storage) {
         this.users = users;
         this.admins = admins;
         this.ledger = ledger;
@@ -182,7 +200,22 @@ public class DataRightsService {
         this.hasher = hasher;
         this.audit = audit;
         this.properties = properties;
+        this.supportConversations = supportConversations;
+        this.supportMessages = supportMessages;
+        this.groupMembers = groupMembers;
+        this.groups = groups;
+        this.signatures = signatures;
+        this.paystackPayments = paystackPayments;
+        this.storage = storage;
     }
+
+    private final SupportConversationRepository supportConversations;
+    private final SupportMessageRepository supportMessages;
+    private final LoanGroupMemberRepository groupMembers;
+    private final LoanGroupRepository groups;
+    private final AgreementSignatureRepository signatures;
+    private final PaystackPaymentRepository paystackPayments;
+    private final ReceiptStorage storage;
 
     // ── Access and portability ─────────────────────────────────────────────
 
@@ -227,7 +260,76 @@ public class DataRightsService {
                 agreementsOf(user),
                 signInsOf(user),
                 recordAccessesOf(user),
-                adminAccessOf(user));
+                adminAccessOf(user),
+                conversationsOf(user),
+                groupsOf(user),
+                signaturesOf(user),
+                cardPaymentsOf(user));
+    }
+
+    /** Every conversation with the team, with every message and the files sent in them. */
+    private List<DataRightsDtos.SupportConversationExport> conversationsOf(User user) {
+        return supportConversations.findByUserIdOrderByLastMessageAtDesc(user.getId()).stream()
+                .map(c -> new DataRightsDtos.SupportConversationExport(
+                        c.getReference(),
+                        c.getKind().label(),
+                        c.getCategory(),
+                        c.getSubject(),
+                        c.getStatus().label(),
+                        c.getCreatedAt(),
+                        c.getResolvedAt(),
+                        c.getResolutionNote(),
+                        supportMessages.findByConversationIdOrderByCreatedAtAsc(c.getId()).stream()
+                                .map(DataRightsService::toSupportMessage)
+                                .toList()))
+                .toList();
+    }
+
+    private static DataRightsDtos.SupportMessageExport toSupportMessage(SupportMessage m) {
+        String from = switch (m.getAuthor()) {
+            case CUSTOMER -> "You";
+            case STAFF -> "Kudi9ja";
+            case SYSTEM -> "Kudi9ja (automatic)";
+        };
+        return new DataRightsDtos.SupportMessageExport(
+                from,
+                m.getAuthorName(),
+                m.getBody(),
+                m.getAttachmentName(),
+                m.getAttachmentType(),
+                m.getAttachmentSize(),
+                m.hasAttachment() ? "/api/v1/support/attachments/" + m.getId() : null,
+                m.getCreatedAt());
+    }
+
+    private List<DataRightsDtos.GroupMembership> groupsOf(User user) {
+        List<DataRightsDtos.GroupMembership> out = new ArrayList<>();
+        for (LoanGroupMember m : groupMembers.findByUserId(user.getId())) {
+            Optional<LoanGroup> g = groups.findById(m.getGroupId());
+            g.ifPresent(group -> out.add(new DataRightsDtos.GroupMembership(
+                    group.getNumber(), group.getName(), group.getArea(), group.getOfficerName(), m.getAddedAt())));
+        }
+        return out;
+    }
+
+    private List<DataRightsDtos.SignedAgreement> signaturesOf(User user) {
+        return signatures.findByUserIdOrderBySignedAtDesc(user.getId()).stream()
+                .map(s -> new DataRightsDtos.SignedAgreement(s.getTypedName(), s.getDocuments(), s.getSignedAt(), s.getDevice()))
+                .toList();
+    }
+
+    private List<DataRightsDtos.CardPayment> cardPaymentsOf(User user) {
+        return paystackPayments.findByUserIdOrderByCreatedAtDesc(user.getId(), PageRequest.of(0, 10_000)).stream()
+                .map(p -> new DataRightsDtos.CardPayment(
+                        p.getReference(),
+                        p.getAmount(),
+                        p.getPurpose().label(),
+                        p.getStatus().label(),
+                        p.getChannel(),
+                        p.getCardLast4(),
+                        p.getCreatedAt(),
+                        p.getPaidAt()))
+                .toList();
     }
 
     private DataRightsDtos.About about(User user, Instant now) {
@@ -614,6 +716,25 @@ public class DataRightsService {
         // law requires us to keep is in it.
         reviews.deleteByUserId(userId);
 
+        // Their place in any loan group. The loans themselves are records and
+        // stay; being listed in a group is not something the law asks us to keep.
+        groupMembers.deleteAll(groupMembers.findByUserId(userId));
+
+        // Conversations with the team are kept — a complaint is a record we
+        // must be able to produce — but none is left open in the team's queue
+        // waiting for somebody who has gone.
+        for (SupportConversation c : supportConversations.findByUserIdOrderByLastMessageAtDesc(userId)) {
+            if (!c.isResolved()) {
+                c.setStatus(SupportConversation.Status.RESOLVED);
+                c.setResolvedAt(now);
+                c.setResolvedBy("System");
+                c.setResolutionNote("Closed because the customer closed their account.");
+                c.setStaffUnread(0);
+                c.setCustomerUnread(0);
+                supportConversations.save(c);
+            }
+        }
+
         audit.record(
                 new AuditService.Actor(user.getId(), user.getFullName(), user.getEmail()),
                 AuditCategory.COMPLIANCE,
@@ -640,13 +761,15 @@ public class DataRightsService {
                         "Your password, passcode and transaction PIN",
                         "Your security question and its answer",
                         "Your saved preferences",
-                        "Your notifications"),
+                        "Your notifications",
+                        "Your place in any loan group"),
                 List.of(
                         "Your name, date of birth, BVN and NIN",
                         "Your address and contact details",
                         "Every transaction on your wallet",
                         "Your savings plans and loans",
-                        "Which version of each agreement you accepted"),
+                        "Which version of each agreement you accepted, and your signature",
+                        "Your conversations and complaints with us, and the files you sent in them"),
                 "Your account is closed and you have been signed out everywhere. "
                         + "We have destroyed everything we are free to destroy. The records listed "
                         + "as retained are kept until " + Dates.lagosDate(retainUntil)
@@ -691,6 +814,23 @@ public class DataRightsService {
             user.setStatusNote("Erased after the retention period ended.");
             user.setRetainUntil(null);
             users.save(user);
+
+            // Conversations with the team: kept as records until now, and now
+            // gone — messages, the files sent in them, and the conversation.
+            for (SupportConversation c : supportConversations.findByUserIdOrderByLastMessageAtDesc(user.getId())) {
+                List<SupportMessage> messages = supportMessages.findByConversationIdOrderByCreatedAtAsc(c.getId());
+                for (SupportMessage m : messages) {
+                    if (m.hasAttachment()) {
+                        try {
+                            storage.delete(m.getAttachmentKey());
+                        } catch (RuntimeException e) {
+                            log.warn("Could not delete a support attachment while erasing {}", reference, e);
+                        }
+                    }
+                }
+                supportMessages.deleteAll(messages);
+                supportConversations.delete(c);
+            }
 
             // A loan entered from the paper records carries the name it was
             // entered under. The figures stay with the loan; the name goes.

@@ -9,6 +9,7 @@ import com.quadrilateral.kudi9ja.domain.kyc.OtpPurpose;
 import com.quadrilateral.kudi9ja.domain.kyc.OtpService;
 import com.quadrilateral.kudi9ja.domain.legal.LegalDocumentKind;
 import com.quadrilateral.kudi9ja.domain.legal.LegalService;
+import com.quadrilateral.kudi9ja.domain.legal.SignatureService;
 import com.quadrilateral.kudi9ja.domain.loan.LoanImportService;
 import com.quadrilateral.kudi9ja.domain.notification.NotificationService;
 import com.quadrilateral.kudi9ja.domain.notification.NotifyKind;
@@ -57,6 +58,7 @@ public class SignupService {
     private final NotificationService notifications;
     private final AdminBootstrapService adminBootstrap;
     private final LoanImportService loanImports;
+    private final SignatureService signatures;
     private final Kudi9jaProperties properties;
 
     public SignupService(
@@ -70,6 +72,7 @@ public class SignupService {
             NotificationService notifications,
             AdminBootstrapService adminBootstrap,
             LoanImportService loanImports,
+            SignatureService signatures,
             Kudi9jaProperties properties) {
         this.drafts = drafts;
         this.users = users;
@@ -81,6 +84,7 @@ public class SignupService {
         this.notifications = notifications;
         this.adminBootstrap = adminBootstrap;
         this.loanImports = loanImports;
+        this.signatures = signatures;
         this.properties = properties;
     }
 
@@ -108,12 +112,14 @@ public class SignupService {
             throw ApiException.validation("Check that date of birth.");
         }
 
-        if (users.existsByEmailIgnoreCase(email)) {
+        // An email or phone on an account the team opened for this person does
+        // not stop them here: step three checks it is theirs, by the BVN.
+        if (users.findByEmailIgnoreCase(email).filter(u -> !isWaiting(u)).isPresent()) {
             throw new ApiException(
                     ErrorCode.EMAIL_TAKEN,
                     "There is already an account with that email address. Sign in instead.");
         }
-        if (users.existsByPhone(phone)) {
+        if (users.findByPhone(phone).filter(u -> !isWaiting(u)).isPresent()) {
             throw new ApiException(
                     ErrorCode.PHONE_TAKEN,
                     "There is already an account with that phone number.");
@@ -183,16 +189,25 @@ public class SignupService {
         String bvn = request.bvn().trim();
         String nin = request.nin().trim();
 
-        if (users.existsByBvn(bvn)) {
+        // Kudi9ja may already have opened an account for this person — a loan
+        // customer the team entered. Signing up with that BVN takes it over.
+        User waiting = users.findByBvn(bvn).filter(SignupService::isWaiting).orElse(null);
+        if (waiting == null && users.existsByBvn(bvn)) {
             throw new ApiException(
                     ErrorCode.BVN_TAKEN,
                     "There is already an account using that BVN. A person may hold one Kudi9ja account.");
         }
-        if (users.existsByNin(nin)) {
+        boolean ninIsTheirs = waiting != null && nin.equals(waiting.getNin());
+        if (!ninIsTheirs && users.existsByNin(nin)) {
             throw new ApiException(
                     ErrorCode.NIN_TAKEN,
                     "There is already an account using that NIN. A person may hold one Kudi9ja account.");
         }
+        if (waiting != null && waiting.getNin() != null && !ninIsTheirs) {
+            throw ApiException.validation(
+                    "That NIN does not match the one Kudi9ja holds for you. Check it, or contact support.");
+        }
+        requireNotSomebodyElses(draft.getEmail(), draft.getPhone(), waiting);
         if (!NigerianStates.isKnown(request.state())) {
             throw ApiException.validation("Choose a state from the list.");
         }
@@ -311,18 +326,26 @@ public class SignupService {
                             + "to open an account.");
         }
 
+        // The signature is checked before anything is created, so a bad one
+        // costs nothing but a redraw.
+        byte[] signaturePng = request.signature() == null
+                ? null
+                : signatures.validate(request.signature(), draft.getFullName());
+
         // Re-check the things that could have changed while the wizard ran.
-        if (users.existsByEmailIgnoreCase(draft.getEmail())) {
-            throw new ApiException(ErrorCode.EMAIL_TAKEN, "There is already an account with that email address.");
+        User waiting = users.findByBvn(draft.getBvn()).filter(SignupService::isWaiting).orElse(null);
+        requireNotSomebodyElses(draft.getEmail(), draft.getPhone(), waiting);
+        if (waiting == null && users.existsByBvn(draft.getBvn())) {
+            throw new ApiException(ErrorCode.BVN_TAKEN, "There is already an account using that identity.");
         }
-        if (users.existsByPhone(draft.getPhone())) {
-            throw new ApiException(ErrorCode.PHONE_TAKEN, "There is already an account with that phone number.");
-        }
-        if (users.existsByBvn(draft.getBvn()) || users.existsByNin(draft.getNin())) {
+        if ((waiting == null || !draft.getNin().equals(waiting.getNin())) && users.existsByNin(draft.getNin())) {
             throw new ApiException(ErrorCode.BVN_TAKEN, "There is already an account using that identity.");
         }
 
-        User user = User.createWithNewId();
+        // The account the team opened for them, taken over as it is — same
+        // customer number, same loans, same history — or a new one.
+        boolean activating = waiting != null;
+        User user = activating ? waiting : User.createWithNewId();
         user.setFullName(draft.getFullName());
         user.setEmail(draft.getEmail());
         user.setPhone(draft.getPhone());
@@ -348,7 +371,11 @@ public class SignupService {
         user.setKycTier(KycTier.TIER2);
         user.setThemeMode(ThemeMode.DARK);
         user.setAccountStatus(AccountStatus.ACTIVE);
-        user.setCreatedAt(Instant.now());
+        if (activating) {
+            user.setStatusNote("Activated by the customer on signing up.");
+        } else {
+            user.setCreatedAt(Instant.now());
+        }
         user.setLastActiveAt(Instant.now());
 
         User saved = users.save(user);
@@ -361,11 +388,16 @@ public class SignupService {
         // must not say "nothing owed" to somebody who owes.
         loanImports.claimFor(saved);
 
+        Map<LegalDocumentKind, String> accepted = parseAcceptedVersions(request.acceptedVersions());
         legal.acceptAll(
                 saved.getId(),
-                parseAcceptedVersions(request.acceptedVersions()),
+                accepted,
                 draft.getDevice(),
                 draft.getIpAddress());
+
+        if (signaturePng != null) {
+            signatures.record(saved, request.signature(), signaturePng, accepted, draft.getDevice(), draft.getIpAddress());
+        }
 
         draft.setCompletedAt(Instant.now());
         draft.setUserId(saved.getId());
@@ -382,10 +414,13 @@ public class SignupService {
 
         adminBootstrap.grantSeededOwnerIfMatching(saved);
 
+        if (activating) {
+            log.info("Customer activated account {} that the team opened", saved.getCustomerRef());
+        }
         notifications.push(
                 saved.getId(),
                 NotifyKind.GENERAL,
-                "Welcome to Kudi9ja",
+                activating ? "Your account is ready" : "Welcome to Kudi9ja",
                 "Your account is open. Your customer reference is " + saved.getCustomerRef()
                         + " — quote it when you pay in. It is not an account number and money cannot be "
                         + "sent to it directly.");
@@ -406,6 +441,26 @@ public class SignupService {
     }
 
     // ── Internals ──────────────────────────────────────────────────────────
+
+    /** An account the team opened that its customer has not taken over yet. */
+    private static boolean isWaiting(User user) {
+        return user.getAccountStatus() == AccountStatus.PENDING_ACTIVATION;
+    }
+
+    /**
+     * The email and phone being signed up with must be free, or already on the
+     * very account this person is taking over — never on somebody else's.
+     */
+    private void requireNotSomebodyElses(String email, String phone, User taking) {
+        if (email != null && users.findByEmailIgnoreCase(email)
+                .filter(owner -> taking == null || !owner.getId().equals(taking.getId())).isPresent()) {
+            throw new ApiException(ErrorCode.EMAIL_TAKEN, "There is already an account with that email address.");
+        }
+        if (phone != null && users.findByPhone(phone)
+                .filter(owner -> taking == null || !owner.getId().equals(taking.getId())).isPresent()) {
+            throw new ApiException(ErrorCode.PHONE_TAKEN, "There is already an account with that phone number.");
+        }
+    }
 
     private SignupDraft require(UUID draftId) {
         SignupDraft draft = drafts.findById(draftId)

@@ -66,25 +66,64 @@ class LegalDocumentFreezeTest {
     }
 
     /**
-     * Every shipped version is published, and the newest is the one in force.
-     * Version 1.1 of the Privacy Policy and the Terms removed the credit
-     * score; 1.0 stays on record for the customers who accepted it.
+     * Every shipped version is published. Version 1.1 of the Privacy Policy
+     * and the Terms removed the credit score; 1.0 stays on record for the
+     * customers who accepted it.
      */
     @Test
-    @DisplayName("every shipped version is published and the newest binds")
+    @DisplayName("every shipped version is published")
     void everyShippedVersionIsPublished() {
         assertThat(documents.findByKindAndVersion(LegalDocumentKind.PRIVACY, "1.0")).isPresent();
         assertThat(documents.findByKindAndVersion(LegalDocumentKind.PRIVACY, "1.1")).isPresent();
         assertThat(documents.findByKindAndVersion(LegalDocumentKind.TERMS, "1.1")).isPresent();
 
-        LegalDocument privacy = documents
-                .findByKindOrderByEffectiveFromDesc(LegalDocumentKind.PRIVACY).get(0);
-        assertThat(privacy.getVersion()).isEqualTo("1.1");
+        LegalDocument privacy = documents.findByKindAndVersion(LegalDocumentKind.PRIVACY, "1.1").orElseThrow();
         assertThat(privacy.getChangeSummary()).contains("credit score");
         assertThat(privacy.getBodyJson())
                 .as("the policy must not describe a score the product no longer has")
                 .doesNotContain("Credit scoring and automated decisions")
                 .contains("How we decide on a loan");
+    }
+
+    /**
+     * The Paystack versions. They change how customers pay in and out, which
+     * the Terms count as a change to their rights, so they are published with
+     * 30 days' notice: on record and readable now, binding from their date.
+     */
+    @Test
+    @DisplayName("the Paystack versions are published, with notice, and describe the new flow")
+    void paystackVersions() {
+        LegalDocument terms = documents.findByKindAndVersion(LegalDocumentKind.TERMS, "1.2").orElseThrow();
+        LegalDocument privacy = documents.findByKindAndVersion(LegalDocumentKind.PRIVACY, "1.2").orElseThrow();
+        LegalDocument lending = documents.findByKindAndVersion(LegalDocumentKind.LENDING, "1.1").orElseThrow();
+
+        for (LegalDocument document : java.util.List.of(terms, privacy, lending)) {
+            assertThat(document.getBodyJson()).as("%s %s", document.getKind(), document.getVersion()).contains("Paystack");
+            assertThat(document.getChangeSummary()).as("%s says what changed", document.getKind()).isNotBlank();
+        }
+        assertThat(terms.getBodyJson())
+                .as("the Terms no longer describe the receipt-upload route")
+                .doesNotContain("submit the claim in the app")
+                .doesNotContain("1018548852")
+                .contains("not insured by the Nigeria Deposit Insurance Corporation")
+                .contains("We do not issue account numbers")
+                .contains("section 93 of the Evidence Act 2011");
+        assertThat(lending.getBodyJson())
+                .doesNotContain("submitting the claim with your receipt")
+                .contains("Through Paystack")
+                .contains("Less transaction fee")
+                .contains("₦193,000");
+        assertThat(terms.getBodyJson()).contains("Loan transaction fee");
+        // No third-party identity provider is used, so none is named.
+        assertThat(terms.getBodyJson()).doesNotContain("Dojah");
+        assertThat(privacy.getBodyJson())
+                .doesNotContain("Dojah")
+                .contains("We never receive your full card number")
+                // Help & complaints, loan officers and loan groups.
+                .contains("Help & complaints conversations")
+                .contains("Who inside Kudi9ja sees your details")
+                .contains("Your loan officer")
+                .contains("Being in a loan group does not share your details with the other members");
     }
 
     @Test

@@ -26,8 +26,14 @@ public class RecordingPushSender implements PushSender {
     @Override
     public synchronized Result send(
             List<String> tokens, String title, String body, Map<String, String> data) {
+        return send(tokens, title, body, data, null);
+    }
 
-        sent.add(new Sent(List.copyOf(tokens), title, body, Map.copyOf(data)));
+    @Override
+    public synchronized Result send(
+            List<String> tokens, String title, String body, Map<String, String> data, String imageUrl) {
+
+        sent.add(new Sent(List.copyOf(tokens), title, body, Map.copyOf(data), imageUrl));
 
         List<String> invalid = tokens.stream().filter(rejects::contains).toList();
         return new Result(tokens.size() - invalid.size(), invalid);
@@ -55,7 +61,8 @@ public class RecordingPushSender implements PushSender {
         rejects.clear();
     }
 
-    public record Sent(List<String> tokens, String title, String body, Map<String, String> data) {
+    public record Sent(
+            List<String> tokens, String title, String body, Map<String, String> data, String imageUrl) {
     }
 
     @TestConfiguration

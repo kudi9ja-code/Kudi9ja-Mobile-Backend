@@ -44,7 +44,14 @@ public enum NotifyKind {
      * <p>Also not optional. A customer who has turned off the message that
      * says their money arrived has turned off the product.
      */
-    GENERAL("Money movements", false);
+    GENERAL("Money movements", false),
+
+    /**
+     * The Kudi9ja team answered a question or a complaint.
+     *
+     * <p>Not optional: a complaint answered into silence has not been answered.
+     */
+    SUPPORT("Help and complaints", false);
 
     private final String label;
     private final boolean optional;

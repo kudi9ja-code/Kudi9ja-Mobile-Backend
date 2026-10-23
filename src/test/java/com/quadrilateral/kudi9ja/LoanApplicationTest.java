@@ -300,9 +300,9 @@ class LoanApplicationTest {
             assertThat(decided.get("status").asText()).isEqualTo("APPROVED");
             assertThat(decided.get("loanId").isNull()).isFalse();
 
-            // The pricing is the old pricing: 200,000 in, 5,000 fee straight out.
+            // 200,000 in; the 5,000 management fee and 2,000 transaction fee straight out.
             assertThat(balanceOf(customer))
-                    .isEqualByComparingTo(before.add(new BigDecimal("195000")));
+                    .isEqualByComparingTo(before.add(new BigDecimal("193000")));
 
             JsonNode loan = getJson("/api/v1/loans", customer).get(0);
             assertThat(loan.get("status").asText()).isEqualTo("ACTIVE");

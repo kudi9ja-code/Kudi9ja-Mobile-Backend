@@ -18,6 +18,8 @@ import com.quadrilateral.kudi9ja.domain.wallet.LedgerService;
 import com.quadrilateral.kudi9ja.domain.wallet.TxKind;
 import com.quadrilateral.kudi9ja.domain.wallet.TxStatus;
 import com.quadrilateral.kudi9ja.domain.wallet.WalletTransaction;
+import com.quadrilateral.kudi9ja.integration.bank.BankDirectory;
+import com.quadrilateral.kudi9ja.integration.paystack.PaystackGateway;
 import com.quadrilateral.kudi9ja.web.dto.WalletDtos;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -29,6 +31,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,6 +67,7 @@ public class WithdrawalService {
     private final NotificationService notifications;
     private final AuditService audit;
     private final AuthService auth;
+    private final ObjectProvider<PaystackGateway> paystack;
 
     public WithdrawalService(
             WithdrawalRequestRepository withdrawals,
@@ -72,7 +76,8 @@ public class WithdrawalService {
             SettingsService settings,
             NotificationService notifications,
             AuditService audit,
-            AuthService auth) {
+            AuthService auth,
+            ObjectProvider<PaystackGateway> paystack) {
         this.withdrawals = withdrawals;
         this.users = users;
         this.ledger = ledger;
@@ -80,6 +85,7 @@ public class WithdrawalService {
         this.notifications = notifications;
         this.audit = audit;
         this.auth = auth;
+        this.paystack = paystack;
     }
 
     // ── Request ────────────────────────────────────────────────────────────
@@ -211,15 +217,34 @@ public class WithdrawalService {
                             + request.getStatus().label().toLowerCase(Locale.ROOT) + ".");
         }
 
+        PaystackGateway gateway = paystack.getIfAvailable();
+        boolean paid;
+        if (gateway != null) {
+            paid = sendThroughPaystack(gateway, request);
+        } else {
+            // No Paystack: the admin paid it by hand from the company account.
+            request.setPayoutProvider("MANUAL");
+            request.setPayoutStatus("PAID");
+            request.setPaidOutAt(Instant.now());
+            paid = true;
+        }
+
         request.setStatus(WithdrawalStatus.APPROVED);
         request.setReviewedAt(Instant.now());
         request.setReviewedBy(actor == null ? "System" : actor.describe());
-        request.setPayoutReference(payoutReference);
+        if (payoutReference != null && !payoutReference.isBlank()) {
+            request.setPayoutReference(payoutReference);
+        } else if (request.getTransferCode() != null) {
+            request.setPayoutReference(request.getTransferCode());
+        }
         request.setNote(note);
         withdrawals.save(request);
 
-        // Settles the pending row that debited the wallet at request time.
-        ledger.settle(request.getId(), "Withdrawal to " + request.getBank());
+        // Settles the pending row that debited the wallet at request time —
+        // now if the money has gone, or when Paystack says it has.
+        if (paid) {
+            ledger.settle(request.getId(), "Withdrawal to " + request.getBank());
+        }
 
         notifications.push(
                 request.getUserId(),
@@ -241,6 +266,135 @@ public class WithdrawalService {
 
         log.info("Approved withdrawal {} for {}", request.getId(), request.getAmount());
         return request;
+    }
+
+    /**
+     * Sends an approved withdrawal through Paystack.
+     *
+     * <p>Called inside the approval, so a refusal from Paystack — the balance
+     * is short, the account is wrong — leaves the request pending and the
+     * admin sees why. Returns whether the money is already gone; usually it is
+     * still processing, and {@link #payoutOutcome} settles or refunds it.
+     */
+    private boolean sendThroughPaystack(PaystackGateway gateway, WithdrawalRequest request) {
+        String bankCode = BankDirectory.byName(request.getBank())
+                .map(BankDirectory.Bank::code)
+                .orElseThrow(() -> new ApiException(
+                        ErrorCode.CONFLICT,
+                        "We do not have a bank code for " + request.getBank() + ", so Paystack cannot send to it. "
+                                + "Pay this one by hand and approve it with the bank's reference."));
+        // Paystack wants 16 to 50 lowercase letters, digits, dashes or underscores.
+        String transferReference = "k9wd-" + request.getId().toString().toLowerCase(Locale.ROOT);
+        long kobo = request.getAmount().movePointRight(2).longValueExact();
+        String name = request.getDestinationName() == null || request.getDestinationName().isBlank()
+                ? request.getCustomerName()
+                : request.getDestinationName();
+
+        PaystackGateway.Transfer transfer;
+        try {
+            String recipient = gateway.createRecipient(name, request.getDestinationAccount(), bankCode);
+            transfer = gateway.transfer(kobo, recipient, transferReference,
+                    "Kudi9ja withdrawal " + request.getReference());
+        } catch (PaystackGateway.PaystackException e) {
+            throw new ApiException(ErrorCode.CONFLICT, e.getMessage() + " Nothing was sent; the request is still waiting.");
+        }
+
+        request.setPayoutProvider("PAYSTACK");
+        request.setTransferReference(transferReference);
+        request.setTransferCode(transfer.transferCode());
+        if ("success".equalsIgnoreCase(transfer.status())) {
+            request.setPayoutStatus("PAID");
+            request.setPaidOutAt(Instant.now());
+            return true;
+        }
+        if ("failed".equalsIgnoreCase(transfer.status()) || "reversed".equalsIgnoreCase(transfer.status())) {
+            throw new ApiException(ErrorCode.CONFLICT,
+                    "Paystack could not send this transfer. Nothing was sent; the request is still waiting.");
+        }
+        request.setPayoutStatus("PROCESSING");
+        if ("otp".equalsIgnoreCase(transfer.status())) {
+            request.setPayoutFailure("Waiting for the transfer to be approved with an OTP on the Paystack dashboard.");
+        }
+        return false;
+    }
+
+    /**
+     * What Paystack reported about a transfer: it arrived, or it failed or was
+     * returned. Arrives by webhook, possibly more than once; a repeat changes
+     * nothing.
+     *
+     * <p>A failure puts every naira back in the wallet. The request stays
+     * approved — it was — and its payout is marked failed, with the reason.
+     */
+    @Transactional
+    public void payoutOutcome(String transferReference, boolean succeeded, String reason) {
+        if (transferReference == null || !transferReference.startsWith("k9wd-")) {
+            return;
+        }
+        UUID id;
+        try {
+            id = UUID.fromString(transferReference.substring("k9wd-".length()));
+        } catch (IllegalArgumentException e) {
+            log.warn("Transfer outcome for a reference we did not issue: {}", transferReference);
+            return;
+        }
+        WithdrawalRequest request = withdrawals.findById(id).orElse(null);
+        if (request == null) {
+            log.warn("Transfer outcome for an unknown withdrawal: {}", transferReference);
+            return;
+        }
+        if ("FAILED".equals(request.getPayoutStatus()) || ("PAID".equals(request.getPayoutStatus()) && succeeded)) {
+            return;
+        }
+        WalletTransaction tx = ledger.find(request.getId()).orElse(null);
+        boolean pending = tx != null && tx.getStatus() == TxStatus.PENDING;
+
+        if (succeeded) {
+            if (pending) {
+                ledger.settle(request.getId(), "Withdrawal to " + request.getBank());
+            }
+            request.setPayoutStatus("PAID");
+            request.setPayoutFailure(null);
+            request.setPaidOutAt(Instant.now());
+            withdrawals.save(request);
+            notifications.push(
+                    request.getUserId(),
+                    NotifyKind.GENERAL,
+                    "Withdrawal sent",
+                    Money.naira(request.getAmount()) + " has been sent to your " + request.getBank() + " account.",
+                    request.getAmount());
+            return;
+        }
+
+        String why = reason == null || reason.isBlank() ? "the bank did not accept the transfer" : reason.trim();
+        if (pending) {
+            ledger.reverse(
+                    request.getId(),
+                    "Withdrawal to " + request.getBank() + " — transfer failed",
+                    "Refund: bank transfer failed");
+        } else {
+            // Paid, then returned by the bank: the money is back with us.
+            ledger.credit(request.getUserId(), request.getAmount(), TxKind.DEPOSIT,
+                    LedgerService.Entry.of("Refund: bank transfer returned", "Kudi9ja")
+                            .related(LedgerService.Related.WITHDRAWAL, request.getId()));
+        }
+        request.setPayoutStatus("FAILED");
+        request.setPayoutFailure(why.length() > 500 ? why.substring(0, 500) : why);
+        withdrawals.save(request);
+
+        notifications.push(
+                request.getUserId(),
+                NotifyKind.GENERAL,
+                "Withdrawal returned to your wallet",
+                "We could not send " + Money.naira(request.getAmount()) + " to your " + request.getBank()
+                        + " account: " + why + ". The full amount is back in your wallet.",
+                request.getAmount());
+        audit.recordSystem(
+                AuditCategory.CUSTOMER,
+                "Withdrawal transfer failed",
+                Money.naira(request.getAmount()) + " to " + request.getBank() + " "
+                        + Masks.accountTail(request.getDestinationAccount()) + " for " + request.getCustomerName()
+                        + " (" + request.getReference() + ") failed and was refunded. Paystack said: " + why);
     }
 
     /**
@@ -393,6 +547,11 @@ public class WithdrawalService {
                 request.getReviewedAt(),
                 request.getReviewedBy(),
                 request.getNote(),
-                request.getPayoutReference());
+                request.getPayoutReference(),
+                request.getPayoutProvider(),
+                request.getPayoutStatus(),
+                request.getTransferCode(),
+                request.getPayoutFailure(),
+                request.getPaidOutAt());
     }
 }

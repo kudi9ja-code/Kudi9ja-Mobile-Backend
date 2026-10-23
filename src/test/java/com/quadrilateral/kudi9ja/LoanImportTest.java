@@ -3,7 +3,9 @@ package com.quadrilateral.kudi9ja;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -75,7 +77,7 @@ class LoanImportTest {
     }
 
     @Test
-    @DisplayName("a loan entered before signup is on the account when the customer arrives")
+    @DisplayName("an admin-entered customer has a real account at once, and signing up with that BVN takes it over")
     void waitingLoanLandsAtSignup() throws Exception {
         SignUpFlow.Session admin = owner();
         String bvn = SignUpFlow.nextIdentityNumber(33);
@@ -87,7 +89,7 @@ class LoanImportTest {
                 Map.entry("bvn", bvn),
                 Map.entry("fullName", "Chioma Grace Adeyemi"),
                 Map.entry("email", email),
-                Map.entry("phone", "08031234567"),
+                Map.entry("phone", SignUpFlow.freshPhone()),
                 Map.entry("principal", 120000),
                 Map.entry("tenureMonths", 6),
                 Map.entry("flatRate", 0.12),
@@ -96,16 +98,33 @@ class LoanImportTest {
                 Map.entry("disbursedAt", disbursed.toString()),
                 Map.entry("amountRepaid", 22400)));
 
-        assertThat(entered.get("claimed").asBoolean()).isFalse();
+        // A real customer from the start: an account, a customer number, the
+        // loan on it — not yet activated.
+        assertThat(entered.get("claimed").asBoolean()).isTrue();
+        String accountId = entered.get("customerId").asText();
         assertThat(entered.get("bvnLast4").asText()).endsWith(bvn.substring(7)).doesNotContain(bvn);
         assertThat(entered.get("totalRepayable").decimalValue()).isEqualByComparingTo("134400.00");
         assertThat(entered.get("outstanding").decimalValue()).isEqualByComparingTo("112000.00");
 
-        // It is waiting, and the admin can see it waiting.
-        assertThat(listJson(admin, "?claimed=false").toString()).contains(entered.get("id").asText());
+        JsonNode account = getJson("/api/v1/admin/customers/" + accountId, admin);
+        assertThat(account.get("accountStatus").asText()).isEqualTo("PENDING_ACTIVATION");
+        String customerRef = account.get("customerRef").asText();
+        assertThat(getJson("/api/v1/admin/loans", admin).get("items").toString()).contains(accountId);
 
-        // The customer signs up the ordinary way, with that BVN.
+        // Nobody can sign in to it until they sign up.
+        mvc.perform(post("/api/v1/auth/signin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("email", email, "password", SignUpFlow.PASSWORD))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ACCOUNT_NOT_ACTIVATED"));
+
+        // The customer signs up the ordinary way, with that BVN — and gets
+        // that same account: same id, same customer number.
         SignUpFlow.Session customer = flow.signUp(email, bvn);
+        assertThat(customer.userId().toString()).isEqualTo(accountId);
+        JsonNode me = getJson("/api/v1/me", customer);
+        assertThat(me.get("customerRef").asText()).isEqualTo(customerRef);
+        assertThat(me.get("accountStatus").asText()).isEqualTo("ACTIVE");
 
         JsonNode loans = getJson("/api/v1/loans", customer);
         assertThat(loans).hasSize(1);
@@ -137,13 +156,45 @@ class LoanImportTest {
         assertThat(row).isNotNull();
         assertThat(row.get("customerId").asText()).isEqualTo(customer.userId().toString());
         assertThat(row.get("loanId").asText()).isEqualTo(loan.get("id").asText());
-        // The BVN went with the claim; the account holds it now.
-        assertThat(row.hasNonNull("bvnLast4")).isFalse();
+        // The account holds the BVN now; the file shows it from there, masked.
+        assertThat(row.get("bvnLast4").asText()).endsWith(bvn.substring(7)).doesNotContain(bvn);
 
-        // A claimed entry cannot be un-entered.
+        // Once they have signed up, the entry cannot be taken back.
         mvc.perform(delete("/api/v1/admin/loans/imports/" + entered.get("id").asText())
                         .header("Authorization", admin.bearer()))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("an account not yet activated can be corrected, BVN included, and is taken over with the corrected BVN")
+    void correctedBeforeActivation() throws Exception {
+        SignUpFlow.Session admin = owner();
+        String typo = SignUpFlow.nextIdentityNumber(31);
+        String bvn = SignUpFlow.nextIdentityNumber(31);
+        JsonNode entered = importLoan(admin, Map.of(
+                "bvn", typo,
+                "fullName", "Chioma Grase Adeyemi",
+                "principal", 60000,
+                "tenureMonths", 3,
+                "flatRate", 0.25,
+                "purpose", "Stock",
+                "disbursedAt", Instant.now().minus(3, ChronoUnit.DAYS).toString()));
+        String id = entered.get("id").asText();
+        String accountId = entered.get("customerId").asText();
+        String phone = SignUpFlow.freshPhone();
+
+        mvc.perform(patch("/api/v1/admin/loans/imports/" + id)
+                        .header("Authorization", admin.bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("fullName", "Chioma Grace Adeyemi", "phone", phone, "bvn", bvn))))
+                .andExpect(status().isOk());
+        JsonNode account = getJson("/api/v1/admin/customers/" + accountId, admin);
+        assertThat(account.get("fullName").asText()).isEqualTo("Chioma Grace Adeyemi");
+        assertThat(account.get("phone").asText()).isEqualTo(phone);
+        assertThat(account.get("bvnLast4").asText()).endsWith(bvn.substring(7));
+
+        SignUpFlow.Session customer = flow.signUp(SignUpFlow.freshEmail("corrected"), bvn);
+        assertThat(customer.userId().toString()).isEqualTo(accountId);
     }
 
     @Test
@@ -235,6 +286,39 @@ class LoanImportTest {
     }
 
     @Test
+    @DisplayName("a loan whose borrower has not signed up is in the book, once")
+    void unclaimedLoansAreInTheBook() throws Exception {
+        SignUpFlow.Session admin = owner();
+        String bvn = SignUpFlow.nextIdentityNumber(39);
+        JsonNode before = getJson("/api/v1/admin/overview", admin).get("book");
+
+        importLoan(admin, Map.of(
+                "bvn", bvn,
+                "fullName", "Bisi Adunni Lawal",
+                "principal", 300000,
+                "tenureMonths", 6,
+                "flatRate", 0.25,
+                "processingFee", 5000,
+                "transactionFee", 2000,
+                "purpose", "Stock",
+                "disbursedAt", Instant.now().minus(3, ChronoUnit.DAYS).toString(),
+                "amountRepaid", 0));
+
+        JsonNode after = getJson("/api/v1/admin/overview", admin).get("book");
+        assertThat(after.get("totalLent").decimalValue())
+                .isEqualByComparingTo(before.get("totalLent").decimalValue().add(new BigDecimal("300000")));
+        assertThat(after.get("totalFeesCharged").decimalValue())
+                .isEqualByComparingTo(before.get("totalFeesCharged").decimalValue().add(new BigDecimal("7000")));
+        assertThat(after.get("activeLoans").asLong()).isEqualTo(before.get("activeLoans").asLong() + 1);
+
+        // Signing up moves it onto the account; the book does not count it twice.
+        flow.signUp(SignUpFlow.freshEmail("unclaimed"), bvn);
+        JsonNode claimed = getJson("/api/v1/admin/overview", admin).get("book");
+        assertThat(claimed.get("totalLent").decimalValue()).isEqualByComparingTo(after.get("totalLent").decimalValue());
+        assertThat(claimed.get("totalFeesCharged").decimalValue()).isEqualByComparingTo(after.get("totalFeesCharged").decimalValue());
+    }
+
+    @Test
     @DisplayName("the book reports the interest the live loans are charged")
     void interestChargedOnTheOpenBook() throws Exception {
         SignUpFlow.Session admin = owner();
@@ -254,19 +338,23 @@ class LoanImportTest {
                 "tenureMonths", 4,
                 "flatRate", 0.20,
                 "processingFee", 7500,
+                "transactionFee", 2000,
                 "purpose", "Stock",
                 "disbursedAt", Instant.now().minus(5, ChronoUnit.DAYS).toString(),
                 "amountRepaid", 0));
 
         assertThat(getJson("/api/v1/loans", customer)).hasSize(1);
+        assertThat(getJson("/api/v1/loans", customer).get(0).get("netDisbursed").decimalValue())
+                .isEqualByComparingTo("490500.00");
 
         JsonNode book = getJson("/api/v1/admin/overview", admin).get("book");
         assertThat(book.get("totalInterestCharged").decimalValue())
                 .isEqualByComparingTo(before.add(new BigDecimal("100000.00")));
 
-        // The fee is its own figure. Interest above is 100,000 with no fee in it.
+        // The fees are their own figure: management and transaction together.
+        // Interest above is 100,000 with no fee in it.
         assertThat(book.get("totalFeesCharged").decimalValue())
-                .isEqualByComparingTo(feesBefore.add(new BigDecimal("7500.00")));
+                .isEqualByComparingTo(feesBefore.add(new BigDecimal("9500.00")));
 
         // Interest paid out is the savers' side. Lending does not touch it: the
         // two figures are opposite sides of the rate card, not one number.
@@ -275,7 +363,7 @@ class LoanImportTest {
     }
 
     @Test
-    @DisplayName("figures that contradict each other are refused, and a waiting entry can be removed")
+    @DisplayName("figures that contradict each other are refused, and an entry made by mistake can be removed")
     void refusedAndRemoved() throws Exception {
         SignUpFlow.Session admin = owner();
         String bvn = SignUpFlow.nextIdentityNumber(36);
@@ -307,7 +395,7 @@ class LoanImportTest {
         JsonNode audit = getJson("/api/v1/admin/audit?size=10", admin);
         assertThat(audit.get("items").toString())
                 .contains("Paper loan entered")
-                .contains("Paper loan removed before claim");
+                .contains("Loan entry removed");
 
         // Somebody who signs up with that BVN now finds nothing waiting.
         SignUpFlow.Session customer = flow.signUp(SignUpFlow.freshEmail("nothing"), bvn);

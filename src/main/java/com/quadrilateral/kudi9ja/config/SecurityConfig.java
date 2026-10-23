@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quadrilateral.kudi9ja.common.error.ApiError;
 import com.quadrilateral.kudi9ja.common.error.ErrorCode;
 import com.quadrilateral.kudi9ja.security.auth.JwtAuthenticationFilter;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +50,9 @@ public class SecurityConfig {
             "/api/v1/legal/**",
             "/api/v1/banks",
             "/api/v1/states",
+            // Paystack holds no token; its calls are proven by the signature
+            // over the body, which PaystackPaymentService checks first.
+            "/api/v1/webhooks/**",
             "/actuator/health",
             "/actuator/health/**",
             "/actuator/info",
@@ -72,6 +76,9 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // A live stream (help and complaints) ends in an async dispatch that
+                        // carries no token; the request that opened it was already checked.
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(OPEN_ENDPOINTS).permitAll()
                         // Panel access is a database grant, resolved per request

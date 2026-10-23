@@ -61,7 +61,57 @@ public final class DataRightsDtos {
             List<Agreement> legalAcceptances,
             List<SignIn> sessions,
             List<RecordAccess> recordAccesses,
-            AdminAccess adminAccess) {
+            AdminAccess adminAccess,
+            List<SupportConversationExport> helpAndComplaints,
+            List<GroupMembership> loanGroups,
+            List<SignedAgreement> signatures,
+            List<CardPayment> paystackPayments) {
+    }
+
+    /** A conversation with the Kudi9ja team — a question or a complaint — and every message in it. */
+    public record SupportConversationExport(
+            String reference,
+            String kind,
+            String topic,
+            String subject,
+            String status,
+            Instant openedAt,
+            Instant resolvedAt,
+            String resolutionNote,
+            List<SupportMessageExport> messages) {
+    }
+
+    /**
+     * One message. A file sent with it is listed, with the address it can be
+     * downloaded from while the account is open.
+     */
+    public record SupportMessageExport(
+            String from,
+            String name,
+            String text,
+            String fileName,
+            String fileType,
+            Long fileSizeBytes,
+            String fileDownload,
+            Instant sentAt) {
+    }
+
+    public record GroupMembership(int groupNumber, String groupName, String area, String loanOfficer, Instant joinedAt) {
+    }
+
+    /** A signature given when accepting the agreements. The image itself is in the app, under Profile. */
+    public record SignedAgreement(String typedName, String documents, Instant signedAt, String device) {
+    }
+
+    public record CardPayment(
+            String reference,
+            BigDecimal amount,
+            String purpose,
+            String status,
+            String channel,
+            String cardLast4,
+            Instant startedAt,
+            Instant paidAt) {
     }
 
     /**

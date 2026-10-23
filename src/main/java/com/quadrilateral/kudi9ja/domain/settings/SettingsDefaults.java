@@ -90,13 +90,14 @@ public final class SettingsDefaults {
         s.setMaxLoanTenureMonths(24);
         s.setMinLoanAmount(Money.of(50_000));
         s.setMaxLoanAmount(Money.of(5_000_000));
-        s.setEarlyPayoffRebateShare(rate("0.5"));
-        s.setLoanCancellationHours(24);
+        s.setEarlyPayoffRebateShare(rate("0"));
+        s.setLoanCancellationHours(0);
 
         // Management fee: flat to the threshold, 1% of the whole above it.
         s.setFlatProcessingFee(Money.of(5_000));
         s.setProcessingFeeThreshold(Money.of(500_000));
         s.setLoanProcessingFeeRate(rate("0.01"));
+        s.setLoanTransactionFee(Money.of(2_000));
 
         // Security.
         s.setMaxPasscodeAttempts(5);

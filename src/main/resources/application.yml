@@ -260,19 +260,31 @@ kudi9ja:
     collections-start-hour: 8
     collections-end-hour: 20
 
-  # Which identity provider checks a BVN and an NIN, and which resolves a bank
-  # account name.
+  # How a BVN, an NIN and a payout account are checked. No third-party
+  # identity provider is used: Kudi9ja collects the numbers at signup and
+  # checks their format.
   #
-  #   dojah         — a licensed provider actually checks
-  #   self-declared — the customer's word is taken as given. A deliberate
-  #                   business choice: an account can be opened in somebody
-  #                   else's name, and the payout account is unverified.
+  #   self-declared — the production choice. The customer's word is taken as
+  #                   given: an account can be opened in somebody else's name,
+  #                   and the payout account is unverified.
   #   sandbox       — local only; passes or fails on the final digit
   #
   # Empty refuses to start. A deployment that has not chosen must not quietly
   # fall back to something that looks like a check and is not one.
   kyc:
     provider: ${KYC_PROVIDER:}
+
+  # Paystack: money in by checkout, money out by transfer. Without a secret
+  # key, paying in is switched off and approved withdrawals are marked paid by
+  # hand, as before. Point the dashboard's webhook URL at
+  # https://<this server>/api/v1/webhooks/paystack, and turn OFF the OTP for
+  # transfers there, or each approved withdrawal waits for a code.
+  paystack:
+    secret-key: ${PAYSTACK_SECRET_KEY:}
+    base-url: ${PAYSTACK_BASE_URL:https://api.paystack.co}
+    # Where checkout returns the customer, e.g. https://kudi9ja.com/app/wallet/paystack.
+    # Empty lets the website say, if it is https.
+    callback-url: ${PAYSTACK_CALLBACK_URL:}
 
   # How many requests one address gets before it is told to wait.
   #

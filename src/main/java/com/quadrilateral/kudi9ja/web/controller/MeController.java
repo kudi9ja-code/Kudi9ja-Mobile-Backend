@@ -6,6 +6,8 @@ import com.quadrilateral.kudi9ja.common.error.ErrorCode;
 import com.quadrilateral.kudi9ja.domain.legal.LegalDocument;
 import com.quadrilateral.kudi9ja.domain.legal.LegalDocumentKind;
 import com.quadrilateral.kudi9ja.domain.legal.LegalService;
+import com.quadrilateral.kudi9ja.domain.legal.SignatureService;
+import com.quadrilateral.kudi9ja.web.dto.SignatureDtos;
 import com.quadrilateral.kudi9ja.web.support.RequestContext;
 import jakarta.servlet.http.HttpServletRequest;
 import com.quadrilateral.kudi9ja.domain.user.ProfileService;
@@ -51,11 +53,13 @@ public class MeController {
     private final ProfileService profiles;
     private final LegalService legal;
     private final CurrentUser currentUser;
+    private final SignatureService signatures;
 
-    public MeController(ProfileService profiles, LegalService legal, CurrentUser currentUser) {
+    public MeController(ProfileService profiles, LegalService legal, CurrentUser currentUser, SignatureService signatures) {
         this.profiles = profiles;
         this.legal = legal;
         this.currentUser = currentUser;
+        this.signatures = signatures;
     }
 
     @GetMapping("/me")
@@ -156,6 +160,15 @@ public class MeController {
                 "document", kind.id(),
                 "version", current.getVersion(),
                 "message", "Thank you. You have accepted the " + current.getTitle() + ".");
+    }
+
+    /** The signatures this customer gave when accepting their agreements, with the image — their copy. */
+    @GetMapping("/me/legal/signatures")
+    @Operation(summary = "Your signed agreements, with your signature")
+    public List<SignatureDtos.SignatureRecord> signatures() {
+        return signatures.forUser(currentUser.requireId()).stream()
+                .map(s -> SignatureDtos.SignatureRecord.forCustomer(s, signatures.dataUrl(s)))
+                .toList();
     }
 
     @GetMapping("/me/legal/acceptances")

@@ -383,6 +383,79 @@ class PushNotificationTest {
         assertThat(pushes.all()).isEmpty();
     }
 
+    // ── Announcements ──────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("An announcement")
+    class Announcements {
+
+        private static final String PICTURE = "https://res.cloudinary.com/kudi9ja/image/upload/promo.jpg";
+
+        @Test
+        @DisplayName("reaches every registered phone, with its picture")
+        void reachesEveryPhone() throws Exception {
+            SignUpFlow.Session first = flow.signUp(email);
+            SignUpFlow.Session second = flow.signUp(SignUpFlow.freshEmail("push-two"));
+            registerPhone(first, "token-announce-1");
+            registerPhone(second, "token-announce-2");
+            SignUpFlow.Session admin = owner();
+
+            JsonNode sent = announce(admin, PICTURE, status().isOk());
+
+            assertThat(sent.get("devices").asInt()).isGreaterThanOrEqualTo(2);
+            assertThat(pushes.all()).allSatisfy(push -> {
+                assertThat(push.title()).isEqualTo("Happy holidays");
+                assertThat(push.imageUrl()).isEqualTo(PICTURE);
+                assertThat(push.data()).containsEntry("kind", "ANNOUNCEMENT");
+                assertThat(push.tokens()).hasSizeLessThanOrEqualTo(12);
+            });
+            assertThat(pushes.all().stream().flatMap(p -> p.tokens().stream()))
+                    .contains("token-announce-1", "token-announce-2");
+        }
+
+        @Test
+        @DisplayName("goes without a picture when none is given")
+        void pictureIsOptional() throws Exception {
+            registerPhone(flow.signUp(email), "token-announce-3");
+
+            announce(owner(), "", status().isOk());
+
+            assertThat(pushes.all()).isNotEmpty().allSatisfy(push -> assertThat(push.imageUrl()).isNull());
+        }
+
+        @Test
+        @DisplayName("refuses a picture that is not a public https link")
+        void refusesAPlainHttpPicture() throws Exception {
+            announce(owner(), "http://example.com/promo.jpg", status().isBadRequest());
+            assertThat(pushes.all()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("cannot be sent by a customer")
+        void customersCannotSend() throws Exception {
+            announce(flow.signUp(email), PICTURE, status().isForbidden());
+            assertThat(pushes.all()).isEmpty();
+        }
+
+        private JsonNode announce(
+                SignUpFlow.Session session,
+                String imageUrl,
+                org.springframework.test.web.servlet.ResultMatcher expected) throws Exception {
+
+            pushes.clear();
+            MvcResult result = mvc.perform(post("/api/v1/admin/announcements")
+                            .header(HttpHeaders.AUTHORIZATION, session.bearer())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of(
+                                    "title", "Happy holidays",
+                                    "body", "From all of us at Kudi9ja.",
+                                    "imageUrl", imageUrl))))
+                    .andExpect(expected)
+                    .andReturn();
+            return json.readTree(result.getResponse().getContentAsString());
+        }
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────
 
     private void registerPhone(SignUpFlow.Session session, String token) throws Exception {

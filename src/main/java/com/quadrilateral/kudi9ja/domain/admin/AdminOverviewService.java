@@ -4,6 +4,8 @@ import com.quadrilateral.kudi9ja.common.util.Money;
 import com.quadrilateral.kudi9ja.domain.audit.AuditCategory;
 import com.quadrilateral.kudi9ja.domain.audit.AuditEntry;
 import com.quadrilateral.kudi9ja.domain.audit.AuditRepository;
+import com.quadrilateral.kudi9ja.domain.loan.ImportedLoan;
+import com.quadrilateral.kudi9ja.domain.loan.ImportedLoanRepository;
 import com.quadrilateral.kudi9ja.domain.loan.LoanRepository;
 import com.quadrilateral.kudi9ja.domain.loan.LoanStatus;
 import com.quadrilateral.kudi9ja.domain.payin.PayInService;
@@ -15,6 +17,7 @@ import com.quadrilateral.kudi9ja.domain.user.UserRepository;
 import com.quadrilateral.kudi9ja.domain.wallet.WalletRepository;
 import com.quadrilateral.kudi9ja.web.dto.AdminDtos;
 import java.time.Duration;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.data.domain.PageRequest;
@@ -57,6 +60,7 @@ public class AdminOverviewService {
     private final PayInService payIns;
     private final WithdrawalService withdrawals;
     private final AuditRepository auditEntries;
+    private final ImportedLoanRepository imports;
 
     public AdminOverviewService(
             AdminAccessService access,
@@ -67,7 +71,8 @@ public class AdminOverviewService {
             LoanRepository loans,
             PayInService payIns,
             WithdrawalService withdrawals,
-            AuditRepository auditEntries) {
+            AuditRepository auditEntries,
+            ImportedLoanRepository imports) {
         this.access = access;
         this.wallets = wallets;
         this.users = users;
@@ -77,6 +82,7 @@ public class AdminOverviewService {
         this.payIns = payIns;
         this.withdrawals = withdrawals;
         this.auditEntries = auditEntries;
+        this.imports = imports;
     }
 
     @Transactional(readOnly = true)
@@ -108,18 +114,57 @@ public class AdminOverviewService {
     }
 
     private AdminDtos.Book book() {
+        PaperBook paper = paperBook(Instant.now());
         return new AdminDtos.Book(
                 Money.of(plans.totalSavedAcrossBook()),
                 Money.of(plans.totalInterestPaidAcrossBook()),
-                Money.of(loans.totalLentAcrossBook()),
-                Money.of(loans.totalInterestChargedAcrossBook()),
-                Money.of(loans.totalFeesChargedAcrossBook()),
-                Money.of(loans.totalOverdueAcrossBook()),
+                Money.add(Money.of(loans.totalLentAcrossBook()), paper.lent()),
+                Money.add(Money.of(loans.totalInterestChargedAcrossBook()), paper.interest()),
+                Money.add(Money.of(loans.totalFeesChargedAcrossBook()), paper.fees()),
+                Money.add(Money.of(loans.totalOverdueAcrossBook()), paper.overdue()),
                 plans.countByStatus(SavingsStatus.ACTIVE),
                 plans.countByStatus(SavingsStatus.MATURED),
-                loans.countByStatus(LoanStatus.ACTIVE),
-                loans.countByStatus(LoanStatus.OVERDUE),
-                loans.countByStatus(LoanStatus.REPAID));
+                loans.countByStatus(LoanStatus.ACTIVE) + paper.active(),
+                loans.countByStatus(LoanStatus.OVERDUE) + paper.overdueCount(),
+                loans.countByStatus(LoanStatus.REPAID) + paper.repaid());
+    }
+
+    /**
+     * Loans entered by hand whose borrower has not signed up yet. They are
+     * real loans the company is owed, so the book counts them the same way it
+     * counts loans on accounts: open ones for lent, interest, fees and
+     * overdue; cleared ones as repaid. Once the borrower signs up the row
+     * becomes a loan on their account and is counted there instead, never twice.
+     */
+    private PaperBook paperBook(Instant now) {
+        BigDecimal lent = Money.zero();
+        BigDecimal interest = Money.zero();
+        BigDecimal fees = Money.zero();
+        BigDecimal overdue = Money.zero();
+        long active = 0;
+        long overdueCount = 0;
+        long repaid = 0;
+        for (ImportedLoan row : imports.findByClaimedAtIsNullOrderByImportedAtDesc()) {
+            if (Money.isZeroOrLess(row.outstanding())) {
+                repaid++;
+                continue;
+            }
+            lent = Money.add(lent, row.getPrincipal());
+            interest = Money.add(interest, Money.of(Money.calc(row.getPrincipal()).multiply(row.getFlatRate())));
+            fees = Money.add(fees, Money.add(row.getProcessingFee(), row.transactionFee()));
+            if (row.dueDate() != null && now.isAfter(row.dueDate())) {
+                overdueCount++;
+                overdue = Money.add(overdue, Money.floorAtZero(Money.subtract(row.getPrincipal(), row.getAmountRepaid())));
+            } else {
+                active++;
+            }
+        }
+        return new PaperBook(lent, interest, fees, overdue, active, overdueCount, repaid);
+    }
+
+    private record PaperBook(
+            BigDecimal lent, BigDecimal interest, BigDecimal fees, BigDecimal overdue,
+            long active, long overdueCount, long repaid) {
     }
 
     private AdminDtos.People people(Instant weekAgo) {

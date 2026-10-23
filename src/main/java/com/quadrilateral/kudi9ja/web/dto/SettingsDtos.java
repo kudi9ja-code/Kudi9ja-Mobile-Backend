@@ -66,8 +66,7 @@ public final class SettingsDtos {
                             s.getFlatProcessingFee(),
                             s.getProcessingFeeThreshold(),
                             s.getLoanProcessingFeeRate(),
-                            s.getEarlyPayoffRebateShare(),
-                            s.getLoanCancellationHours()),
+                            s.getLoanTransactionFee()),
                     new Wallet(
                             s.getMinDepositAmount(),
                             s.getMinWithdrawalAmount()),
@@ -125,8 +124,8 @@ public final class SettingsDtos {
             BigDecimal flatProcessingFee,
             BigDecimal processingFeeThreshold,
             BigDecimal processingFeeRate,
-            BigDecimal earlyPayoffRebateShare,
-            int cancellationHours) {
+            /** Flat, on every loan, beside the management fee. */
+            BigDecimal transactionFee) {
     }
 
     public record Wallet(

@@ -94,6 +94,7 @@ public class LoanService {
         BigDecimal interest = Finance.loanInterest(s, principal, months);
         BigDecimal total = Money.add(principal, interest);
         BigDecimal fee = Finance.processingFee(s, principal);
+        BigDecimal transactionFee = Finance.transactionFee(s);
         Instant now = Instant.now();
 
         boolean withinLimits = Money.gte(principal, s.getMinLoanAmount())
@@ -105,6 +106,7 @@ public class LoanService {
         preview.setTenureMonths(months);
         preview.setFlatRate(rate);
         preview.setProcessingFee(fee);
+        preview.setTransactionFee(transactionFee);
         preview.setDisbursedAt(now);
         preview.setAmountRepaid(Money.zero());
         preview.setRebateGranted(Money.zero());
@@ -124,13 +126,14 @@ public class LoanService {
                 Finance.loanMonthly(s, principal, months),
                 fee,
                 Finance.processingFeeBasis(s, principal),
+                transactionFee,
                 Finance.netDisbursed(s, principal),
                 schedule.isEmpty() ? null : schedule.get(0).dueDate(),
                 Dates.addMonths(now, months),
                 schedule,
                 withinLimits,
                 withinLimits
-                        ? "The fee comes out of what we send you, never added to what you owe. "
+                        ? "The management and transaction fees come out of what we send you, never added to what you owe. "
                                 + "There is no late fee and no penalty interest: even in default, "
                                 + "the amount you owe does not increase."
                         : "We lend from " + Money.naira(s.getMinLoanAmount())
@@ -254,6 +257,7 @@ public class LoanService {
         Instant now = Instant.now();
         BigDecimal rate = s.loanRateFor(months);
         BigDecimal fee = Finance.processingFee(s, principal);
+        BigDecimal transactionFee = Finance.transactionFee(s);
 
         Loan loan = new Loan();
         loan.setId(UUID.randomUUID());
@@ -263,6 +267,7 @@ public class LoanService {
         // Frozen here, for the life of the loan.
         loan.setFlatRate(rate);
         loan.setProcessingFee(fee);
+        loan.setTransactionFee(transactionFee);
         loan.setPurpose(purpose.trim());
         loan.setRequestedAt(now);
         loan.setDisbursedAt(now);
@@ -284,16 +289,22 @@ public class LoanService {
                     LedgerService.Entry.of("Management fee deducted from loan", "Kudi9ja Credit")
                             .related(LedgerService.Related.LOAN, saved.getId()));
         }
+        if (Money.isPositive(transactionFee)) {
+            ledger.debit(userId, transactionFee, TxKind.FEE,
+                    LedgerService.Entry.of("Transaction fee deducted from loan", "Kudi9ja Credit")
+                            .related(LedgerService.Related.LOAN, saved.getId()));
+        }
 
         notifications.push(
                 userId,
                 NotifyKind.GENERAL,
                 "Loan disbursed",
                 Money.naira(saved.netDisbursed()) + " reached your wallet after the "
-                        + Money.naira(fee) + " management fee. You repay "
+                        + Money.naira(fee) + " management fee"
+                        + (Money.isPositive(transactionFee) ? " and " + Money.naira(transactionFee) + " transaction fee" : "")
+                        + ". You repay "
                         + Money.naira(saved.totalRepayable()) + " over " + months
-                        + (months == 1 ? " month" : " months") + ". "
-                        + "You have " + s.getLoanCancellationHours() + " hours to change your mind.",
+                        + (months == 1 ? " month" : " months") + ".",
                 saved.netDisbursed());
 
         log.info("Disbursed loan {} of {} over {} months at {}",
@@ -379,11 +390,11 @@ public class LoanService {
     }
 
     /**
-     * Settles a loan early, with the interest rebate.
+     * Pays off everything still owed in one go.
      *
-     * <p>Half the interest attributable to the months that never started comes
-     * back, capped at what is owed. There is no early-settlement charge —
-     * charging one would punish exactly the behaviour the rebate rewards.
+     * <p>Paying early is the same as paying on time, only sooner: the amount is
+     * what is outstanding, interest included. There is no discount for it and
+     * no charge either.
      */
     @Transactional
     public LoanDtos.RepaymentResponse settleEarly(UUID userId, UUID loanId, String pin) {
@@ -397,8 +408,7 @@ public class LoanService {
         }
 
         Instant now = Instant.now();
-        BigDecimal rebate = rebateFor(s, loan, now);
-        BigDecimal due = Money.floorAtZero(Money.subtract(loan.outstanding(), rebate));
+        BigDecimal due = loan.outstanding();
 
         if (Money.isPositive(due)) {
             ledger.debit(userId, due, TxKind.LOAN_REPAYMENT,
@@ -406,7 +416,6 @@ public class LoanService {
                             .related(LedgerService.Related.LOAN, loan.getId()));
         }
 
-        loan.setRebateGranted(Money.add(loan.getRebateGranted(), rebate));
         loan.setAmountRepaid(Money.add(loan.getAmountRepaid(), due));
         loan.setStatus(LoanStatus.REPAID);
         loan.setSettledAt(now);
@@ -415,83 +424,19 @@ public class LoanService {
         notifications.push(
                 userId,
                 NotifyKind.REPAYMENT_PAID,
-                "Loan settled early",
-                "You cleared your " + loan.getPurpose() + " loan and saved "
-                        + Money.naira(rebate) + " in interest.",
-                rebate);
+                "Loan paid off",
+                "You paid off your " + loan.getPurpose() + " loan in full with "
+                        + Money.naira(due) + ". Nothing more is owed.",
+                due);
 
         return new LoanDtos.RepaymentResponse(
                 loan.getId(),
                 due,
-                rebate,
+                Money.zero(),
                 Money.zero(),
                 loan.getStatus(),
                 ledger.balanceOf(userId),
-                "Settled. You saved " + Money.naira(rebate) + " in interest.");
-    }
-
-    /**
-     * The change of mind the Lending Agreement grants.
-     *
-     * <p>Return what was received plus the fee inside the window, pay <b>no
-     * interest</b>, and the loan leaves the record as cancelled. This clause is
-     * written into the agreement and was not implemented in the client; it is
-     * implemented here, because a clause the system cannot honour is worse than
-     * no clause.
-     */
-    @Transactional
-    public LoanDtos.RepaymentResponse cancel(UUID userId, UUID loanId, String pin) {
-        auth.verifyPin(userId, pin);
-
-        PlatformSettings s = settings.currentReadOnly();
-        Loan loan = require(userId, loanId);
-        Instant now = Instant.now();
-        int window = s.getLoanCancellationHours();
-
-        if (!loan.withinCancellationWindow(now, window)) {
-            throw new ApiException(
-                    ErrorCode.CANCELLATION_WINDOW_CLOSED,
-                    loan.getStatus() != LoanStatus.ACTIVE
-                            ? "That loan cannot be cancelled."
-                            : "The " + window + "-hour change-of-mind window has closed. "
-                                    + "You can still settle early and get part of the interest back.");
-        }
-
-        BigDecimal returnable = loan.cancellationAmount();
-
-        // The whole disbursement comes back — what reached the wallet and the
-        // fee that was taken from it — and no interest is charged.
-        ledger.debit(userId, returnable, TxKind.LOAN_REPAYMENT,
-                LedgerService.Entry.of("Loan cancelled within the change-of-mind window")
-                        .related(LedgerService.Related.LOAN, loan.getId()));
-
-        loan.setAmountRepaid(returnable);
-        // The interest is waived in full, so the rebate carries whatever the
-        // loan would otherwise have charged.
-        loan.setRebateGranted(loan.totalInterest());
-        loan.setStatus(LoanStatus.CANCELLED);
-        loan.setSettledAt(now);
-        loan.setDecisionReasons("Cancelled by the customer inside the "
-                + window + "-hour change-of-mind window. No interest charged; fee refunded.");
-        loans.save(loan);
-
-        notifications.push(
-                userId,
-                NotifyKind.GENERAL,
-                "Loan cancelled",
-                "You returned " + Money.naira(returnable) + " inside the " + window
-                        + "-hour window, so no interest was charged and the "
-                        + Money.naira(loan.getProcessingFee()) + " fee came back to you.",
-                returnable);
-
-        return new LoanDtos.RepaymentResponse(
-                loan.getId(),
-                returnable,
-                loan.totalInterest(),
-                Money.zero(),
-                loan.getStatus(),
-                ledger.balanceOf(userId),
-                "Cancelled. No interest was charged and the fee was refunded.");
+                "Paid off in full.");
     }
 
     // ── Sweeps ─────────────────────────────────────────────────────────────
@@ -593,33 +538,12 @@ public class LoanService {
                 .reduce(Money.zero(), Money::add);
     }
 
-    /** The rebate this loan would earn if it were settled now. */
-    @Transactional(readOnly = true)
-    public BigDecimal rebateFor(PlatformSettings s, Loan loan, Instant now) {
-        if (!loan.isOpen() || loan.getDisbursedAt() == null) {
-            return Money.zero();
-        }
-        return Finance.earlyPayoffRebate(
-                s,
-                loan.totalInterest(),
-                loan.outstanding(),
-                loan.getTenureMonths(),
-                loan.getDisbursedAt(),
-                now);
-    }
-
     /** Builds the response, with the settlement figures worked out. */
     @Transactional(readOnly = true)
     public LoanDtos.LoanResponse toResponse(Loan loan) {
-        PlatformSettings s = settings.currentReadOnly();
         Instant now = Instant.now();
-        BigDecimal rebate = rebateFor(s, loan, now);
-        return LoanDtos.LoanResponse.from(
-                loan,
-                now,
-                rebate,
-                Money.floorAtZero(Money.subtract(loan.outstanding(), rebate)),
-                s.getLoanCancellationHours());
+        // Paying off now costs exactly what is outstanding: there is no rebate.
+        return LoanDtos.LoanResponse.from(loan, now, Money.zero(), loan.outstanding());
     }
 
     // ── Internals ──────────────────────────────────────────────────────────

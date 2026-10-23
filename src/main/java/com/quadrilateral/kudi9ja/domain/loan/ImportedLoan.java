@@ -2,13 +2,21 @@ package com.quadrilateral.kudi9ja.domain.loan;
 
 import com.quadrilateral.kudi9ja.common.util.Dates;
 import com.quadrilateral.kudi9ja.common.util.Money;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,16 +35,19 @@ import lombok.Setter;
  * <p>Nothing here touches the ledger. The money moved outside the app, so the
  * wallet stays at zero and only the loan book records the debt.
  *
- * <p>The BVN, email and phone are cleared when the row is claimed. The account
- * holds them from then on, and a second copy is one more place identity data
- * can leak from.
+ * <p>The BVN, NIN, date of birth, email and phone are cleared when the row is
+ * claimed. The account holds them from then on, and a second copy is one more
+ * place identity data can leak from. The rest of the file — address, business,
+ * guarantors, documents — belongs to the loan and stays with it.
  */
 @Entity
 @Table(
         name = "imported_loan",
         indexes = {
                 @Index(name = "ix_imported_loan_bvn", columnList = "bvn"),
-                @Index(name = "ix_imported_loan_claimed", columnList = "claimed_at, imported_at")
+                @Index(name = "ix_imported_loan_claimed", columnList = "claimed_at, imported_at"),
+                @Index(name = "ix_imported_loan_user", columnList = "user_id"),
+                @Index(name = "ix_imported_loan_loan", columnList = "loan_id")
         })
 @Getter
 @Setter
@@ -78,14 +89,70 @@ public class ImportedLoan {
     @Column(name = "processing_fee", nullable = false, precision = 19, scale = 2, updatable = false)
     private BigDecimal processingFee;
 
+    /** The transaction fee taken when the loan was given, on its own line. Zero on older rows. */
+    @Column(name = "transaction_fee", nullable = false, precision = 19, scale = 2, updatable = false)
+    private BigDecimal transactionFee = BigDecimal.ZERO;
+
     @Column(name = "purpose", nullable = false, length = 200)
     private String purpose;
 
     @Column(name = "disbursed_at", nullable = false, updatable = false)
     private Instant disbursedAt;
 
-    @Column(name = "amount_repaid", nullable = false, precision = 19, scale = 2, updatable = false)
+    // Updatable: an admin records repayments that arrive outside the app
+    // while the loan is still waiting for its borrower.
+    @Column(name = "amount_repaid", nullable = false, precision = 19, scale = 2)
     private BigDecimal amountRepaid;
+
+    // The borrower's file -------------------------------------------------------
+    //
+    // Everything an in-app application would have told us, entered by the
+    // admin from the paper records. All optional: the debt is the debt whether
+    // or not the notebook recorded a landmark.
+
+    @Column(name = "nin", length = 11)
+    private String nin;
+
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @Column(name = "gender", length = 40)
+    private String gender;
+
+    @Column(name = "address", length = 400)
+    private String address;
+
+    @Column(name = "state", length = 60)
+    private String state;
+
+    @Column(name = "occupation", length = 160)
+    private String occupation;
+
+    @Column(name = "business_name", length = 200)
+    private String businessName;
+
+    @Column(name = "business_address", length = 400)
+    private String businessAddress;
+
+    @Column(name = "monthly_income", precision = 19, scale = 2)
+    private BigDecimal monthlyIncome;
+
+    @Column(name = "payout_bank", length = 120)
+    private String payoutBank;
+
+    @Column(name = "payout_account_number", length = 10)
+    private String payoutAccountNumber;
+
+    @Column(name = "notes", length = 2000)
+    private String notes;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "imported_loan_guarantor",
+            joinColumns = @JoinColumn(name = "imported_loan_id", nullable = false),
+            indexes = @Index(name = "ix_imported_loan_guarantor", columnList = "imported_loan_id"))
+    @OrderColumn(name = "position")
+    private List<OfflineGuarantor> guarantors = new ArrayList<>();
 
     // Lifecycle -------------------------------------------------------------------
 
@@ -138,6 +205,7 @@ public class ImportedLoan {
         loan.setTenureMonths(tenureMonths);
         loan.setFlatRate(flatRate);
         loan.setProcessingFee(processingFee);
+        loan.setTransactionFee(transactionFee());
         loan.setPurpose(purpose);
         loan.setRequestedAt(disbursedAt);
         loan.setDisbursedAt(disbursedAt);
@@ -157,6 +225,15 @@ public class ImportedLoan {
         return loan;
     }
 
+    public BigDecimal transactionFee() {
+        return transactionFee == null ? Money.zero() : transactionFee;
+    }
+
+    /** What the borrower actually received: the loan, less both fees. */
+    public BigDecimal netDisbursed() {
+        return Money.subtract(Money.subtract(principal, processingFee), transactionFee());
+    }
+
     /** Records the claim and drops the identity data the account now holds. */
     public void claimedBy(UUID userId, UUID loanId, Instant now) {
         this.claimedAt = now;
@@ -165,5 +242,7 @@ public class ImportedLoan {
         this.bvn = null;
         this.email = null;
         this.phone = null;
+        this.nin = null;
+        this.dateOfBirth = null;
     }
 }

@@ -133,12 +133,18 @@ public class PlatformSettings {
      * The share of the untouched months' interest handed back on an early
      * settlement. Half at the shipped setting.
      */
+    /**
+     * Retired. Paying a loan off early once earned back part of the interest;
+     * it now costs exactly what is outstanding. Kept only because the column
+     * is required; always zero and read by nothing.
+     */
     @Column(name = "early_payoff_rebate_share", nullable = false, precision = 12, scale = 6)
     private BigDecimal earlyPayoffRebateShare;
 
     /**
-     * The change-of-mind window the Lending Agreement grants: return what was
-     * received plus the fee inside it and no interest is owed.
+     * Retired. Loans once had a change-of-mind window; a loan that reaches the
+     * wallet is now repaid in full, with interest. Kept only because the
+     * column is required; always zero and read by nothing.
      */
     @Column(name = "loan_cancellation_hours", nullable = false)
     private Integer loanCancellationHours;
@@ -153,6 +159,14 @@ public class PlatformSettings {
 
     @Column(name = "loan_processing_fee_rate", nullable = false, precision = 12, scale = 6)
     private BigDecimal loanProcessingFeeRate;
+
+    /**
+     * A flat transaction fee on every loan, beside the management fee, for what
+     * the payment provider charges to move the money. Deducted from the
+     * disbursement and shown on its own line.
+     */
+    @Column(name = "loan_transaction_fee", nullable = false, precision = 19, scale = 2)
+    private BigDecimal loanTransactionFee;
 
     // Security --------------------------------------------------------------
 

@@ -99,6 +99,10 @@ public class AuthService {
             throw new ApiException(ErrorCode.BAD_CREDENTIALS, "That email or password is not right.");
         }
 
+        if (user.getAccountStatus() == AccountStatus.PENDING_ACTIVATION) {
+            hasher.matches(password, DUMMY_HASH);
+            throw notActivated();
+        }
         if (!user.getAccountStatus().canSignIn()) {
             throw new ApiException(
                     ErrorCode.ACCOUNT_CLOSED,
@@ -367,8 +371,23 @@ public class AuthService {
     @Transactional
     public void startPasswordReset(String email) {
         String normalised = SignupService.normaliseEmail(email);
+        // An account the team opened has no password to reset: it is
+        // activated by signing up, which sets one. Said plainly, so the
+        // customer is not left waiting for a code.
+        users.findByEmailIgnoreCase(normalised)
+                .filter(user -> user.getAccountStatus() == AccountStatus.PENDING_ACTIVATION)
+                .ifPresent(user -> {
+                    throw notActivated();
+                });
         users.findByEmailIgnoreCase(normalised).ifPresent(user ->
                 otp.issue(normalised, OtpPurpose.PASSWORD_RESET, user.getFullName(), user.getId()));
+    }
+
+    private static ApiException notActivated() {
+        return new ApiException(
+                ErrorCode.ACCOUNT_NOT_ACTIVATED,
+                "Kudi9ja set this account up for you. To start using it, sign up with your BVN — "
+                        + "your loan and details will be waiting.");
     }
 
     @Transactional

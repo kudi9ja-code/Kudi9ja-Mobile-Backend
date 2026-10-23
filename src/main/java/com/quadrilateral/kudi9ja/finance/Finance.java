@@ -134,9 +134,14 @@ public final class Finance {
         return Money.of(Money.calc(principal).multiply(s.getLoanProcessingFeeRate()));
     }
 
-    /** What actually reaches the wallet once the fee is taken off. */
+    /** The flat transaction fee on every loan, beside the management fee. */
+    public static BigDecimal transactionFee(PlatformSettings s) {
+        return s.getLoanTransactionFee() == null ? Money.zero() : Money.of(s.getLoanTransactionFee());
+    }
+
+    /** What actually reaches the wallet once both fees are taken off. */
     public static BigDecimal netDisbursed(PlatformSettings s, BigDecimal principal) {
-        return Money.subtract(principal, processingFee(s, principal));
+        return Money.subtract(Money.subtract(principal, processingFee(s, principal)), transactionFee(s));
     }
 
     /** How the fee on this loan was worked out, in words, for a receipt. */
@@ -149,39 +154,4 @@ public final class Finance {
         return pct.toPlainString() + "% of the whole amount";
     }
 
-    /**
-     * Settling a loan early earns back a share of the interest on the months
-     * that have not yet started.
-     *
-     * <pre>
-     *   elapsed   = whole months since disbursement
-     *   remaining = tenureMonths - elapsed - 1
-     *   rebate    = totalInterest x (remaining / tenureMonths) x share
-     * </pre>
-     *
-     * <p>Capped at the outstanding balance, so a rebate can never turn a
-     * settlement into a payout. There is no early-settlement charge.
-     */
-    public static BigDecimal earlyPayoffRebate(
-            PlatformSettings s,
-            BigDecimal totalInterest,
-            BigDecimal outstanding,
-            int tenureMonths,
-            Instant disbursedAt,
-            Instant now) {
-        if (tenureMonths <= 0 || Money.isZeroOrLess(outstanding)) {
-            return Money.zero();
-        }
-        int elapsed = Dates.monthsBetween(disbursedAt, now);
-        int remaining = tenureMonths - elapsed - 1;
-        if (remaining <= 0) {
-            return Money.zero();
-        }
-        BigDecimal share = Money.calc(BigDecimal.valueOf(remaining))
-                .divide(BigDecimal.valueOf(tenureMonths), Money.CALC_SCALE, RoundingMode.HALF_UP);
-        BigDecimal rebate = Money.of(Money.calc(totalInterest)
-                .multiply(share)
-                .multiply(s.getEarlyPayoffRebateShare()));
-        return Money.min(rebate, outstanding);
-    }
 }

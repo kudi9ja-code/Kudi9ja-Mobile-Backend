@@ -64,6 +64,11 @@ public final class SignUpFlow {
         return String.format("%d%08d%d", prefix, serial, 1 + (serial % 8));
     }
 
+    /** A phone number nobody else in the run has: what an admin types for a borrower. */
+    public static String freshPhone() {
+        return String.format("070%08d", SEQUENCE.incrementAndGet());
+    }
+
     /** Step one only, for tests about the gating rather than the account. */
     public String startSignup(String email) throws Exception {
         int serial = SEQUENCE.incrementAndGet();
@@ -90,13 +95,41 @@ public final class SignUpFlow {
 
     /** All eight steps with a BVN the test chose, for what is matched on it. */
     public Session signUp(String email, String bvn) throws Exception {
+        return signUp(email, bvn, nextIdentityNumber(12));
+    }
+
+    /** With the NIN too — as somebody does who is taking over an account the team opened with it. */
+    public Session signUp(String email, String bvn, String nin) throws Exception {
+        String draftId = prepareDraft(email, bvn, nin);
+
+        MvcResult completed = mvc.perform(post("/api/v1/auth/signup/{id}/complete", draftId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Device", "Integration test")
+                        .content(json.writeValueAsString(Map.of(
+                                "accepted", true,
+                                // The versions in force, the same ones the app
+                                // carries. A stale number here is refused.
+                                "acceptedVersions", Map.of(
+                                        "TERMS", "1.1", "PRIVACY", "1.1", "LENDING", "1.0")))))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        return sessionFrom(read(completed));
+    }
+
+    /** Every step up to the PIN, leaving the draft ready to complete. For tests about completion itself. */
+    public String prepareDraft(String email, String bvn) throws Exception {
+        return prepareDraft(email, bvn, nextIdentityNumber(12));
+    }
+
+    public String prepareDraft(String email, String bvn, String nin) throws Exception {
         String draftId = startSignup(email);
 
         step(draftId, "email", Map.of("code", mailer.requireCodeFor(email)));
 
         step(draftId, "identity", Map.of(
                 "bvn", bvn,
-                "nin", nextIdentityNumber(12),
+                "nin", nin,
                 "address", "14 Adeola Odeku Street, Victoria Island",
                 "state", "Lagos"));
 
@@ -113,20 +146,7 @@ public final class SignUpFlow {
 
         step(draftId, "passcode", Map.of("passcode", PASSCODE, "confirmPasscode", PASSCODE));
         step(draftId, "pin", Map.of("pin", PIN, "confirmPin", PIN));
-
-        MvcResult completed = mvc.perform(post("/api/v1/auth/signup/{id}/complete", draftId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Device", "Integration test")
-                        .content(json.writeValueAsString(Map.of(
-                                "accepted", true,
-                                // The versions in force, the same ones the app
-                                // carries. A stale number here is refused.
-                                "acceptedVersions", Map.of(
-                                        "TERMS", "1.1", "PRIVACY", "1.1", "LENDING", "1.0")))))
-                .andExpect(status().isCreated())
-                .andReturn();
-
-        return sessionFrom(read(completed));
+        return draftId;
     }
 
     public Session signIn(String email) throws Exception {
@@ -148,7 +168,7 @@ public final class SignUpFlow {
                 .andExpect(status().isOk());
     }
 
-    private Session sessionFrom(JsonNode body) {
+    public Session sessionFrom(JsonNode body) {
         return new Session(
                 body.get("accessToken").asText(),
                 body.get("refreshToken").asText(),
@@ -156,7 +176,7 @@ public final class SignUpFlow {
                 body.get("profile").get("email").asText());
     }
 
-    private JsonNode read(MvcResult result) throws Exception {
+    public JsonNode read(MvcResult result) throws Exception {
         return json.readTree(result.getResponse().getContentAsString());
     }
 

@@ -1,6 +1,7 @@
 package com.quadrilateral.kudi9ja.domain.loan;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -19,4 +20,7 @@ public interface ImportedLoanRepository extends JpaRepository<ImportedLoan, UUID
     List<ImportedLoan> findAllByOrderByImportedAtDesc();
 
     List<ImportedLoan> findByUserId(UUID userId);
+
+    /** The import a claimed loan came from, if it came from one. */
+    Optional<ImportedLoan> findByLoanId(UUID loanId);
 }

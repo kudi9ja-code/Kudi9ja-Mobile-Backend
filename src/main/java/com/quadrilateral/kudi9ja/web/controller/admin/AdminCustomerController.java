@@ -3,6 +3,9 @@ package com.quadrilateral.kudi9ja.web.controller.admin;
 import com.quadrilateral.kudi9ja.common.api.PageResponse;
 import com.quadrilateral.kudi9ja.domain.admin.AdminCustomerService;
 import com.quadrilateral.kudi9ja.domain.loan.LoanService;
+import com.quadrilateral.kudi9ja.domain.loan.OfflineLoanService;
+import com.quadrilateral.kudi9ja.domain.legal.SignatureService;
+import com.quadrilateral.kudi9ja.web.dto.SignatureDtos;
 import com.quadrilateral.kudi9ja.domain.payin.PayInService;
 import com.quadrilateral.kudi9ja.domain.payout.WithdrawalService;
 import com.quadrilateral.kudi9ja.domain.user.AccountStatus;
@@ -10,6 +13,7 @@ import com.quadrilateral.kudi9ja.domain.wallet.LedgerService;
 import com.quadrilateral.kudi9ja.domain.wallet.TxFilter;
 import com.quadrilateral.kudi9ja.web.dto.AdminDtos;
 import com.quadrilateral.kudi9ja.web.dto.LoanDtos;
+import com.quadrilateral.kudi9ja.web.dto.OfflineLoanDtos;
 import com.quadrilateral.kudi9ja.web.dto.PayInDtos;
 import com.quadrilateral.kudi9ja.web.dto.SavingsDtos;
 import com.quadrilateral.kudi9ja.web.dto.WalletDtos;
@@ -57,16 +61,44 @@ public class AdminCustomerController {
     private final PayInService payIns;
     private final WithdrawalService withdrawals;
     private final LoanService loans;
+    private final OfflineLoanService offline;
+    private final SignatureService signatures;
 
     public AdminCustomerController(
             AdminCustomerService customers,
             PayInService payIns,
             WithdrawalService withdrawals,
-            LoanService loans) {
+            LoanService loans,
+            OfflineLoanService offline,
+            SignatureService signatures) {
         this.customers = customers;
         this.payIns = payIns;
         this.withdrawals = withdrawals;
         this.loans = loans;
+        this.offline = offline;
+        this.signatures = signatures;
+    }
+
+    /** The signatures the customer gave when accepting their agreements. */
+    @GetMapping("/{customerId}/signatures")
+    @Operation(summary = "A customer's signed agreements, with signed links to the signatures")
+    public List<SignatureDtos.SignatureRecord> signatures(@PathVariable UUID customerId) {
+        customers.detail(customerId);
+        return signatures.forUser(customerId).stream()
+                .map(s -> SignatureDtos.SignatureRecord.forAdmin(s, signatures.signedUrl(s)))
+                .toList();
+    }
+
+    /**
+     * Everything recorded by hand about this customer: the loans entered from
+     * the paper records, the documents attached to any of their loans, and the
+     * repayments that came in outside the app.
+     */
+    @GetMapping("/{customerId}/loan-records")
+    @Operation(summary = "Imported loans, attached documents and hand-recorded repayments for a customer")
+    public OfflineLoanDtos.CustomerLoanRecords loanRecords(@PathVariable UUID customerId) {
+        customers.detail(customerId);
+        return offline.forCustomer(customerId);
     }
 
     /**

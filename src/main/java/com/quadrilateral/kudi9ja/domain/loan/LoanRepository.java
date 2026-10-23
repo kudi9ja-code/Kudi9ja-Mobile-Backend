@@ -81,12 +81,12 @@ public interface LoanRepository extends JpaRepository<Loan, UUID> {
     BigDecimal totalInterestChargedAcrossBook();
 
     /**
-     * Management fees on the loans still running. A fee is not interest: it is
+     * Management and transaction fees on the loans still running. A fee is not interest: it is
      * a one-off charge taken off the disbursement, so it is summed on its own
      * rather than folded into {@link #totalInterestChargedAcrossBook()}.
      */
     @Query("""
-            select coalesce(sum(l.processingFee), 0)
+            select coalesce(sum(l.processingFee + l.transactionFee), 0)
               from Loan l
              where l.status in (
                    com.quadrilateral.kudi9ja.domain.loan.LoanStatus.ACTIVE,

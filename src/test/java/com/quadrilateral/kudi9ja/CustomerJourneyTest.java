@@ -404,8 +404,9 @@ class CustomerJourneyTest {
         borrowing.approve(admin, application.get("id").asText());
         JsonNode loan = getJson("/api/v1/loans", customer).get(0);
 
-        // ₦200,000 in, ₦5,000 straight out. The fee never joins the debt.
-        assertThat(balanceOf(customer)).isEqualByComparingTo(before.add(new BigDecimal("195000")));
+        // ₦200,000 in; the ₦5,000 management fee and ₦2,000 transaction fee straight out.
+        // Neither fee joins the debt.
+        assertThat(balanceOf(customer)).isEqualByComparingTo(before.add(new BigDecimal("193000")));
         assertThat(loan.get("principal").decimalValue()).isEqualByComparingTo("200000.00");
         assertThat(loan.get("outstanding").decimalValue()).isEqualByComparingTo("250000.00");
 
@@ -413,6 +414,58 @@ class CustomerJourneyTest {
         assertThat(ledger.get("items")).isNotEmpty();
         JsonNode fees = getJson("/api/v1/transactions?filter=FEES", customer);
         assertThat(fees.get("items")).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("paying off early costs exactly what is outstanding, interest included")
+    void payingOffEarlyHasNoDiscount() throws Exception {
+        SignUpFlow.Session customer = flow.signUp(customerEmail);
+        SignUpFlow.Session admin = owner();
+        fundWallet(customer, admin, "1000000");
+        postJson("/api/v1/savings/plans/fixed", customer, """
+                {"title": "Collateral", "principal": 500000, "days": 365, "pin": "5271"}
+                """);
+        borrowing.borrow(customer, admin, "200000", 3, "Stock for the shop");
+        JsonNode loan = getJson("/api/v1/loans", customer).get(0);
+        // ₦200,000 over 3 months at 25%: ₦250,000 owed, and paying today costs all of it.
+        assertThat(loan.get("earlySettlementAmount").decimalValue()).isEqualByComparingTo("250000.00");
+        assertThat(loan.get("earlySettlementRebate").decimalValue()).isEqualByComparingTo("0");
+
+        BigDecimal before = balanceOf(customer);
+        JsonNode paid = postJson("/api/v1/loans/" + loan.get("id").asText() + "/settle", customer, """
+                {"pin": "5271"}
+                """);
+        assertThat(paid.get("amountPaid").decimalValue()).isEqualByComparingTo("250000.00");
+        assertThat(paid.get("status").asText()).isEqualTo("REPAID");
+        assertThat(balanceOf(customer)).isEqualByComparingTo(before.subtract(new BigDecimal("250000")));
+    }
+
+    @Test
+    @DisplayName("a confirmed repayment transfer comes off what is owed")
+    void confirmedRepaymentTransferReducesTheLoan() throws Exception {
+        SignUpFlow.Session customer = flow.signUp(customerEmail);
+        SignUpFlow.Session admin = owner();
+        borrowing.borrow(customer, admin, "200000", 3, "Stock for the shop");
+        JsonNode loan = getJson("/api/v1/loans", customer).get(0);
+        String loanId = loan.get("id").asText();
+
+        String reference = postJson("/api/v1/payins/reference", customer, null).get("reference").asText();
+        MvcResult claim = mvc.perform(multipart("/api/v1/payins")
+                        .file(new MockMultipartFile("receipt", "transfer.png", MediaType.IMAGE_PNG_VALUE,
+                                "receipt-bytes".getBytes()))
+                        .param("amount", "50000")
+                        .param("reference", reference)
+                        .param("purpose", "LOAN_REPAYMENT")
+                        .param("loanId", loanId)
+                        .param("senderName", "Chioma Grace Adeyemi")
+                        .header("Authorization", "Bearer " + customer.accessToken()))
+                .andExpect(status().isCreated())
+                .andReturn();
+        postJson("/api/v1/admin/payins/" + read(claim).get("id").asText() + "/confirm", admin, "{}");
+
+        JsonNode after = getJson("/api/v1/loans", customer).get(0);
+        assertThat(after.get("amountRepaid").decimalValue()).isEqualByComparingTo("50000.00");
+        assertThat(after.get("outstanding").decimalValue()).isEqualByComparingTo("200000.00");
     }
 
     @Test
@@ -427,7 +480,8 @@ class CustomerJourneyTest {
         assertThat(quote.get("totalRepayable").decimalValue()).isEqualByComparingTo("1780000.00");
         // 1% of the whole principal above the threshold.
         assertThat(quote.get("processingFee").decimalValue()).isEqualByComparingTo("10000.00");
-        assertThat(quote.get("netDisbursed").decimalValue()).isEqualByComparingTo("990000.00");
+        assertThat(quote.get("transactionFee").decimalValue()).isEqualByComparingTo("2000.00");
+        assertThat(quote.get("netDisbursed").decimalValue()).isEqualByComparingTo("988000.00");
     }
 
     // ── The ledger ─────────────────────────────────────────────────────────

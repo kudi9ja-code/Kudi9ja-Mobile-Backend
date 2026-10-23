@@ -67,6 +67,11 @@ public class AppReview {
         review.displayName = displayName;
         review.rating = rating;
         review.comment = comment;
+        // One reading of the clock for both: two separate Instant.now() calls
+        // land nanoseconds apart and make a brand-new review look edited.
+        Instant now = Instant.now();
+        review.createdAt = now;
+        review.updatedAt = now;
         return review;
     }
 }

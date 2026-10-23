@@ -70,6 +70,10 @@ public class Loan {
     @Column(name = "processing_fee", nullable = false, precision = 19, scale = 2, updatable = false)
     private BigDecimal processingFee;
 
+    /** The flat transaction fee, also deducted from the disbursement. Zero on loans priced before it existed. */
+    @Column(name = "transaction_fee", nullable = false, precision = 19, scale = 2, updatable = false)
+    private BigDecimal transactionFee = BigDecimal.ZERO;
+
     @Column(name = "purpose", nullable = false, length = 200)
     private String purpose;
 
@@ -143,7 +147,11 @@ public class Loan {
     }
 
     public BigDecimal netDisbursed() {
-        return Money.subtract(principal, processingFee);
+        return Money.subtract(Money.subtract(principal, processingFee), transactionFee());
+    }
+
+    public BigDecimal transactionFee() {
+        return transactionFee == null ? Money.zero() : transactionFee;
     }
 
     public double repaymentProgress() {
@@ -157,25 +165,6 @@ public class Loan {
 
     public boolean isOpen() {
         return status.isOpen();
-    }
-
-    /**
-     * Whether the change-of-mind window is still open.
-     *
-     * <p>The Lending Agreement grants a period in which a borrower may return
-     * what they received plus the fee, pay no interest, and have the loan leave
-     * the record.
-     */
-    public boolean withinCancellationWindow(Instant now, int windowHours) {
-        return disbursedAt != null
-                && status == LoanStatus.ACTIVE
-                && Money.isZeroOrLess(amountRepaid)
-                && now.isBefore(disbursedAt.plusSeconds(windowHours * 3600L));
-    }
-
-    /** What it costs to cancel: the money received, plus the fee that was taken. */
-    public BigDecimal cancellationAmount() {
-        return Money.add(netDisbursed(), processingFee);
     }
 
     /**

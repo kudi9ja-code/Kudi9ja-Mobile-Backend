@@ -52,6 +52,7 @@ public final class LoanDtos {
             BigDecimal monthlyRepayment,
             BigDecimal processingFee,
             String processingFeeBasis,
+            BigDecimal transactionFee,
             BigDecimal netDisbursed,
             Instant firstDueDate,
             Instant dueDate,
@@ -91,6 +92,7 @@ public final class LoanDtos {
             BigDecimal flatRate,
             String flatRateLabel,
             BigDecimal processingFee,
+            BigDecimal transactionFee,
             BigDecimal netDisbursed,
             String purpose,
             LoanStatus status,
@@ -109,9 +111,6 @@ public final class LoanDtos {
             int installmentsPaid,
             List<ScheduleRow> schedule,
             ScheduleRow nextInstallment,
-            boolean canCancel,
-            BigDecimal cancellationAmount,
-            Instant cancellationDeadline,
             BigDecimal earlySettlementRebate,
             BigDecimal earlySettlementAmount,
             String decisionReasons) {
@@ -120,14 +119,11 @@ public final class LoanDtos {
                 Loan loan,
                 Instant now,
                 BigDecimal rebate,
-                BigDecimal settlementAmount,
-                int cancellationWindowHours) {
+                BigDecimal settlementAmount) {
 
             List<ScheduleRow> schedule = loan.schedule(now).stream()
                     .map(installment -> ScheduleRow.from(installment, now))
                     .toList();
-
-            boolean canCancel = loan.withinCancellationWindow(now, cancellationWindowHours);
 
             return new LoanResponse(
                     loan.getId(),
@@ -136,6 +132,7 @@ public final class LoanDtos {
                     loan.getFlatRate(),
                     ratePct(loan.getFlatRate()),
                     loan.getProcessingFee(),
+                    loan.transactionFee(),
                     loan.netDisbursed(),
                     loan.getPurpose(),
                     loan.getStatus(),
@@ -157,11 +154,6 @@ public final class LoanDtos {
                             .filter(row -> row.status() != InstallmentStatus.PAID)
                             .findFirst()
                             .orElse(null),
-                    canCancel,
-                    canCancel ? loan.cancellationAmount() : null,
-                    loan.getDisbursedAt() == null
-                            ? null
-                            : loan.getDisbursedAt().plusSeconds(cancellationWindowHours * 3600L),
                     rebate,
                     settlementAmount,
                     loan.getDecisionReasons());

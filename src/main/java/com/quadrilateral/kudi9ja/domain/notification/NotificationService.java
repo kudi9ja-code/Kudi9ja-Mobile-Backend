@@ -223,6 +223,50 @@ public class NotificationService {
         }
     }
 
+    // ── Announcements ──────────────────────────────────────────────────────
+
+    /** The sender refuses more than this per call, so a broadcast goes in batches. */
+    private static final int BROADCAST_BATCH = 12;
+
+    /**
+     * Sends one message, with an optional picture, to every registered phone.
+     *
+     * <p>Push only: nothing is written to anybody's notification list. The
+     * installed app reads a notification's kind to draw it, and an
+     * announcement is none of the kinds it knows.
+     *
+     * <p>Returns how many phones it is going to as soon as the list is read.
+     * The sending itself runs on another thread, because a few thousand
+     * phones at one request each would outlast any HTTP timeout.
+     */
+    @Transactional(readOnly = true)
+    public int broadcast(String title, String body, String imageUrl) {
+        List<String> tokens = devices.findAll().stream().map(DeviceToken::getToken).toList();
+        if (!tokens.isEmpty()) {
+            self.deliverBroadcast(tokens, title, body, imageUrl);
+        }
+        return tokens.size();
+    }
+
+    /** Never throws. A failed batch is logged and the next one still goes. */
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void deliverBroadcast(List<String> tokens, String title, String body, String imageUrl) {
+        int delivered = 0;
+        for (int from = 0; from < tokens.size(); from += BROADCAST_BATCH) {
+            List<String> batch = tokens.subList(from, Math.min(from + BROADCAST_BATCH, tokens.size()));
+            try {
+                PushSender.Result result = push.send(
+                        batch, title, body, Map.of("kind", "ANNOUNCEMENT"), imageUrl);
+                delivered += result.delivered();
+                result.invalidTokens().forEach(devices::deleteByToken);
+            } catch (RuntimeException e) {
+                log.warn("Could not deliver part of the announcement \"{}\"", title, e);
+            }
+        }
+        log.info("Announcement \"{}\" reached {} of {} handset(s)", title, delivered, tokens.size());
+    }
+
     // ── Devices ────────────────────────────────────────────────────────────
 
     /**

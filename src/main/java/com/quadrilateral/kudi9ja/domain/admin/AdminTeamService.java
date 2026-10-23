@@ -1,5 +1,7 @@
 package com.quadrilateral.kudi9ja.domain.admin;
 
+import com.quadrilateral.kudi9ja.domain.group.LoanGroupRepository;
+import com.quadrilateral.kudi9ja.domain.officer.LoanOfficerService;
 import com.quadrilateral.kudi9ja.common.error.ApiException;
 import com.quadrilateral.kudi9ja.common.error.ErrorCode;
 import com.quadrilateral.kudi9ja.domain.audit.AuditCategory;
@@ -39,16 +41,22 @@ public class AdminTeamService {
     private final UserRepository users;
     private final AdminAccessService access;
     private final AuditService audit;
+    private final LoanOfficerService officers;
+    private final LoanGroupRepository groups;
 
     public AdminTeamService(
             AdminUserRepository admins,
             UserRepository users,
             AdminAccessService access,
-            AuditService audit) {
+            AuditService audit,
+            LoanOfficerService officers,
+            LoanGroupRepository groups) {
         this.admins = admins;
         this.users = users;
         this.access = access;
         this.audit = audit;
+        this.officers = officers;
+        this.groups = groups;
     }
 
     @Transactional(readOnly = true)
@@ -190,6 +198,12 @@ public class AdminTeamService {
             refuseLosingTheLastOwner("remove");
         }
 
+        long running = groups.countByOfficerId(target.getId());
+        if (running > 0) {
+            throw new ApiException(ErrorCode.CONFLICT, target.getName() + " runs " + running + " loan group"
+                    + (running == 1 ? "" : "s") + ". Give " + (running == 1 ? "it" : "them") + " another officer first.");
+        }
+        officers.beforeLeaving(target);
         admins.delete(target);
         audit.record(
                 actorOf(actor),

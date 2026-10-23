@@ -42,13 +42,10 @@ public final class SettingsDiff {
         num(changes, "Maximum loan tenure", before.getMaxLoanTenureMonths(), after.getMaxLoanTenureMonths(), " months");
         money(changes, "Minimum loan", before.getMinLoanAmount(), after.getMinLoanAmount());
         money(changes, "Maximum loan", before.getMaxLoanAmount(), after.getMaxLoanAmount());
-        pct(changes, "Early payoff rebate share",
-                before.getEarlyPayoffRebateShare(), after.getEarlyPayoffRebateShare());
-        num(changes, "Loan cancellation window",
-                before.getLoanCancellationHours(), after.getLoanCancellationHours(), " hours");
 
         // Management fee -------------------------------------------------------
         money(changes, "Flat management fee", before.getFlatProcessingFee(), after.getFlatProcessingFee());
+        money(changes, "Loan transaction fee", before.getLoanTransactionFee(), after.getLoanTransactionFee());
         money(changes, "Management fee threshold",
                 before.getProcessingFeeThreshold(), after.getProcessingFeeThreshold());
         pct(changes, "Management fee rate",

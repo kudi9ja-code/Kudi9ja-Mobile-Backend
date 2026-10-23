@@ -117,7 +117,11 @@ public final class WalletDtos {
             String reviewedBy,
             String note,
             BigDecimal newBalance,
-            String message) {
+            String message,
+            /** Where the money is: PROCESSING, PAID or FAILED (refunded). Null until approved. */
+            String payoutStatus,
+            String payoutFailure,
+            Instant paidOutAt) {
 
         public static WithdrawalResponse from(WithdrawalRequest request, BigDecimal balance, String message) {
             return new WithdrawalResponse(
@@ -134,7 +138,10 @@ public final class WalletDtos {
                     request.getReviewedBy(),
                     request.getNote(),
                     balance,
-                    message);
+                    message,
+                    request.getPayoutStatus(),
+                    request.getPayoutFailure(),
+                    request.getPaidOutAt());
         }
     }
 
@@ -156,7 +163,12 @@ public final class WalletDtos {
             Instant reviewedAt,
             String reviewedBy,
             String note,
-            String payoutReference) {
+            String payoutReference,
+            String payoutProvider,
+            String payoutStatus,
+            String transferCode,
+            String payoutFailure,
+            Instant paidOutAt) {
     }
 
     public record ApproveWithdrawalRequest(String payoutReference, String note) {

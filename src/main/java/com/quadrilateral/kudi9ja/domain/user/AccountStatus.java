@@ -25,7 +25,16 @@ public enum AccountStatus {
     DORMANT("Dormant"),
 
     /** Closed at the customer's request, or by us. Records retained. */
-    CLOSED("Closed");
+    CLOSED("Closed"),
+
+    /**
+     * Opened for the customer by the team — a loan customer entered by an
+     * admin — and not yet taken over by them. Everything works on it as on any
+     * account (loans, schedules, repayments recorded by the team), but nobody
+     * can sign in to it: the customer activates it by signing up with the BVN
+     * the admin entered.
+     */
+    PENDING_ACTIVATION("Not activated yet");
 
     private final String label;
 
@@ -39,7 +48,7 @@ public enum AccountStatus {
 
     /** Whether the account may sign in at all. */
     public boolean canSignIn() {
-        return this != CLOSED;
+        return this != CLOSED && this != PENDING_ACTIVATION;
     }
 
     /** Whether money may move on this account. */

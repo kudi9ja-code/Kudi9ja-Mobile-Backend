@@ -34,6 +34,20 @@ public interface PushSender {
     Result send(List<String> tokens, String title, String body, Map<String, String> data);
 
     /**
+     * The same, with a picture drawn large beneath the text.
+     *
+     * <p>Only the operating system draws it, so it shows while the app is
+     * closed or in the background. The installed app draws foreground
+     * messages itself and shows the text alone.
+     *
+     * @param imageUrl a public {@code https} link to a JPEG or PNG, or null
+     */
+    default Result send(
+            List<String> tokens, String title, String body, Map<String, String> data, String imageUrl) {
+        return send(tokens, title, body, data);
+    }
+
+    /**
      * @param delivered how many the provider accepted
      * @param invalidTokens tokens the provider says will never work again —
      *                      an app that was uninstalled, or a token that has

@@ -151,30 +151,4 @@ public class LoanController {
                 () -> loans.settleEarly(userId, loanId, request.pin()))
                 .value();
     }
-
-    /**
-     * The change-of-mind cancellation the Lending Agreement grants.
-     *
-     * <p>Inside the window, return what was received plus the fee, pay <b>no
-     * interest</b>, and the loan leaves the record as a cancelled row. The
-     * agreement has always promised this; the Flutter client never built it,
-     * which left a written commitment the product could not honour.
-     */
-    @PostMapping("/loans/{loanId}/cancel")
-    @Operation(summary = "Cancel inside the change-of-mind window. No interest is charged.")
-    public LoanDtos.RepaymentResponse cancel(
-            @PathVariable UUID loanId,
-            @Valid @RequestBody LoanDtos.LoanPinRequest request,
-            @RequestHeader(value = "Idempotency-Key", required = false) String key) {
-
-        UUID userId = currentUser.requireId();
-        return idempotency.execute(
-                userId,
-                key,
-                "loan.cancel",
-                loanId,
-                LoanDtos.RepaymentResponse.class,
-                () -> loans.cancel(userId, loanId, request.pin()))
-                .value();
-    }
 }

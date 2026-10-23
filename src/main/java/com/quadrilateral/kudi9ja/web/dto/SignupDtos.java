@@ -122,7 +122,27 @@ public final class SignupDtos {
             Map<String, String> acceptedVersions,
 
             @NotNull(message = "You have to accept all three documents to open an account.")
-            Boolean accepted) {
+            Boolean accepted,
+
+            /** The signature drawn beside the acceptance. Optional for older clients. */
+            @jakarta.validation.Valid
+            SignatureInput signature) {
+    }
+
+    /**
+     * An electronic signature: a PNG of what the customer drew, as a data URL,
+     * and the name they typed. The time is the server's, not this one's.
+     */
+    public record SignatureInput(
+            @NotNull(message = "Draw your signature.")
+            @jakarta.validation.constraints.Size(max = 600000, message = "That signature is too large. Draw it again.")
+            String image,
+
+            @NotNull(message = "Type your full name.")
+            @jakarta.validation.constraints.Size(min = 2, max = 160, message = "Type your full name.")
+            String typedName,
+
+            java.time.Instant signedAt) {
     }
 
     /**

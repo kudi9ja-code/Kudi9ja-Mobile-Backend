@@ -10,8 +10,14 @@ import com.quadrilateral.kudi9ja.domain.audit.AuditCategory;
 import com.quadrilateral.kudi9ja.domain.audit.AuditService;
 import com.quadrilateral.kudi9ja.domain.notification.NotificationService;
 import com.quadrilateral.kudi9ja.domain.notification.NotifyKind;
+import com.quadrilateral.kudi9ja.domain.group.LoanGroupService;
+import com.quadrilateral.kudi9ja.domain.officer.LoanOfficerService;
+import com.quadrilateral.kudi9ja.domain.user.AccountStatus;
+import com.quadrilateral.kudi9ja.domain.user.KycTier;
+import com.quadrilateral.kudi9ja.domain.user.ThemeMode;
 import com.quadrilateral.kudi9ja.domain.user.User;
 import com.quadrilateral.kudi9ja.domain.user.UserRepository;
+import com.quadrilateral.kudi9ja.domain.wallet.LedgerService;
 import com.quadrilateral.kudi9ja.web.dto.LoanImportDtos;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -53,6 +59,10 @@ public class LoanImportService {
     private final AdminAccessService access;
     private final AuditService audit;
     private final NotificationService notifications;
+    private final LoanOfficerService officers;
+    private final LoanGroupService groups;
+    private final LedgerService ledger;
+    private final EnteredLoanRemoval removal;
 
     public LoanImportService(
             ImportedLoanRepository imports,
@@ -60,13 +70,21 @@ public class LoanImportService {
             UserRepository users,
             AdminAccessService access,
             AuditService audit,
-            NotificationService notifications) {
+            NotificationService notifications,
+            LoanOfficerService officers,
+            LoanGroupService groups,
+            LedgerService ledger,
+            EnteredLoanRemoval removal) {
         this.imports = imports;
         this.loans = loans;
         this.users = users;
         this.access = access;
         this.audit = audit;
         this.notifications = notifications;
+        this.officers = officers;
+        this.groups = groups;
+        this.ledger = ledger;
+        this.removal = removal;
     }
 
     // ── Admin ──────────────────────────────────────────────────────────────
@@ -80,18 +98,24 @@ public class LoanImportService {
      */
     @Transactional
     public ImportedLoan importLoan(LoanImportDtos.ImportLoanRequest request) {
-        AdminUser actor = access.requireCanActOnLoans();
+        // Entered into a group: whoever runs it may, whatever their role, and its
+        // officer leads. Otherwise, anyone who can act on loans.
+        AdminUser actor = request.groupId() == null
+                ? access.requireCanActOnLoans()
+                : groups.requireCanAddTo(request.groupId());
         Instant now = Instant.now();
+        AdminUser groupOfficer = request.groupId() == null ? null : groups.officerOf(request.groupId());
 
         BigDecimal principal = Money.of(request.principal());
         BigDecimal fee = request.processingFee() == null ? Money.zero() : Money.of(request.processingFee());
+        BigDecimal transactionFee = request.transactionFee() == null ? Money.zero() : Money.of(request.transactionFee());
         BigDecimal repaid = request.amountRepaid() == null ? Money.zero() : Money.of(request.amountRepaid());
 
         if (request.disbursedAt().isAfter(now)) {
             throw ApiException.validation("The disbursement date is in the future.");
         }
-        if (Money.gte(fee, principal)) {
-            throw ApiException.validation("The processing fee cannot be as much as the loan itself.");
+        if (Money.gte(Money.add(fee, transactionFee), principal)) {
+            throw ApiException.validation("The management and transaction fees together cannot be as much as the loan itself.");
         }
 
         ImportedLoan row = new ImportedLoan();
@@ -105,8 +129,10 @@ public class LoanImportService {
         row.setTenureMonths(request.tenureMonths());
         row.setFlatRate(request.flatRate());
         row.setProcessingFee(fee);
+        row.setTransactionFee(transactionFee);
         row.setPurpose(request.purpose().trim());
         row.setDisbursedAt(request.disbursedAt());
+        OfflineLoanService.applyFile(row, request);
         row.setAmountRepaid(repaid);
         row.setImportedBy(actor.getName());
         row.setImportedAt(now);
@@ -118,6 +144,18 @@ public class LoanImportService {
         }
 
         ImportedLoan saved = imports.save(row);
+        // Every borrower has at least one loan officer from the day the loan exists.
+        List<UUID> officerIds = new java.util.ArrayList<>();
+        if (groupOfficer != null) {
+            officerIds.add(groupOfficer.getId());
+        }
+        if (request.officerIds() != null) {
+            officerIds.addAll(request.officerIds());
+        }
+        officers.startImport(saved, actor, officerIds);
+        if (request.groupId() != null) {
+            groups.addImported(request.groupId(), saved, actor);
+        }
 
         audit.record(
                 actorOf(actor),
@@ -127,15 +165,28 @@ public class LoanImportService {
                         + saved.getTenureMonths() + " months for " + saved.getFullName()
                         + " (BVN ending " + saved.getBvn().substring(7) + "), disbursed "
                         + DAY.format(saved.getDisbursedAt()) + ", with "
-                        + Money.naira(saved.getAmountRepaid()) + " already repaid.",
+                        + Money.naira(saved.getAmountRepaid()) + " already repaid. Management fee "
+                        + Money.naira(saved.getProcessingFee()) + ", transaction fee "
+                        + Money.naira(saved.transactionFee()) + ", paid out " + Money.naira(saved.netDisbursed()) + ".",
                 saved.getId(),
                 "Imported loan " + saved.getId());
 
-        // The customer may have beaten the admin to it. Attach at once rather
-        // than leaving a row waiting for a signup that has already happened.
-        users.findByBvn(saved.getBvn()).ifPresent(user -> claim(List.of(saved), user, now));
+        // The loan goes on a real account at once: the customer's own if they
+        // already have one, otherwise one opened for them now, which they
+        // activate by signing up with this BVN. Either way they are a customer
+        // like any other from this moment — schedule, reminders, the loan book.
+        User owner = users.findByBvn(saved.getBvn()).orElseGet(() -> openForCustomer(saved, actor, now));
+        claim(List.of(saved), owner, now);
 
         return saved;
+    }
+
+    /** An entry as the panel shows it, with the live loan's figures once it is on an account. */
+    @Transactional(readOnly = true)
+    public LoanImportDtos.ImportedLoanResponse view(ImportedLoan row) {
+        Loan live = row.getLoanId() == null ? null : loans.findById(row.getLoanId()).orElse(null);
+        User owner = row.getUserId() == null ? null : users.findById(row.getUserId()).orElse(null);
+        return LoanImportDtos.ImportedLoanResponse.from(row, live, owner);
     }
 
     @Transactional(readOnly = true)
@@ -156,24 +207,25 @@ public class LoanImportService {
         ImportedLoan row = imports.findById(id)
                 .orElseThrow(() -> ApiException.notFound("That imported loan"));
 
+        String who = row.getFullName();
+        String amount = Money.naira(row.getPrincipal());
+        boolean accountRemoved = false;
         if (row.isClaimed()) {
-            throw new ApiException(
-                    ErrorCode.CONFLICT,
-                    "That loan is already on the customer's account. Close it there by repayment "
-                            + "or a write-off; it cannot be un-entered.");
+            // On an account the customer has not activated yet, and untouched
+            // since: the whole entry can still be taken back.
+            accountRemoved = removal.remove(row);
+        } else {
+            imports.delete(row);
         }
-
-        imports.delete(row);
 
         audit.record(
                 actorOf(actor),
                 AuditCategory.LOAN,
-                "Paper loan removed before claim",
-                actor.getName() + " removed the unclaimed " + Money.naira(row.getPrincipal())
-                        + " loan entered for " + row.getFullName() + " (BVN ending "
-                        + row.getBvn().substring(7) + ").",
-                row.getId(),
-                "Imported loan " + row.getId());
+                "Loan entry removed",
+                actor.getName() + " removed the " + amount + " loan entered for " + who + " by mistake"
+                        + (accountRemoved ? ", and the not-yet-activated account opened for it." : "."),
+                id,
+                "Imported loan " + id);
     }
 
     // ── Signup ─────────────────────────────────────────────────────────────
@@ -213,7 +265,91 @@ public class LoanImportService {
         return waiting.size();
     }
 
+    /**
+     * Loans entered by hand before accounts were opened for them: each is put
+     * on its borrower's account, opening one where needed. Safe to run any
+     * number of times; a row that cannot be placed is reported and left.
+     *
+     * @return how many were placed
+     */
+    @Transactional
+    public int adoptWaiting() {
+        int placed = 0;
+        Instant now = Instant.now();
+        for (ImportedLoan row : imports.findByClaimedAtIsNullOrderByImportedAtDesc()) {
+            try {
+                User owner = users.findByBvn(row.getBvn()).orElseGet(() -> openForCustomer(row, null, now));
+                claim(List.of(row), owner, now);
+                placed++;
+            } catch (ApiException e) {
+                log.warn("Could not open an account for imported loan {}: {}", row.getId(), e.getMessage());
+                audit.recordSystem(AuditCategory.LOAN, "Loan customer not placed on an account",
+                        "The loan entered for " + row.getFullName() + " could not be put on an account: "
+                                + e.getMessage() + " Correct the details on the loan file.");
+            }
+        }
+        return placed;
+    }
+
     // ── Internals ──────────────────────────────────────────────────────────
+
+    /**
+     * Opens an account for a borrower the team entered: a real customer with a
+     * customer number and a wallet, marked not yet activated. Nobody can sign in
+     * to it; the borrower takes it over by signing up with the same BVN.
+     */
+    private User openForCustomer(ImportedLoan row, AdminUser actor, Instant now) {
+        String email = row.getEmail() == null || row.getEmail().isBlank() ? null : row.getEmail().trim().toLowerCase(Locale.ROOT);
+        if (email != null && users.existsByEmailIgnoreCase(email)) {
+            throw new ApiException(ErrorCode.EMAIL_TAKEN,
+                    "That email address already belongs to another customer. Leave it blank or correct it.");
+        }
+        String phone = row.getPhone() == null || row.getPhone().isBlank() ? null : row.getPhone().trim();
+        if (phone != null && users.existsByPhone(phone)) {
+            throw new ApiException(ErrorCode.PHONE_TAKEN,
+                    "That phone number already belongs to another customer. Leave it blank or correct it.");
+        }
+        String nin = row.getNin() == null || row.getNin().isBlank() ? null : row.getNin().trim();
+        if (nin != null && users.existsByNin(nin)) {
+            throw new ApiException(ErrorCode.NIN_TAKEN, "That NIN already belongs to another customer. Check it.");
+        }
+
+        User user = User.createWithNewId();
+        user.setFullName(row.getFullName());
+        user.setEmail(email);
+        user.setPhone(phone);
+        user.setDateOfBirth(row.getDateOfBirth());
+        user.setGender(row.getGender());
+        user.setBvn(row.getBvn());
+        user.setNin(nin);
+        user.setAddress(row.getAddress());
+        user.setState(row.getState());
+        user.setPayoutBank(row.getPayoutBank());
+        user.setPayoutAccountNumber(row.getPayoutAccountNumber());
+        // Nobody can sign in until the customer signs up and sets their own.
+        user.setPasswordHash(NOT_ACTIVATED);
+        user.setKycTier(KycTier.TIER0);
+        user.setThemeMode(ThemeMode.DARK);
+        user.setAccountStatus(AccountStatus.PENDING_ACTIVATION);
+        user.setStatusNote("Opened by " + (actor == null ? "the team" : actor.getName())
+                + " for a loan given outside the app. Activated when the customer signs up with this BVN.");
+        user.setCreatedAt(now);
+        User saved = users.save(user);
+        ledger.openWallet(saved.getId());
+
+        audit.record(actor == null ? AuditService.Actor.system() : actorOf(actor),
+                AuditCategory.CUSTOMER,
+                "Account opened for a loan customer",
+                "Account " + saved.getCustomerRef() + " opened for " + saved.getFullName()
+                        + ". Not activated until they sign up with their BVN.",
+                saved.getId(),
+                saved.getCustomerRef());
+        log.info("Opened not-yet-activated account {} for an imported loan", saved.getCustomerRef());
+        return saved;
+    }
+
+    /** Not a hash of anything: no password can ever match it. */
+    private static final String NOT_ACTIVATED = "!not-activated";
 
     private void claim(List<ImportedLoan> rows, User user, Instant now) {
         BigDecimal owed = Money.zero();
@@ -221,6 +357,8 @@ public class LoanImportService {
             Loan loan = loans.save(row.toLoan(user.getId(), now));
             row.claimedBy(user.getId(), loan.getId(), now);
             imports.save(row);
+            officers.moveToAccount(row.getId(), user.getId());
+            groups.attachAccount(row.getId(), user.getId());
             owed = Money.add(owed, loan.outstanding());
             log.info("Imported loan {} became loan {} on {}", row.getId(), loan.getId(), user.getCustomerRef());
         }
