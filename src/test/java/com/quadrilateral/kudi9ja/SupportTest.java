@@ -165,6 +165,34 @@ class SupportTest {
         throw new AssertionError("Conversation " + id + " is not in the queue: " + items);
     }
 
+    @Test
+    @DisplayName("anyone on the panel can answer, even a read-only viewer")
+    void viewersCanReply() throws Exception {
+        SignUpFlow.Session owner = owner();
+        String viewerEmail = SignUpFlow.freshEmail("supportviewer");
+        flow.signUp(viewerEmail);
+        postJson("/api/v1/admin/team", owner, """
+                {"email": "%s", "role": "VIEWER"}
+                """.formatted(viewerEmail));
+        SignUpFlow.Session viewer = flow.signIn(viewerEmail);
+
+        SignUpFlow.Session customer = flow.signUp(SignUpFlow.freshEmail("askviewer"));
+        String id = postJson("/api/v1/support/conversations", customer, """
+                {"kind": "ENQUIRY", "category": "Savings", "subject": "When is interest paid?",
+                 "message": "On a fixed plan, when does the interest arrive?"}
+                """).at("/conversation/id").asText();
+
+        postJson("/api/v1/admin/support/conversations/" + id + "/assign", viewer, "{}");
+        postJson("/api/v1/admin/support/conversations/" + id + "/messages", viewer, """
+                {"body": "The day the plan starts. It is paid upfront."}
+                """);
+        JsonNode thread = getJson("/api/v1/support/conversations/" + id, customer);
+        assertThat(thread.get("messages").toString()).contains("paid upfront");
+        postJson("/api/v1/admin/support/conversations/" + id + "/resolve", viewer, "{}");
+        assertThat(getJson("/api/v1/support/conversations/" + id, customer).at("/conversation/status").asText())
+                .isEqualTo("RESOLVED");
+    }
+
     private SignUpFlow.Session owner() throws Exception {
         String ownerEmail = "owner@kudi9ja.test";
         if (users.findByEmailIgnoreCase(ownerEmail).isPresent()) {

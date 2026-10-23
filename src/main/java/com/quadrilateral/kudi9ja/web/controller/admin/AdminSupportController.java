@@ -29,9 +29,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
- * The team's side of help and complaints. Anyone on the panel can read the
- * queue; answering, assigning and resolving takes a role that may act on
- * customers.
+ * The team's side of help and complaints. Anyone with access to the panel,
+ * whatever their role, can read the queue and answer, take, resolve and
+ * reopen a conversation.
  */
 @RestController
 @RequestMapping("/api/v1/admin/support")
@@ -81,7 +81,7 @@ public class AdminSupportController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Reply. The customer is notified.")
     public SupportDtos.SupportMessageView reply(@PathVariable UUID id, @Valid @RequestBody SupportDtos.SupportReply reply) {
-        return support.staffPost(access.requireCanManageCustomers(), id, reply.body(), null);
+        return support.staffPost(access.requireCanView(), id, reply.body(), null);
     }
 
     @PostMapping(value = "/conversations/{id}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -91,13 +91,13 @@ public class AdminSupportController {
             @PathVariable UUID id,
             @RequestPart("file") MultipartFile file,
             @RequestParam(value = "body", required = false) String body) {
-        return support.staffPost(access.requireCanManageCustomers(), id, body, SupportFiles.attachment(file));
+        return support.staffPost(access.requireCanView(), id, body, SupportFiles.attachment(file));
     }
 
     @PostMapping("/conversations/{id}/assign")
     @Operation(summary = "Take it on")
     public SupportDtos.SupportConversationView assign(@PathVariable UUID id) {
-        return support.assignToMe(access.requireCanManageCustomers(), id);
+        return support.assignToMe(access.requireCanView(), id);
     }
 
     @PostMapping("/conversations/{id}/resolve")
@@ -105,20 +105,20 @@ public class AdminSupportController {
     public SupportDtos.SupportConversationView resolve(
             @PathVariable UUID id,
             @Valid @RequestBody(required = false) SupportDtos.ResolveSupportConversation request) {
-        return support.staffResolve(access.requireCanManageCustomers(), id, request == null ? null : request.note());
+        return support.staffResolve(access.requireCanView(), id, request == null ? null : request.note());
     }
 
     @PostMapping("/conversations/{id}/reopen")
     @Operation(summary = "Reopen a resolved conversation")
     public SupportDtos.SupportConversationView reopen(@PathVariable UUID id) {
-        return support.staffReopen(access.requireCanManageCustomers(), id);
+        return support.staffReopen(access.requireCanView(), id);
     }
 
     @PostMapping("/conversations/{id}/typing")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Tell the customer someone is typing. Stored nowhere.")
     public void typing(@PathVariable UUID id) {
-        support.staffTyping(access.requireCanManageCustomers(), id);
+        support.staffTyping(access.requireCanView(), id);
     }
 
     @GetMapping("/attachments/{messageId}")
