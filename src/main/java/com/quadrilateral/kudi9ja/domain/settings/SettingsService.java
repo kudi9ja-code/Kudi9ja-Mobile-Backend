@@ -148,7 +148,7 @@ public class SettingsService {
                 "Settings seeded",
                 "Version 1 written from the shipped defaults: "
                         + "17% savings, 12.5%–134% lending across 1–24 months, "
-                        + "₦5,000 flat management fee to ₦500,000 then 1%.");
+                        + "₦5,000 flat management fee to ₦250,000 then 2%.");
         log.info("Seeded platform settings version 1");
         return first;
     }

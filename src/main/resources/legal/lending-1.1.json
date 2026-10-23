@@ -113,7 +113,7 @@
             },
             {
               "term": "Processing fee (management fee)",
-              "meaning": "A flat **₦5,000** on every loan from ₦50,000 up to and including ₦500,000. Above that figure — and ₦500,001 is already above it — the fee is **1% of the whole amount borrowed**, not of the part above the threshold. It is deducted from the money we send you, never added to what you owe."
+              "meaning": "A flat **₦5,000** on every loan from ₦50,000 up to and including ₦250,000. Above that figure — and ₦250,001 is already above it — the fee is **2% of the whole amount borrowed**, not of the part above the threshold. It is deducted from the money we send you, never added to what you owe."
             },
             {
               "term": "Transaction fee",
@@ -483,11 +483,11 @@
             },
             {
               "label": "Less management fee",
-              "value": "- ₦50,000"
+              "value": "- ₦100,000"
             },
             {
               "label": "Reaches your wallet",
-              "value": "₦4,950,000"
+              "value": "₦4,900,000"
             },
             {
               "label": "Interest (flat)",
@@ -507,15 +507,15 @@
             },
             {
               "label": "Total cost of the credit",
-              "value": "₦6,984,000"
+              "value": "₦7,034,000"
             },
             {
               "label": "Cost over 24 months",
-              "value": "141.1% of what you received"
+              "value": "143.6% of what you received"
             },
             {
               "label": "Equivalent annual rate",
-              "value": "71% per year"
+              "value": "72% per year"
             }
           ]
         },
@@ -835,5 +835,5 @@
       ]
     }
   ],
-  "changeSummary": "You can now repay through Paystack — by card, bank transfer or USSD — and the payment is applied to your loan the moment Paystack confirms it. The receipt-upload route has gone. You also sign this agreement electronically when you open your account. Every repayment now carries a transaction fee of 2% of the instalment, added to each instalment and shown before you confirm; only the management fee comes off the money we send you. Instalments and fees are rounded up to the naira. There is no longer a 24-hour cancellation: once a loan reaches your wallet it is repaid in full, with interest, though you can still settle early. Paying a loan off early now costs exactly what is still owed: there is no discount for paying early. You now choose to repay weekly or monthly; the loan and interest are the same either way."
+  "changeSummary": "You can now repay through Paystack — by card, bank transfer or USSD — and the payment is applied to your loan the moment Paystack confirms it. The receipt-upload route has gone. You also sign this agreement electronically when you open your account. Every repayment now carries a transaction fee of 2% of the instalment, added to each instalment and shown before you confirm; only the management fee comes off the money we send you. Instalments and fees are rounded up to the naira. There is no longer a 24-hour cancellation: once a loan reaches your wallet it is repaid in full, with interest, though you can still settle early. Paying a loan off early now costs exactly what is still owed: there is no discount for paying early. You now choose to repay weekly or monthly; the loan and interest are the same either way. The management fee is now a flat ₦5,000 up to and including ₦250,000, and 2% of the whole amount above that."
 }

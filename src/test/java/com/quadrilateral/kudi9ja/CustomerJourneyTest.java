@@ -491,10 +491,10 @@ class CustomerJourneyTest {
         assertThat(quote.get("installmentAmount").decimalValue()).isEqualByComparingTo("151301.00");
         assertThat(quote.get("totalRepaymentFees").decimalValue()).isEqualByComparingTo("35604.00");
         assertThat(quote.get("totalRepayable").decimalValue()).isEqualByComparingTo("1815604.00");
-        // 1% of the whole principal above the threshold, and nothing else comes off.
-        assertThat(quote.get("processingFee").decimalValue()).isEqualByComparingTo("10000.00");
+        // 2% of the whole principal above the threshold, and nothing else comes off.
+        assertThat(quote.get("processingFee").decimalValue()).isEqualByComparingTo("20000.00");
         assertThat(quote.get("transactionFee").decimalValue()).isEqualByComparingTo("0.00");
-        assertThat(quote.get("netDisbursed").decimalValue()).isEqualByComparingTo("990000.00");
+        assertThat(quote.get("netDisbursed").decimalValue()).isEqualByComparingTo("980000.00");
     }
 
     // ── The ledger ─────────────────────────────────────────────────────────

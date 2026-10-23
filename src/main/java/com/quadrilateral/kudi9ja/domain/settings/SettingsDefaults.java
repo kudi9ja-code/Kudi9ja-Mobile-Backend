@@ -93,10 +93,10 @@ public final class SettingsDefaults {
         s.setEarlyPayoffRebateShare(rate("0"));
         s.setLoanCancellationHours(0);
 
-        // Management fee: flat to the threshold, 1% of the whole above it.
+        // Management fee: ₦5,000 flat to ₦250,000, 2% of the whole above it.
         s.setFlatProcessingFee(Money.of(5_000));
-        s.setProcessingFeeThreshold(Money.of(500_000));
-        s.setLoanProcessingFeeRate(rate("0.01"));
+        s.setProcessingFeeThreshold(Money.of(250_000));
+        s.setLoanProcessingFeeRate(rate("0.02"));
         s.setLoanRepaymentFeeRate(rate("0.02"));
         s.setLoanWeeklyAllowed(true);
         s.setLoanMonthlyAllowed(true);
@@ -107,8 +107,8 @@ public final class SettingsDefaults {
         s.setGroupMinLoanAmount(Money.of(50_000));
         s.setGroupMaxLoanAmount(Money.of(5_000_000));
         s.setGroupFlatProcessingFee(Money.of(5_000));
-        s.setGroupProcessingFeeThreshold(Money.of(500_000));
-        s.setGroupLoanProcessingFeeRate(rate("0.01"));
+        s.setGroupProcessingFeeThreshold(Money.of(250_000));
+        s.setGroupLoanProcessingFeeRate(rate("0.02"));
         s.setGroupLoanRepaymentFeeRate(rate("0.02"));
         s.setGroupLoanWeeklyAllowed(true);
         s.setGroupLoanMonthlyAllowed(true);

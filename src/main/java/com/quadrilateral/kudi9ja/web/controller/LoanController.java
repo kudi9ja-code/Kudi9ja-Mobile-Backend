@@ -66,7 +66,7 @@ public class LoanController {
      *
      * <p>Includes the management fee, which is <b>deducted from the
      * disbursement and never added to the debt</b>: a customer borrowing
-     * ₦500,000 owes interest on ₦500,000 and receives ₦495,000.
+     * ₦500,000 owes interest on ₦500,000 and receives ₦490,000.
      */
     @GetMapping("/loans/quote")
     @Operation(summary = "Fee, net disbursement, interest, total and the full schedule")

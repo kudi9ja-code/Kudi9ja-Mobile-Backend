@@ -176,8 +176,8 @@ public final class Finance {
      *
      * <p>A flat fee on any loan up to <b>and including</b> the threshold. One
      * naira above it, the fee becomes a percentage of the <b>whole</b>
-     * principal, never of the excess — ₦500,001 is already on the percentage.
-     * The two rules meet exactly at the threshold (1% of ₦500,000 is ₦5,000),
+     * principal, never of the excess — ₦250,001 is already on the percentage.
+     * The two rules meet exactly at the threshold (2% of ₦250,000 is ₦5,000),
      * so the fee curve is continuous and never jumps.
      *
      * <p>It is always deducted from the disbursement, never added to the debt.

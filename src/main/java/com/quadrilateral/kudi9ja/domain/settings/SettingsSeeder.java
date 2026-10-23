@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>The defaults are the ones compiled into the Flutter client, so a fresh
  * deployment prices exactly as the app has always said it would: 17% a year on
- * savings, the published loan card, ₦5,000 flat management fee to ₦500,000.
+ * savings, the published loan card, ₦5,000 flat management fee to ₦250,000, then 2%.
  *
  * <p>Seeding never overwrites. Once a version exists this does nothing at all,
  * which is what makes it safe to run on every boot — including a boot that

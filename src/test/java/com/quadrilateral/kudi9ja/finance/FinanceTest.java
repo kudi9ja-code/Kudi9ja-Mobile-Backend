@@ -248,54 +248,57 @@ class FinanceTest {
     class ManagementFee {
 
         /**
-         * The two rules meet exactly at ₦500,000, because 1% of ₦500,000 <i>is</i>
+         * The two rules meet exactly at ₦250,000, because 2% of ₦250,000 <i>is</i>
          * ₦5,000. A discontinuity here would mean borrowing one naira more cost
-         * a step change in fee, and customers would learn to borrow ₦499,999.
+         * a step change in fee, and customers would learn to borrow ₦249,999.
          */
         @Test
-        @DisplayName("flat and percentage meet exactly at ₦500,000")
+        @DisplayName("flat and percentage meet exactly at ₦250,000")
         void curveIsContinuousAtTheThreshold() {
-            assertThat(Finance.processingFee(settings, new BigDecimal("500000")))
+            assertThat(Finance.processingFee(settings, new BigDecimal("250000")))
                     .isEqualByComparingTo("5000.00");
-            assertThat(Finance.processingFee(settings, new BigDecimal("500001")))
-                    .isEqualByComparingTo("5000.01");
+            assertThat(Finance.processingFee(settings, new BigDecimal("250001")))
+                    .isEqualByComparingTo("5000.02");
         }
 
         @ParameterizedTest(name = "₦{0} attracts a fee of ₦{1}")
         @CsvSource({
                 "50000,   5000.00",
                 "200000,  5000.00",
-                "500000,  5000.00",
-                "1000000, 10000.00",
-                "5000000, 50000.00"
+                "250000,  5000.00",
+                "251000,  5020.00",
+                "500000,  10000.00",
+                "1000000, 20000.00",
+                "5000000, 100000.00"
         })
         void followsTheTwoRules(BigDecimal principal, BigDecimal expected) {
             assertThat(Finance.processingFee(settings, principal)).isEqualByComparingTo(expected);
         }
 
         /**
-         * Above the threshold the fee is 1% of the <b>whole</b> principal, not
-         * of the excess over ₦500,000.
+         * Above the threshold the fee is 2% of the <b>whole</b> principal, not
+         * of the excess over ₦250,000.
          */
         @Test
-        @DisplayName("above the threshold the fee is 1% of the whole principal")
+        @DisplayName("above the threshold the fee is 2% of the whole principal")
         void percentageAppliesToTheWholePrincipal() {
             assertThat(Finance.processingFee(settings, new BigDecimal("1000000")))
-                    .isEqualByComparingTo("10000.00")
-                    // 1% of the excess would be ₦5,000. It is not that.
-                    .isNotEqualByComparingTo("5000.00");
+                    .isEqualByComparingTo("20000.00")
+                    // 2% of the excess would be ₦15,000. It is not that.
+                    .isNotEqualByComparingTo("15000.00");
         }
 
         /**
          * What reaches the wallet: the loan, less the management fee (₦5,000 up
-         * to ₦500,000, then 1%). Nothing else comes off: the transaction fee is
+         * to ₦250,000, then 2%). Nothing else comes off: the transaction fee is
          * paid with each repayment.
          */
         @ParameterizedTest(name = "₦{0} borrowed → ₦{1} received")
         @CsvSource({
                 "100000, 95000.00",
-                "500000, 495000.00",
-                "600000, 594000.00"
+                "250000, 245000.00",
+                "500000, 490000.00",
+                "600000, 588000.00"
         })
         @DisplayName("only the management fee comes off what is paid out")
         void onlyTheManagementFeeComesOff(BigDecimal principal, BigDecimal received) {
@@ -306,7 +309,7 @@ class FinanceTest {
         /**
          * The fees come out of the disbursement and are never added to the debt.
          * Somebody borrowing ₦500,000 owes interest on ₦500,000 and receives
-         * ₦493,000.
+         * ₦490,000.
          */
         @Test
         @DisplayName("the management fee is deducted from the disbursement, never added to the debt")
@@ -314,7 +317,7 @@ class FinanceTest {
             BigDecimal principal = new BigDecimal("500000");
 
             assertThat(Finance.netDisbursed(settings, principal))
-                    .isEqualByComparingTo("495000.00");
+                    .isEqualByComparingTo("490000.00");
             // The debt is priced on the gross principal, not the net.
             assertThat(Finance.loanTotal(settings, principal, 3))
                     .isEqualByComparingTo("625000.00");
