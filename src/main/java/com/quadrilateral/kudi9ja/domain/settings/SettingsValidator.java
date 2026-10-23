@@ -132,8 +132,8 @@ public final class SettingsValidator {
         if (s.getMaxPasscodeAttempts() < 1) {
             problems.put("maxPasscodeAttempts", "At least one attempt must be allowed.");
         }
-        if (s.getLockTimeoutMinutes() < 1) {
-            problems.put("lockTimeoutMinutes", "The idle lock must be at least a minute.");
+        if (s.getLockTimeoutMinutes() < 10) {
+            problems.put("lockTimeoutMinutes", "The idle lock must be at least 10 minutes.");
         }
         if (s.getOtpResendSeconds() < 1) {
             problems.put("otpResendSeconds", "The resend cooldown must be at least a second.");

@@ -115,7 +115,7 @@ public final class SettingsDefaults {
 
         // Security.
         s.setMaxPasscodeAttempts(5);
-        s.setLockTimeoutMinutes(2);
+        s.setLockTimeoutMinutes(10);
         s.setOtpResendSeconds(45);
 
         // Wallet.
