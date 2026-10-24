@@ -305,6 +305,12 @@ public final class AdminDtos {
             BigDecimal totalFeesCharged,
 
             BigDecimal totalOverdue,
+
+            /**
+             * What customers still owe on the loans running now: loan, interest
+             * and fees, less every repayment. Falls with each payment.
+             */
+            BigDecimal totalOutstanding,
             long activePlans,
             long maturedPlans,
             long activeLoans,

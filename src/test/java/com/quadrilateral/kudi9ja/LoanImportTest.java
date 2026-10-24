@@ -462,6 +462,9 @@ class LoanImportTest {
                 "repayments", List.of(payment(22000, secondOut.plus(30, ChronoUnit.DAYS), "CASH"))));
         assertThat(running.get("customerId").asText()).isEqualTo(customerId);
         assertThat(running.get("outstanding").decimalValue()).isEqualByComparingTo("44000");
+        // What is still owed counts the running loan only, after its payment.
+        assertThat(getJson("/api/v1/admin/overview", admin).get("book").get("totalOutstanding").decimalValue())
+                .isEqualByComparingTo(bookBefore.get("totalOutstanding").decimalValue().add(new BigDecimal("44000")));
         assertThat(getJson("/api/v1/admin/loans/imports/lookup?bvn=" + bvn, admin).get("hasRunningLoan").asBoolean()).isTrue();
 
         // One running loan at a time: another can only go on as closed, and

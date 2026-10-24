@@ -6,6 +6,7 @@ import com.quadrilateral.kudi9ja.domain.audit.AuditEntry;
 import com.quadrilateral.kudi9ja.domain.audit.AuditRepository;
 import com.quadrilateral.kudi9ja.domain.loan.ImportedLoan;
 import com.quadrilateral.kudi9ja.domain.loan.ImportedLoanRepository;
+import com.quadrilateral.kudi9ja.domain.loan.Loan;
 import com.quadrilateral.kudi9ja.domain.loan.LoanRepository;
 import com.quadrilateral.kudi9ja.domain.loan.LoanStatus;
 import com.quadrilateral.kudi9ja.domain.payin.PayInService;
@@ -127,6 +128,7 @@ public class AdminOverviewService {
                 Money.add(Money.of(loans.totalInterestChargedAcrossBook()), paper.interest()),
                 Money.add(Money.of(loans.totalFeesChargedAcrossBook()), paper.fees()),
                 Money.add(Money.of(loans.totalOverdueAcrossBook()), paper.overdue()),
+                Money.add(loans.findAllOpen().stream().map(Loan::outstanding).reduce(Money.zero(), Money::add), paper.outstanding()),
                 plans.countByStatus(SavingsStatus.ACTIVE),
                 plans.countByStatus(SavingsStatus.MATURED),
                 loans.countByStatus(LoanStatus.ACTIVE) + paper.active(),
@@ -149,6 +151,7 @@ public class AdminOverviewService {
         BigDecimal interest = Money.zero();
         BigDecimal fees = Money.zero();
         BigDecimal overdue = Money.zero();
+        BigDecimal outstanding = Money.zero();
         long active = 0;
         long overdueCount = 0;
         long repaid = 0;
@@ -160,6 +163,7 @@ public class AdminOverviewService {
                 repaid++;
                 continue;
             }
+            outstanding = Money.add(outstanding, row.outstanding());
             if (row.dueDate() != null && now.isAfter(row.dueDate())) {
                 overdueCount++;
                 overdue = Money.add(overdue, Money.floorAtZero(Money.subtract(row.getPrincipal(), row.getAmountRepaid())));
@@ -167,11 +171,11 @@ public class AdminOverviewService {
                 active++;
             }
         }
-        return new PaperBook(lent, interest, fees, overdue, active, overdueCount, repaid);
+        return new PaperBook(lent, interest, fees, overdue, outstanding, active, overdueCount, repaid);
     }
 
     private record PaperBook(
-            BigDecimal lent, BigDecimal interest, BigDecimal fees, BigDecimal overdue,
+            BigDecimal lent, BigDecimal interest, BigDecimal fees, BigDecimal overdue, BigDecimal outstanding,
             long active, long overdueCount, long repaid) {
     }
 
