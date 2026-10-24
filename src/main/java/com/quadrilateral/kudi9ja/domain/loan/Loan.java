@@ -291,6 +291,14 @@ public class Loan {
         return schedule;
     }
 
+    /** What is owed on instalments whose day has passed, whether or not the last one has. */
+    public BigDecimal pastDue(Instant now) {
+        return schedule(now).stream()
+                .filter(installment -> installment.status() == InstallmentStatus.OVERDUE)
+                .map(Installment::outstanding)
+                .reduce(Money.zero(), Money::add);
+    }
+
     /** The next instalment owed, or empty once the loan is settled. */
     public java.util.Optional<Installment> nextInstallment(Instant now) {
         return schedule(now).stream()

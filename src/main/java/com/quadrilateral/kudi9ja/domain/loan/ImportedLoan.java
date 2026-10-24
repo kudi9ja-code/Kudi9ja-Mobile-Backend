@@ -218,6 +218,10 @@ public class ImportedLoan {
         return Money.floorAtZero(Money.subtract(totalRepayable(), amountRepaid));
     }
 
+    public BigDecimal pastDue(Instant now) {
+        return disbursedAt == null ? Money.zero() : terms().pastDue(now);
+    }
+
     public boolean isClaimed() {
         return claimedAt != null;
     }

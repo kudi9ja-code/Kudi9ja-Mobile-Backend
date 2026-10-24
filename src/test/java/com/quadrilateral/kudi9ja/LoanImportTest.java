@@ -407,10 +407,11 @@ class LoanImportTest {
     }
 
     @Test
-    @DisplayName("overdue is what is still owed: loan, interest and fees, less repayments")
+    @DisplayName("overdue is every missed instalment: loan, interest and fees, less repayments")
     void overdueIsWhatIsStillOwed() throws Exception {
         SignUpFlow.Session admin = owner();
-        BigDecimal before = getJson("/api/v1/admin/overview", admin).get("book").get("totalOverdue").decimalValue();
+        JsonNode bookBefore = getJson("/api/v1/admin/overview", admin).get("book");
+        BigDecimal before = bookBefore.get("totalOverdue").decimalValue();
         Instant out = Instant.now().truncatedTo(ChronoUnit.DAYS).plus(12, ChronoUnit.HOURS).minus(150, ChronoUnit.DAYS);
 
         // ₦100,000 at 10% over two months is ₦110,000; ₦60,000 came back, so
@@ -425,8 +426,20 @@ class LoanImportTest {
                 "disbursedAt", out.toString(),
                 "repayments", List.of(payment(60000, out.plus(30, ChronoUnit.DAYS), "CASH"))));
 
-        assertThat(getJson("/api/v1/admin/overview", admin).get("book").get("totalOverdue").decimalValue())
-                .isEqualByComparingTo(before.add(new BigDecimal("50000")));
+        // Still running, but its first instalment has passed unpaid: ₦120,000
+        // at 10% over three months is three of ₦44,000, and one is missed.
+        importLoan(admin, Map.of(
+                "bvn", SignUpFlow.nextIdentityNumber(32),
+                "fullName", "Funmi Ola Bakare",
+                "principal", 120000,
+                "tenureMonths", 3,
+                "flatRate", 0.10,
+                "purpose", "Shop restocking",
+                "disbursedAt", Instant.now().minus(45, ChronoUnit.DAYS).toString()));
+
+        JsonNode book = getJson("/api/v1/admin/overview", admin).get("book");
+        assertThat(book.get("totalOverdue").decimalValue()).isEqualByComparingTo(before.add(new BigDecimal("94000")));
+        assertThat(book.get("loansBehind").asLong()).isEqualTo(bookBefore.get("loansBehind").asLong() + 2);
     }
 
     @Test

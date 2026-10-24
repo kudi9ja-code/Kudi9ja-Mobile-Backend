@@ -304,7 +304,11 @@ public final class AdminDtos {
              */
             BigDecimal totalFeesCharged,
 
+            /** Owed on instalments past their day, on every running loan, not only those past their last. */
             BigDecimal totalOverdue,
+
+            /** Running loans with at least one instalment past its day and unpaid. */
+            long loansBehind,
 
             /**
              * What customers still owe on the loans running now: loan, interest

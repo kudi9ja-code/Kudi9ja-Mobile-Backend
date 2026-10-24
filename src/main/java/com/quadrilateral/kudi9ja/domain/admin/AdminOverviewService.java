@@ -119,7 +119,12 @@ public class AdminOverviewService {
     }
 
     private AdminDtos.Book book() {
-        PaperBook paper = paperBook(Instant.now());
+        Instant now = Instant.now();
+        PaperBook paper = paperBook(now);
+        List<BigDecimal> behind = loans.findAllOpen().stream()
+                .map(l -> l.pastDue(now))
+                .filter(Money::isPositive)
+                .toList();
         RepaymentDtos.Summary repaid = repayments.allTime();
         return new AdminDtos.Book(
                 Money.of(plans.totalSavedAcrossBook()),
@@ -127,9 +132,9 @@ public class AdminOverviewService {
                 Money.add(Money.of(loans.totalLentAcrossBook()), paper.lent()),
                 Money.add(Money.of(loans.totalInterestChargedAcrossBook()), paper.interest()),
                 Money.add(Money.of(loans.totalFeesChargedAcrossBook()), paper.fees()),
-                // Still owed on overdue loans — loan, interest and fees, less repayments.
-                Money.add(loans.findByStatusOrderByRequestedAtDesc(LoanStatus.OVERDUE).stream()
-                        .map(Loan::outstanding).reduce(Money.zero(), Money::add), paper.overdue()),
+                // Every missed instalment, not only on loans past their last day.
+                Money.add(behind.stream().reduce(Money.zero(), Money::add), paper.overdue()),
+                behind.size() + paper.behind(),
                 Money.add(loans.findAllOpen().stream().map(Loan::outstanding).reduce(Money.zero(), Money::add), paper.outstanding()),
                 plans.countByStatus(SavingsStatus.ACTIVE),
                 plans.countByStatus(SavingsStatus.MATURED),
@@ -145,7 +150,7 @@ public class AdminOverviewService {
      * Loans entered by hand whose borrower has not signed up yet. They are
      * real loans the company is owed, so the book counts them the same way it
      * counts loans on accounts: every one for lent, interest and fees; open
-     * ones for overdue; cleared ones as repaid. Once the borrower signs up the row
+     * ones for missed instalments; cleared ones as repaid. Once the borrower signs up the row
      * becomes a loan on their account and is counted there instead, never twice.
      */
     private PaperBook paperBook(Instant now) {
@@ -154,6 +159,7 @@ public class AdminOverviewService {
         BigDecimal fees = Money.zero();
         BigDecimal overdue = Money.zero();
         BigDecimal outstanding = Money.zero();
+        long behind = 0;
         long active = 0;
         long overdueCount = 0;
         long repaid = 0;
@@ -166,19 +172,23 @@ public class AdminOverviewService {
                 continue;
             }
             outstanding = Money.add(outstanding, row.outstanding());
+            BigDecimal missed = row.pastDue(now);
+            if (Money.isPositive(missed)) {
+                behind++;
+                overdue = Money.add(overdue, missed);
+            }
             if (row.dueDate() != null && now.isAfter(row.dueDate())) {
                 overdueCount++;
-                overdue = Money.add(overdue, row.outstanding());
             } else {
                 active++;
             }
         }
-        return new PaperBook(lent, interest, fees, overdue, outstanding, active, overdueCount, repaid);
+        return new PaperBook(lent, interest, fees, overdue, outstanding, behind, active, overdueCount, repaid);
     }
 
     private record PaperBook(
             BigDecimal lent, BigDecimal interest, BigDecimal fees, BigDecimal overdue, BigDecimal outstanding,
-            long active, long overdueCount, long repaid) {
+            long behind, long active, long overdueCount, long repaid) {
     }
 
     private AdminDtos.People people(Instant weekAgo) {
