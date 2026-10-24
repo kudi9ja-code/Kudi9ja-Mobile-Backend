@@ -2,6 +2,7 @@ package com.quadrilateral.kudi9ja.domain.loan;
 
 import com.quadrilateral.kudi9ja.common.error.ApiException;
 import com.quadrilateral.kudi9ja.common.error.ErrorCode;
+import com.quadrilateral.kudi9ja.common.util.Dates;
 import com.quadrilateral.kudi9ja.common.util.Money;
 import com.quadrilateral.kudi9ja.config.Kudi9jaProperties;
 import com.quadrilateral.kudi9ja.domain.admin.AdminAccessService;
@@ -369,7 +370,7 @@ public class OfflineLoanService {
 
         if (row.isClaimed()) {
             Loan loan = requireLoan(row.getLoanId());
-            applyToLoan(loan, amount, request);
+            applyToLoan(loan, amount, paidAt, request);
         } else {
             if (Money.gt(amount, row.outstanding())) {
                 throw ApiException.validation("That is more than the " + Money.naira(row.outstanding())
@@ -400,7 +401,7 @@ public class OfflineLoanService {
         Loan loan = requireLoan(loanId);
         BigDecimal amount = Money.of(request.amount());
         Instant paidAt = paidAt(request, loan.getDisbursedAt());
-        applyToLoan(loan, amount, request);
+        applyToLoan(loan, amount, paidAt, request);
 
         UUID importId = imports.findByLoanId(loanId).map(ImportedLoan::getId).orElse(null);
         RecordedRepayment saved = saveRepayment(actor, importId, loanId, amount, paidAt, request);
@@ -458,9 +459,64 @@ public class OfflineLoanService {
                         .toList());
     }
 
+    /**
+     * Takes back a repayment recorded by mistake — the wrong amount or the
+     * wrong day. It comes off what the loan has repaid, and a loan it had
+     * closed is running again. To correct one, remove it and record it again.
+     */
+    @Transactional
+    public void removeRepayment(UUID repaymentId) {
+        AdminUser actor = access.requireCanActOnLoans();
+        RecordedRepayment r = repayments.findById(repaymentId)
+                .orElseThrow(() -> ApiException.notFound("That repayment"));
+        ImportedLoan row = r.getImportedLoanId() == null ? null : imports.findById(r.getImportedLoanId()).orElse(null);
+        Loan loan = r.getLoanId() == null ? null : loans.findById(r.getLoanId()).orElse(null);
+        BigDecimal amount = r.getAmount();
+
+        if (loan != null) {
+            if (!loan.isOpen() && loan.getStatus() != LoanStatus.REPAID) {
+                throw new ApiException(ErrorCode.CONFLICT, "That loan is "
+                        + loan.getStatus().label().toLowerCase(Locale.ROOT) + ", so its repayments stay as they are.");
+            }
+            boolean reopens = loan.getStatus() == LoanStatus.REPAID;
+            if (reopens && loans.findByUserIdAndStatusIn(loan.getUserId(), List.of(LoanStatus.ACTIVE, LoanStatus.OVERDUE))
+                    .stream().anyMatch(other -> !other.getId().equals(loan.getId()))) {
+                throw new ApiException(ErrorCode.CONFLICT, "Removing this would leave the loan unpaid and running again, "
+                        + "but the customer already has a running loan. A customer has one running loan at a time.");
+            }
+            loan.setAmountRepaid(Money.floorAtZero(Money.subtract(loan.getAmountRepaid(), amount)));
+            if (reopens && Money.isPositive(loan.outstanding())) {
+                loan.setSettledAt(null);
+                loan.setStatus(loan.getDueDate() != null && Instant.now().isAfter(loan.getDueDate())
+                        ? LoanStatus.OVERDUE : LoanStatus.ACTIVE);
+            }
+            loans.save(loan);
+        }
+        // The entry's own figure holds what was repaid when it was entered, and
+        // everything while it waited for an account.
+        if (row != null && (loan == null || r.isEnteredWithLoan())) {
+            row.setAmountRepaid(Money.floorAtZero(Money.subtract(row.getAmountRepaid(), amount)));
+            imports.save(row);
+        }
+        repayments.delete(r);
+
+        String who = loan != null
+                ? users.findById(loan.getUserId()).map(u -> u.getFullName() + " (" + u.getCustomerRef() + ")").orElse("the borrower")
+                : row != null ? row.getFullName() : "the borrower";
+        audit.record(
+                actorOf(actor),
+                AuditCategory.LOAN,
+                "Recorded repayment removed",
+                actor.getName() + " removed the " + Money.naira(amount) + " repayment dated "
+                        + Dates.lagosDate(r.getPaidAt()) + " (" + methodLabel(r.getMethod()) + ", recorded by "
+                        + r.getRecordedBy() + ") from " + who + "'s loan.",
+                loan != null ? loan.getId() : r.getImportedLoanId(),
+                loan != null ? "Loan " + loan.getId() : "Imported loan " + r.getImportedLoanId());
+    }
+
     // ── Internals ─────────────────────────────────────────────────────────
 
-    private void applyToLoan(Loan loan, BigDecimal amount, OfflineLoanDtos.OfflineRepaymentRequest request) {
+    private void applyToLoan(Loan loan, BigDecimal amount, Instant paidAt, OfflineLoanDtos.OfflineRepaymentRequest request) {
         if (!loan.isOpen()) {
             throw new ApiException(ErrorCode.LOAN_CLOSED,
                     "That loan is " + loan.getStatus().label().toLowerCase(Locale.ROOT) + ". There is nothing left to repay.");
@@ -470,6 +526,16 @@ public class OfflineLoanService {
                     + " still owed on this loan.");
         }
         loanService.applyRepayment(loan, amount, "Repayment received by " + methodLabel(request.method()), false);
+        // Cleared by a payment made before today: it closed on the day it was paid.
+        if (loan.getStatus() == LoanStatus.REPAID) {
+            Instant last = repayments.findByLoanIdOrderByPaidAtAsc(loan.getId()).stream()
+                    .map(RecordedRepayment::getPaidAt)
+                    .reduce(paidAt, (a, b) -> b.isAfter(a) ? b : a);
+            if (loan.getSettledAt() == null || last.isBefore(loan.getSettledAt())) {
+                loan.setSettledAt(last);
+                loans.save(loan);
+            }
+        }
     }
 
     private RecordedRepayment saveRepayment(
@@ -492,10 +558,11 @@ public class OfflineLoanService {
     private Instant paidAt(OfflineLoanDtos.OfflineRepaymentRequest request, Instant disbursedAt) {
         Instant now = Instant.now();
         Instant paidAt = request.paidAt() == null ? now : request.paidAt();
-        if (paidAt.isAfter(now.plusSeconds(60))) {
+        // By the day in Lagos: a payment on the day of the payout is never "before" it.
+        if (Dates.lagosDate(paidAt).isAfter(Dates.lagosDate(now))) {
             throw ApiException.validation("The payment date is in the future.");
         }
-        if (disbursedAt != null && paidAt.isBefore(disbursedAt)) {
+        if (disbursedAt != null && Dates.lagosDate(paidAt).isBefore(Dates.lagosDate(disbursedAt))) {
             throw ApiException.validation("The payment date is before the loan was disbursed.");
         }
         return paidAt;

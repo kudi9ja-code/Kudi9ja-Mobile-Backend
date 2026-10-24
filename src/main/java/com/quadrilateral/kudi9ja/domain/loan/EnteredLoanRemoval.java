@@ -12,6 +12,8 @@ import com.quadrilateral.kudi9ja.domain.user.User;
 import com.quadrilateral.kudi9ja.domain.user.UserRepository;
 import com.quadrilateral.kudi9ja.domain.wallet.WalletRepository;
 import com.quadrilateral.kudi9ja.domain.wallet.WalletTransactionRepository;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,14 +78,22 @@ public class EnteredLoanRemoval {
         }
         Loan loan = row.getLoanId() == null ? null : loans.findById(row.getLoanId()).orElse(null);
         boolean repaidSince = loan != null && !Money.eq(loan.getAmountRepaid(), row.getAmountRepaid());
-        if (repaidSince || !recorded.findByImportedLoanIdOrderByPaidAtAsc(row.getId()).isEmpty()
-                || (loan != null && !recorded.findByLoanIdOrderByPaidAtAsc(loan.getId()).isEmpty())) {
+        // Repayments typed in with the loan are part of the entry and go with it.
+        List<RecordedRepayment> onIt = new ArrayList<>(recorded.findByImportedLoanIdOrderByPaidAtAsc(row.getId()));
+        if (loan != null) {
+            recorded.findByLoanIdOrderByPaidAtAsc(loan.getId()).stream()
+                    .filter(r -> onIt.stream().noneMatch(o -> o.getId().equals(r.getId())))
+                    .forEach(onIt::add);
+        }
+        if (repaidSince || onIt.stream().anyMatch(r -> !r.isEnteredWithLoan())) {
             throw new ApiException(
                     ErrorCode.CONFLICT,
                     "Repayments have been recorded on this loan since it was entered, so it cannot be "
                             + "taken back. Write it off instead if it should not be collected.");
         }
 
+        recorded.deleteAll(onIt);
+        recorded.flush();
         documents.deleteAll(documents.findByImportedLoanIdOrderByUploadedAtAsc(row.getId()));
         officers.deleteAll(officers.findByImportedLoanIdOrderByLeadDescAssignedAtAsc(row.getId()));
         groupMembers.deleteAll(groupMembers.findByImportedLoanId(row.getId()));

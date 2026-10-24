@@ -34,11 +34,11 @@ public final class LoanImportDtos {
     }
 
     public record ImportLoanRequest(
-            @NotBlank(message = "The customer's BVN is needed. It is how the loan finds them when they sign up.")
+            /** Needed unless {@code customerId} names the account the loan goes on. */
             @Pattern(regexp = "^\\d{11}$", message = "A BVN is eleven digits.")
             String bvn,
 
-            @NotBlank(message = "Enter the customer's name as it appears on their BVN.")
+            /** Needed unless {@code customerId} names the account the loan goes on. */
             @Size(min = 2, max = 160, message = "Enter the customer's full name.")
             String fullName,
 
@@ -142,7 +142,36 @@ public final class LoanImportDtos {
             List<UUID> officerIds,
 
             /** The loan group this borrower belongs to, if any. */
-            UUID groupId) {
+            UUID groupId,
+
+            /**
+             * A customer already on the system, to add another loan to — a past
+             * one or the one running now. Their BVN and name come from the account.
+             */
+            UUID customerId,
+
+            /**
+             * Every repayment made on the loan before it was entered, each on the
+             * day it was paid. They count towards what is repaid, as
+             * {@code amountRepaid} does, and a loan they clear closes on the day
+             * of the last one.
+             */
+            @Size(max = 400, message = "Up to 400 repayments on one loan.")
+            List<OfflineLoanDtos.@Valid OfflineRepaymentRequest> repayments) {
+    }
+
+    /** Who a BVN already belongs to, so another loan goes on their account instead of a new one. */
+    public record BvnMatch(
+            boolean found,
+            UUID customerId,
+            String fullName,
+            String customerRef,
+            String accountStatusLabel,
+            boolean hasRunningLoan) {
+
+        public static BvnMatch none() {
+            return new BvnMatch(false, null, null, null, null, false);
+        }
     }
 
     /** A guarantor as the admin types it. Only the name is required. */

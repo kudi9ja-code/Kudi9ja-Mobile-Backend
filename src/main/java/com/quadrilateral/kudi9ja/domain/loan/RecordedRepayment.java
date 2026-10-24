@@ -63,4 +63,8 @@ public class RecordedRepayment {
 
     @Column(name = "recorded_at", nullable = false, updatable = false)
     private Instant recordedAt;
+
+    /** Typed in with the loan when it was entered, rather than recorded later. */
+    @Column(name = "entered_with_loan", nullable = false, updatable = false)
+    private boolean enteredWithLoan;
 }

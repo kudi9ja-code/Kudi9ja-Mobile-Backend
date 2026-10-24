@@ -19,6 +19,7 @@ import com.quadrilateral.kudi9ja.domain.user.User;
 import com.quadrilateral.kudi9ja.domain.user.UserRepository;
 import com.quadrilateral.kudi9ja.domain.wallet.LedgerService;
 import com.quadrilateral.kudi9ja.web.dto.LoanImportDtos;
+import com.quadrilateral.kudi9ja.web.dto.OfflineLoanDtos;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -63,6 +64,7 @@ public class LoanImportService {
     private final LoanGroupService groups;
     private final LedgerService ledger;
     private final EnteredLoanRemoval removal;
+    private final RecordedRepaymentRepository recorded;
 
     public LoanImportService(
             ImportedLoanRepository imports,
@@ -75,6 +77,7 @@ public class LoanImportService {
             LoanGroupService groups,
             LedgerService ledger,
             EnteredLoanRemoval removal,
+            RecordedRepaymentRepository recorded,
             com.quadrilateral.kudi9ja.domain.settings.SettingsService settings) {
         this.imports = imports;
         this.loans = loans;
@@ -86,6 +89,7 @@ public class LoanImportService {
         this.groups = groups;
         this.ledger = ledger;
         this.removal = removal;
+        this.recorded = recorded;
         this.settings = settings;
     }
 
@@ -113,19 +117,56 @@ public class LoanImportService {
         BigDecimal principal = Money.of(request.principal());
         BigDecimal fee = request.processingFee() == null ? Money.zero() : Money.of(request.processingFee());
         BigDecimal transactionFee = request.transactionFee() == null ? Money.zero() : Money.of(request.transactionFee());
+        List<OfflineLoanDtos.OfflineRepaymentRequest> payments =
+                request.repayments() == null ? List.of() : request.repayments();
         BigDecimal repaid = request.amountRepaid() == null ? Money.zero() : Money.of(request.amountRepaid());
+        Instant lastPaid = null;
+        for (OfflineLoanDtos.OfflineRepaymentRequest p : payments) {
+            if (p.paidAt() == null) {
+                throw ApiException.validation("Enter the date of each repayment.");
+            }
+            if (Dates.lagosDate(p.paidAt()).isAfter(Dates.lagosDate(now))) {
+                throw ApiException.validation("A repayment is dated " + DAY.format(p.paidAt())
+                        + ", which has not come yet.");
+            }
+            if (Dates.lagosDate(p.paidAt()).isBefore(Dates.lagosDate(request.disbursedAt()))) {
+                throw ApiException.validation("A repayment is dated " + DAY.format(p.paidAt())
+                        + ", before the loan was paid out on " + DAY.format(request.disbursedAt()) + ".");
+            }
+            repaid = Money.add(repaid, Money.of(p.amount()));
+            lastPaid = lastPaid == null || p.paidAt().isAfter(lastPaid) ? p.paidAt() : lastPaid;
+        }
 
-        if (request.disbursedAt().isAfter(now)) {
+        if (Dates.lagosDate(request.disbursedAt()).isAfter(Dates.lagosDate(now))) {
             throw ApiException.validation("The disbursement date is in the future.");
         }
         if (Money.gte(Money.add(fee, transactionFee), principal)) {
             throw ApiException.validation("The management and transaction fees together cannot be as much as the loan itself.");
         }
 
+        // Another loan for somebody already on the system: who they are comes
+        // from their account, not from what is typed.
+        User existing = null;
+        if (request.customerId() != null) {
+            existing = users.findById(request.customerId())
+                    .orElseThrow(() -> ApiException.notFound("That customer"));
+            if (existing.getBvn() == null || existing.getBvn().isBlank()) {
+                throw ApiException.validation("This customer has no BVN on their account, so a loan cannot be entered for them.");
+            }
+        } else {
+            if (request.bvn() == null || request.bvn().isBlank()) {
+                throw ApiException.validation("The customer's BVN is needed. It is how the loan finds them when they sign up.");
+            }
+            if (request.fullName() == null || request.fullName().isBlank()) {
+                throw ApiException.validation("Enter the customer's name as it appears on their BVN.");
+            }
+            existing = users.findByBvn(request.bvn().trim()).orElse(null);
+        }
+
         ImportedLoan row = new ImportedLoan();
         row.setId(UUID.randomUUID());
-        row.setBvn(request.bvn().trim());
-        row.setFullName(request.fullName().trim());
+        row.setBvn(existing != null ? existing.getBvn() : request.bvn().trim());
+        row.setFullName(existing != null ? existing.getFullName() : request.fullName().trim());
         row.setEmail(request.email() == null || request.email().isBlank()
                 ? null : request.email().trim().toLowerCase(Locale.ROOT));
         row.setPhone(request.phone() == null || request.phone().isBlank() ? null : request.phone().trim());
@@ -151,6 +192,16 @@ public class LoanImportService {
             throw ApiException.validation("The amount repaid, " + Money.naira(repaid)
                     + ", is more than the " + Money.naira(row.totalRepayable())
                     + " that was ever owed on this loan.");
+        }
+        // One running loan at a time: every other loan the customer has had
+        // must be closed before another one still being repaid goes on.
+        if (Money.isPositive(row.outstanding()) && existing != null
+                && !loans.findByUserIdAndStatusIn(existing.getId(), List.of(LoanStatus.ACTIVE, LoanStatus.OVERDUE)).isEmpty()) {
+            throw new ApiException(
+                    ErrorCode.CONFLICT,
+                    existing.getFullName() + " already has a running loan. A customer has one running loan at a time, "
+                            + "so this one can only be entered as closed: add its repayments up to the full "
+                            + Money.naira(row.totalRepayable()) + ".");
         }
 
         ImportedLoan saved = imports.save(row);
@@ -185,10 +236,57 @@ public class LoanImportService {
         // already have one, otherwise one opened for them now, which they
         // activate by signing up with this BVN. Either way they are a customer
         // like any other from this moment — schedule, reminders, the loan book.
-        User owner = users.findByBvn(saved.getBvn()).orElseGet(() -> openForCustomer(saved, actor, now));
+        User owner = existing != null ? existing : openForCustomer(saved, actor, now);
         claim(List.of(saved), owner, now);
 
+        for (OfflineLoanDtos.OfflineRepaymentRequest p : payments) {
+            RecordedRepayment r = new RecordedRepayment();
+            r.setId(UUID.randomUUID());
+            r.setImportedLoanId(saved.getId());
+            r.setLoanId(saved.getLoanId());
+            r.setAmount(Money.of(p.amount()));
+            r.setPaidAt(p.paidAt());
+            r.setMethod(p.method());
+            r.setReference(p.reference() == null || p.reference().isBlank() ? null : p.reference().trim());
+            r.setNote(p.note() == null || p.note().isBlank() ? null : p.note().trim());
+            r.setRecordedBy(actor.getName());
+            r.setRecordedAt(now);
+            r.setEnteredWithLoan(true);
+            recorded.save(r);
+        }
+        // A loan its repayments cleared closed on the day of the last one.
+        if (lastPaid != null) {
+            Instant closedOn = lastPaid;
+            loans.findById(saved.getLoanId())
+                    .filter(l -> l.getStatus() == LoanStatus.REPAID)
+                    .ifPresent(l -> {
+                        l.setSettledAt(closedOn);
+                        loans.save(l);
+                    });
+        }
+
         return saved;
+    }
+
+    /**
+     * Whether a BVN already belongs to a customer, so the panel can put
+     * another loan on their account rather than open a second one.
+     */
+    @Transactional(readOnly = true)
+    public LoanImportDtos.BvnMatch lookup(String bvn) {
+        access.requireCanView();
+        if (bvn == null || !bvn.trim().matches("\\d{11}")) {
+            return LoanImportDtos.BvnMatch.none();
+        }
+        return users.findByBvn(bvn.trim())
+                .map(u -> new LoanImportDtos.BvnMatch(
+                        true,
+                        u.getId(),
+                        u.getFullName(),
+                        u.getCustomerRef(),
+                        u.getAccountStatus().label(),
+                        !loans.findByUserIdAndStatusIn(u.getId(), List.of(LoanStatus.ACTIVE, LoanStatus.OVERDUE)).isEmpty()))
+                .orElse(LoanImportDtos.BvnMatch.none());
     }
 
     /** An entry as the panel shows it, with the live loan's figures once it is on an account. */

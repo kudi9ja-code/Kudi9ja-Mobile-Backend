@@ -68,6 +68,19 @@ public class AdminLoanImportController {
                 .toList();
     }
 
+    @GetMapping("/lookup")
+    @Operation(summary = "Whether a BVN already belongs to a customer, so another loan goes on their account")
+    public LoanImportDtos.BvnMatch lookup(@RequestParam String bvn) {
+        return imports.lookup(bvn);
+    }
+
+    @DeleteMapping("/repayments/{repaymentId}")
+    @Operation(summary = "Remove a repayment recorded by mistake. A loan it had closed is running again.")
+    public Map<String, Boolean> removeRepayment(@PathVariable UUID repaymentId) {
+        offline.removeRepayment(repaymentId);
+        return Map.of("removed", true);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "One entry with its whole file: details, guarantors, documents and repayments")
     public OfflineLoanDtos.OfflineLoanFile file(@PathVariable UUID id) {

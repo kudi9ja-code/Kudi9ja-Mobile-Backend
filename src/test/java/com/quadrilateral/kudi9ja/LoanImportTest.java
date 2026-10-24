@@ -16,6 +16,7 @@ import com.quadrilateral.kudi9ja.support.SignUpFlow;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -403,6 +404,105 @@ class LoanImportTest {
 
         // A customer cannot reach the admin's endpoint.
         postExpecting(customer, good, 403);
+    }
+
+    @Test
+    @DisplayName("a customer's whole history: closed loans with every repayment on its day, then the one running now")
+    void loanHistoryWithDatedRepayments() throws Exception {
+        SignUpFlow.Session admin = owner();
+        String bvn = SignUpFlow.nextIdentityNumber(33);
+        Instant day = Instant.now().truncatedTo(ChronoUnit.DAYS).plus(12, ChronoUnit.HOURS);
+
+        // ₦100,000 at 10% over two months: ₦110,000, paid in two halves.
+        Instant firstOut = day.minus(300, ChronoUnit.DAYS);
+        Instant lastPaid = firstOut.plus(61, ChronoUnit.DAYS);
+        JsonNode first = importLoan(admin, Map.of(
+                "bvn", bvn,
+                "fullName", "Bolanle Ade Okafor",
+                "principal", 100000,
+                "tenureMonths", 2,
+                "flatRate", 0.10,
+                "purpose", "Shop restocking",
+                "disbursedAt", firstOut.toString(),
+                "repayments", List.of(
+                        payment(55000, firstOut.plus(30, ChronoUnit.DAYS), "CASH"),
+                        payment(55000, lastPaid, "BANK_TRANSFER"))));
+        assertThat(first.get("outstanding").decimalValue()).isEqualByComparingTo("0");
+        String customerId = first.get("customerId").asText();
+
+        // Closed on the day of its last repayment, not the day it was typed in.
+        JsonNode loans = getJson("/api/v1/admin/customers/" + customerId + "/loans", admin);
+        assertThat(loans).hasSize(1);
+        assertThat(loans.get(0).get("status").asText()).isEqualTo("REPAID");
+        assertThat(Instant.parse(loans.get(0).get("settledAt").asText())).isEqualTo(lastPaid);
+
+        // The BVN now finds them, so the next loan goes on the same account.
+        JsonNode match = getJson("/api/v1/admin/loans/imports/lookup?bvn=" + bvn, admin);
+        assertThat(match.get("found").asBoolean()).isTrue();
+        assertThat(match.get("customerId").asText()).isEqualTo(customerId);
+        assertThat(match.get("hasRunningLoan").asBoolean()).isFalse();
+
+        // The one running now: ₦60,000 at 10% over three months, one payment so far.
+        Instant secondOut = day.minus(40, ChronoUnit.DAYS);
+        JsonNode running = importLoan(admin, Map.of(
+                "customerId", customerId,
+                "principal", 60000,
+                "tenureMonths", 3,
+                "flatRate", 0.10,
+                "purpose", "Shop restocking",
+                "disbursedAt", secondOut.toString(),
+                "repayments", List.of(payment(22000, secondOut.plus(30, ChronoUnit.DAYS), "CASH"))));
+        assertThat(running.get("customerId").asText()).isEqualTo(customerId);
+        assertThat(running.get("outstanding").decimalValue()).isEqualByComparingTo("44000");
+        assertThat(getJson("/api/v1/admin/loans/imports/lookup?bvn=" + bvn, admin).get("hasRunningLoan").asBoolean()).isTrue();
+
+        // One running loan at a time: another can only go on as closed, and
+        // no repayment before its payout or after today.
+        Instant thirdOut = day.minus(200, ChronoUnit.DAYS);
+        Map<String, Object> third = Map.of(
+                "customerId", customerId,
+                "principal", 50000,
+                "tenureMonths", 1,
+                "flatRate", 0.10,
+                "purpose", "Shop restocking",
+                "disbursedAt", thirdOut.toString());
+        postExpecting(admin, third, 409);
+        postExpecting(admin, with(third, "repayments", List.of(payment(55000, thirdOut.minus(2, ChronoUnit.DAYS), "CASH"))), 400);
+        postExpecting(admin, with(third, "repayments", List.of(payment(55000, day.plus(3, ChronoUnit.DAYS), "CASH"))), 400);
+        importLoan(admin, with(third, "repayments", List.of(payment(55000, thirdOut.plus(20, ChronoUnit.DAYS), "POS"))));
+        assertThat(getJson("/api/v1/admin/customers/" + customerId + "/loans", admin)).hasSize(3);
+
+        // Every repayment is in the history, under the customer, on its own day.
+        String ref = getJson("/api/v1/admin/customers/" + customerId, admin).get("customerRef").asText();
+        JsonNode history = getJson("/api/v1/admin/repayments?query=" + ref, admin);
+        assertThat(history.get("page").get("items")).hasSize(4);
+        assertThat(history.get("summary").get("total").decimalValue()).isEqualByComparingTo("187000");
+
+        // A repayment typed wrong comes off again — but not one that would
+        // reopen a closed loan while another is running.
+        JsonNode records = getJson("/api/v1/admin/customers/" + customerId + "/loan-records", admin);
+        String onFirst = null;
+        String onRunning = null;
+        for (JsonNode r : records.get("repayments")) {
+            if (r.get("amount").decimalValue().compareTo(new BigDecimal("22000")) == 0) {
+                onRunning = r.get("id").asText();
+            } else if (Instant.parse(r.get("paidAt").asText()).equals(lastPaid)) {
+                onFirst = r.get("id").asText();
+            }
+        }
+        assertThat(mvc.perform(delete("/api/v1/admin/loans/imports/repayments/" + onFirst)
+                        .header("Authorization", admin.bearer()))
+                .andReturn().getResponse().getStatus()).isEqualTo(409);
+        mvc.perform(delete("/api/v1/admin/loans/imports/repayments/" + onRunning)
+                        .header("Authorization", admin.bearer()))
+                .andExpect(status().isOk());
+        JsonNode after = getJson("/api/v1/admin/loans/imports/" + running.get("id").asText(), admin);
+        assertThat(after.get("loan").get("outstanding").decimalValue()).isEqualByComparingTo("66000");
+        assertThat(after.get("repayments")).isEmpty();
+    }
+
+    private static Map<String, Object> payment(int amount, Instant paidAt, String method) {
+        return Map.of("amount", amount, "paidAt", paidAt.toString(), "method", method);
     }
 
     // -- Plumbing -----------------------------------------------------------
