@@ -290,17 +290,15 @@ public final class AdminDtos {
             BigDecimal totalLent,
 
             /**
-             * Interest charged on the loans that are still running.
-             *
-             * <p>What the live book earns if it all comes back — contracted,
-             * not collected. It sits beside {@link #totalInterestPaid} so the
+             * Interest charged on every loan paid out, running or closed —
+             * contracted, not collected. It sits beside {@link #totalInterestPaid} so the
              * panel shows both sides of the rate card rather than only what
              * savings cost.
              */
             BigDecimal totalInterestCharged,
 
             /**
-             * Management and transaction fees on the loans still running, kept apart
+             * Management and transaction fees on every loan paid out, kept apart
              * from {@link #totalInterestCharged}: a fee is a one-off charge
              * taken off the disbursement, not interest.
              */

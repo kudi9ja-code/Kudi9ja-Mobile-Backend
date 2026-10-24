@@ -412,6 +412,7 @@ class LoanImportTest {
         SignUpFlow.Session admin = owner();
         String bvn = SignUpFlow.nextIdentityNumber(33);
         Instant day = Instant.now().truncatedTo(ChronoUnit.DAYS).plus(12, ChronoUnit.HOURS);
+        JsonNode bookBefore = getJson("/api/v1/admin/overview", admin).get("book");
 
         // ₦100,000 at 10% over two months: ₦110,000, paid in two halves.
         Instant firstOut = day.minus(300, ChronoUnit.DAYS);
@@ -435,6 +436,13 @@ class LoanImportTest {
         assertThat(loans).hasSize(1);
         assertThat(loans.get(0).get("status").asText()).isEqualTo("REPAID");
         assertThat(Instant.parse(loans.get(0).get("settledAt").asText())).isEqualTo(lastPaid);
+
+        // A closed loan still counts in what was lent and the interest charged.
+        JsonNode book = getJson("/api/v1/admin/overview", admin).get("book");
+        assertThat(book.get("totalLent").decimalValue())
+                .isEqualByComparingTo(bookBefore.get("totalLent").decimalValue().add(new BigDecimal("100000")));
+        assertThat(book.get("totalInterestCharged").decimalValue())
+                .isEqualByComparingTo(bookBefore.get("totalInterestCharged").decimalValue().add(new BigDecimal("10000")));
 
         // The BVN now finds them, so the next loan goes on the same account.
         JsonNode match = getJson("/api/v1/admin/loans/imports/lookup?bvn=" + bvn, admin);

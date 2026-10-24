@@ -140,8 +140,8 @@ public class AdminOverviewService {
     /**
      * Loans entered by hand whose borrower has not signed up yet. They are
      * real loans the company is owed, so the book counts them the same way it
-     * counts loans on accounts: open ones for lent, interest, fees and
-     * overdue; cleared ones as repaid. Once the borrower signs up the row
+     * counts loans on accounts: every one for lent, interest and fees; open
+     * ones for overdue; cleared ones as repaid. Once the borrower signs up the row
      * becomes a loan on their account and is counted there instead, never twice.
      */
     private PaperBook paperBook(Instant now) {
@@ -153,13 +153,13 @@ public class AdminOverviewService {
         long overdueCount = 0;
         long repaid = 0;
         for (ImportedLoan row : imports.findByClaimedAtIsNullOrderByImportedAtDesc()) {
+            lent = Money.add(lent, row.getPrincipal());
+            interest = Money.add(interest, Money.of(Money.calc(row.getPrincipal()).multiply(row.getFlatRate())));
+            fees = Money.add(fees, Money.add(row.getProcessingFee(), row.transactionFee()));
             if (Money.isZeroOrLess(row.outstanding())) {
                 repaid++;
                 continue;
             }
-            lent = Money.add(lent, row.getPrincipal());
-            interest = Money.add(interest, Money.of(Money.calc(row.getPrincipal()).multiply(row.getFlatRate())));
-            fees = Money.add(fees, Money.add(row.getProcessingFee(), row.transactionFee()));
             if (row.dueDate() != null && now.isAfter(row.dueDate())) {
                 overdueCount++;
                 overdue = Money.add(overdue, Money.floorAtZero(Money.subtract(row.getPrincipal(), row.getAmountRepaid())));
