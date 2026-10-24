@@ -51,13 +51,6 @@ public interface LoanRepository extends JpaRepository<Loan, UUID> {
     long countByStatus(LoanStatus status);
 
     @Query("""
-            select coalesce(sum(l.principal - l.amountRepaid - l.rebateGranted), 0)
-              from Loan l
-             where l.status = com.quadrilateral.kudi9ja.domain.loan.LoanStatus.OVERDUE
-            """)
-    BigDecimal totalOverdueAcrossBook();
-
-    @Query("""
             select coalesce(sum(l.principal), 0)
               from Loan l
              where l.status in (

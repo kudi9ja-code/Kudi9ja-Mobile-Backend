@@ -127,7 +127,9 @@ public class AdminOverviewService {
                 Money.add(Money.of(loans.totalLentAcrossBook()), paper.lent()),
                 Money.add(Money.of(loans.totalInterestChargedAcrossBook()), paper.interest()),
                 Money.add(Money.of(loans.totalFeesChargedAcrossBook()), paper.fees()),
-                Money.add(Money.of(loans.totalOverdueAcrossBook()), paper.overdue()),
+                // Still owed on overdue loans — loan, interest and fees, less repayments.
+                Money.add(loans.findByStatusOrderByRequestedAtDesc(LoanStatus.OVERDUE).stream()
+                        .map(Loan::outstanding).reduce(Money.zero(), Money::add), paper.overdue()),
                 Money.add(loans.findAllOpen().stream().map(Loan::outstanding).reduce(Money.zero(), Money::add), paper.outstanding()),
                 plans.countByStatus(SavingsStatus.ACTIVE),
                 plans.countByStatus(SavingsStatus.MATURED),
@@ -166,7 +168,7 @@ public class AdminOverviewService {
             outstanding = Money.add(outstanding, row.outstanding());
             if (row.dueDate() != null && now.isAfter(row.dueDate())) {
                 overdueCount++;
-                overdue = Money.add(overdue, Money.floorAtZero(Money.subtract(row.getPrincipal(), row.getAmountRepaid())));
+                overdue = Money.add(overdue, row.outstanding());
             } else {
                 active++;
             }

@@ -407,6 +407,29 @@ class LoanImportTest {
     }
 
     @Test
+    @DisplayName("overdue is what is still owed: loan, interest and fees, less repayments")
+    void overdueIsWhatIsStillOwed() throws Exception {
+        SignUpFlow.Session admin = owner();
+        BigDecimal before = getJson("/api/v1/admin/overview", admin).get("book").get("totalOverdue").decimalValue();
+        Instant out = Instant.now().truncatedTo(ChronoUnit.DAYS).plus(12, ChronoUnit.HOURS).minus(150, ChronoUnit.DAYS);
+
+        // ₦100,000 at 10% over two months is ₦110,000; ₦60,000 came back, so
+        // ₦50,000 is overdue — not the ₦40,000 left of the loan alone.
+        importLoan(admin, Map.of(
+                "bvn", SignUpFlow.nextIdentityNumber(32),
+                "fullName", "Kunle Bayo Adeyemi",
+                "principal", 100000,
+                "tenureMonths", 2,
+                "flatRate", 0.10,
+                "purpose", "Shop restocking",
+                "disbursedAt", out.toString(),
+                "repayments", List.of(payment(60000, out.plus(30, ChronoUnit.DAYS), "CASH"))));
+
+        assertThat(getJson("/api/v1/admin/overview", admin).get("book").get("totalOverdue").decimalValue())
+                .isEqualByComparingTo(before.add(new BigDecimal("50000")));
+    }
+
+    @Test
     @DisplayName("a customer's whole history: closed loans with every repayment on its day, then the one running now")
     void loanHistoryWithDatedRepayments() throws Exception {
         SignUpFlow.Session admin = owner();
