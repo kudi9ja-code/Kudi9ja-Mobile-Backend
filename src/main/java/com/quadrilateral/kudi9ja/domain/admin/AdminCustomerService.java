@@ -112,6 +112,31 @@ public class AdminCustomerService {
                 financials(user));
     }
 
+    /**
+     * The full BVN and NIN, for an admin who has tapped "Show" on the record.
+     *
+     * <p>The record itself carries only the last four digits; the full numbers
+     * come from here, one customer at a time, and every reveal is written to the
+     * audit log as its own line, so who has seen whose numbers can always be
+     * answered.
+     */
+    @Transactional
+    public AdminDtos.CustomerIdentityNumbers identityNumbers(UUID customerId) {
+        AdminUser actor = access.requireCanView();
+        User user = require(customerId);
+
+        audit.record(
+                actorOf(actor),
+                AuditCategory.DATA_ACCESS,
+                "BVN and NIN viewed",
+                actor.getName() + " viewed the full BVN and NIN of " + user.getFullName()
+                        + " (" + user.getCustomerRef() + ").",
+                user.getId(),
+                user.getCustomerRef());
+
+        return new AdminDtos.CustomerIdentityNumbers(blankToNull(user.getBvn()), blankToNull(user.getNin()));
+    }
+
     @Transactional(readOnly = true)
     public Page<WalletTransaction> transactions(UUID customerId, TxFilter filter, Pageable pageable) {
         access.requireCanView();

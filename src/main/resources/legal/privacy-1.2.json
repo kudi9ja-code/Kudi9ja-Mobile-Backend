@@ -5,7 +5,7 @@
   "summary": "What personal data Kudi9ja collects, why we are allowed to hold it, who we share it with, how long we keep it, and the rights you have over it.",
   "version": "1.2",
   "effective": "2026-11-22T00:00:00.000",
-  "changeSummary": "Names the partner who now handles your payments for us: Paystack, which processes your payments in and out. Says what payment data Paystack shares with us — and that your card number never reaches us — and adds the signature you give when you accept our agreements. Covers the Help & complaints chat — the messages, photos and documents you send in it, and how long they are kept — and explains loan officers and loan groups: who on our team can see a borrower's details, and why.",
+  "changeSummary": "Names the partner who now handles your payments for us: Paystack, which processes your payments in and out. Says what payment data Paystack shares with us — and that your card number never reaches us — and adds the signature you give when you accept our agreements. Covers the Help & complaints chat — the messages, photos and documents you send in it, and how long they are kept — and explains loan officers and loan groups: who on our team can see a borrower's details, and why. Also says that the team sees your BVN and NIN in full only when they ask to, and that each time is logged.",
   "readMinutes": 16,
   "sections": [
     {
@@ -249,7 +249,7 @@
           "entries": [
             {
               "term": "Your loan officer",
-              "meaning": "Every borrower has at least one loan officer, and may have more, with one of them leading. To follow your loan they can see your profile, contact details, BVN and NIN (masked), your loan application and the documents, photos and guarantors attached to it, your loan schedule and repayments, and your Help & complaints conversations. You can see who your loan officers are, and how to reach them, in the app."
+              "meaning": "Every borrower has at least one loan officer, and may have more, with one of them leading. To follow your loan they can see your profile, contact details, BVN and NIN (masked, and shown in full only when they tap to see them, which is logged), your loan application and the documents, photos and guarantors attached to it, your loan schedule and repayments, and your Help & complaints conversations. You can see who your loan officers are, and how to reach them, in the app."
             },
             {
               "term": "Your loan group's officer",
@@ -411,7 +411,7 @@
             "Passwords, passcodes and PINs are stored as salted one-way hashes and are never held or transmitted in readable form.",
             "Data in transit is encrypted.",
             "Access inside Kudi9ja is restricted by role, so staff see only what their job requires, and administrative actions are written to an audit log.",
-            "Sensitive numbers such as your BVN and NIN are masked in the app and in our internal tools.",
+            "Sensitive numbers such as your BVN and NIN are masked in the app and in our internal tools. A team member can see them in full only by asking to, on one record at a time, to check them against your documents, and every time they do it is written to the audit log.",
             "Sign-in is protected by a passcode, transactions by a separate PIN, and the app locks itself after a short period of inactivity.",
             "Staff are trained on data protection, and are bound by confidentiality obligations that outlast their employment."
           ]

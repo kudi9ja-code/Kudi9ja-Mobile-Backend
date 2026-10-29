@@ -127,6 +127,12 @@ public class AdminCustomerController {
         return customers.detail(customerId);
     }
 
+    @GetMapping("/{customerId}/identity-numbers")
+    @Operation(summary = "A customer's full BVN and NIN. Each reveal is logged as a data access.")
+    public AdminDtos.CustomerIdentityNumbers identityNumbers(@PathVariable UUID customerId) {
+        return customers.identityNumbers(customerId);
+    }
+
     @GetMapping("/{customerId}/transactions")
     @Operation(summary = "A customer's ledger")
     public PageResponse<WalletDtos.TransactionResponse> transactions(

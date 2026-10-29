@@ -1,15 +1,16 @@
 package com.quadrilateral.kudi9ja.common.util;
 
 /**
- * What may leave the server. A full BVN or NIN never does; an account number
- * shows its last four so a customer can recognise their own.
+ * What may leave the server. A BVN or NIN goes out as its last four; the only
+ * full copy is the admin panel's logged reveal of one customer's numbers. An
+ * account number shows its last four so a customer can recognise their own.
  */
 public final class Masks {
 
     private Masks() {
     }
 
-    /** Last four digits only: the most any endpoint returns of a BVN or NIN. */
+    /** Last four digits only: how every list and record returns a BVN or NIN. */
     public static String lastFour(String value) {
         if (value == null || value.isBlank()) {
             return "";

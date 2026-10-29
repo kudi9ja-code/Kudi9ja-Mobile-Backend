@@ -25,9 +25,9 @@ import java.util.UUID;
  *
  * <p>The panel sees more of a customer than the customer's own app shows them,
  * because an admin matching a bank narration needs the full name and the
- * customer reference. It still never sees a hash, a security answer, or a full
- * BVN or NIN — an admin has no use for those, and the Privacy Policy promises
- * identity data is held to the minimum the job needs.
+ * customer reference. It still never sees a hash or a security answer. The BVN
+ * and NIN come masked to their last four; the full numbers are shown only when
+ * an admin taps to reveal them on one record, and each reveal is audited.
  */
 public final class AdminDtos {
 
@@ -200,6 +200,10 @@ public final class AdminDtos {
                     grant == null ? null : grant.getRole(),
                     financials);
         }
+    }
+
+    /** A customer's full BVN and NIN, revealed on request and logged each time. */
+    public record CustomerIdentityNumbers(String bvn, String nin) {
     }
 
     /** The money side of a customer record. Every figure is derived server-side. */
