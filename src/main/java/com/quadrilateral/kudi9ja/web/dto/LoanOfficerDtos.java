@@ -39,8 +39,8 @@ public final class LoanOfficerDtos {
             String assignedBy) {
     }
 
-    /** An officer as the customer sees them: who to talk to. */
-    public record MyOfficer(String name, String email, String phone, boolean lead) {
+    /** An officer as the customer sees them: the name only, no contact details. */
+    public record MyOfficer(String name, boolean lead) {
     }
 
     /** One borrower in an officer's book. */

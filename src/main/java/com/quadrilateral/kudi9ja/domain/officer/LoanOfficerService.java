@@ -153,17 +153,11 @@ public class LoanOfficerService {
         return out;
     }
 
-    /** The customer's own view: who to talk to about their loan. */
+    /** The customer's own view: who looks after their loan. Names only, never the officer's email or phone. */
     @Transactional(readOnly = true)
     public List<LoanOfficerDtos.MyOfficer> mine(UUID userId) {
-        List<LoanOfficerAssignment> rows = assignments.findByUserIdOrderByLeadDescAssignedAtAsc(userId);
-        Map<UUID, AdminUser> team = team(rows);
-        return rows.stream()
-                .map(a -> {
-                    AdminUser admin = team.get(a.getOfficerId());
-                    return new LoanOfficerDtos.MyOfficer(a.getOfficerName(), a.getOfficerEmail(),
-                            admin == null ? null : admin.getPhone(), a.isLead());
-                })
+        return assignments.findByUserIdOrderByLeadDescAssignedAtAsc(userId).stream()
+                .map(a -> new LoanOfficerDtos.MyOfficer(a.getOfficerName(), a.isLead()))
                 .toList();
     }
 

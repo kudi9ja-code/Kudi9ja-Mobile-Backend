@@ -103,7 +103,9 @@ class LoanOfficerTest {
 
         JsonNode mine = send(borrower, get("/api/v1/me/officers"), null, 200);
         assertThat(mine).hasSize(2);
-        assertThat(mine.get(0).has("email")).isTrue();
+        assertThat(mine.get(0).has("name")).isTrue();
+        assertThat(mine.get(0).has("email")).isFalse();
+        assertThat(mine.get(0).has("phone")).isFalse();
 
         // Now one may go, and the other stays.
         send(owner, delete("/api/v1/admin/officers/assignments/" + onAccount.get(1).get("id").asText()), null, 204);
