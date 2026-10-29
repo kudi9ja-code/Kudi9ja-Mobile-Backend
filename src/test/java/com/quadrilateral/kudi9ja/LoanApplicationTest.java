@@ -490,6 +490,108 @@ class LoanApplicationTest {
     }
 
     @Nested
+    @DisplayName("Changing the terms")
+    class ChangingTerms {
+
+        private JsonNode offer(SignUpFlow.Session admin, String id, String body) throws Exception {
+            return read(mvc.perform(post("/api/v1/admin/loan-applications/{id}/offer", id)
+                            .header("Authorization", admin.bearer())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isOk())
+                    .andReturn());
+        }
+
+        @Test
+        @DisplayName("changed terms wait for the customer, and once agreed the loan is lent on them")
+        void agreedTermsAreLentOn() throws Exception {
+            SignUpFlow.Session admin = owner();
+            SignUpFlow.Session customer = fundedCustomer(admin);
+
+            BigDecimal before = balanceOf(customer);
+            String id = borrowing.apply(customer, "200000", 3, "Stock").get("id").asText();
+            JsonNode offered = offer(admin, id, """
+                    {"months": 4, "interestRatePct": 30, "managementFee": 8000, "transactionFeePct": 3,
+                     "note": "Four months suits your sales better."}
+                    """);
+            assertThat(offered.get("status").asText()).isEqualTo("OFFERED");
+
+            // Nothing is lent while the customer has not answered.
+            mvc.perform(post("/api/v1/admin/loan-applications/{id}/approve", id)
+                            .header("Authorization", admin.bearer())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isBadRequest());
+
+            JsonNode mine = getJson("/api/v1/loans/applications", customer).get(0);
+            assertThat(mine.get("status").asText()).isEqualTo("OFFERED");
+            assertThat(mine.get("offer").get("months").asInt()).isEqualTo(4);
+            assertThat(mine.get("offer").get("flatRate").decimalValue()).isEqualByComparingTo("0.30");
+            // Which admin sent it stays on the admin side.
+            assertThat(mine.get("offer").hasNonNull("offeredBy")).isFalse();
+
+            JsonNode agreed = read(mvc.perform(post("/api/v1/loans/applications/{id}/agree", id)
+                            .header("Authorization", customer.bearer())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"pin\": \"" + SignUpFlow.PIN + "\"}"))
+                    .andExpect(status().isOk())
+                    .andReturn());
+            assertThat(agreed.get("status").asText()).isEqualTo("PENDING");
+
+            borrowing.approve(admin, id);
+
+            // 200,000 in; the changed 8,000 management fee out.
+            assertThat(balanceOf(customer)).isEqualByComparingTo(before.add(new BigDecimal("192000")));
+            JsonNode loan = getJson("/api/v1/loans", customer).get(0);
+            assertThat(loan.get("tenureMonths").asInt()).isEqualTo(4);
+            // ₦260,000 in four instalments of ₦65,000, each plus 3% (₦1,950).
+            assertThat(loan.get("loanAndInterest").decimalValue()).isEqualByComparingTo("260000.00");
+            assertThat(loan.get("outstanding").decimalValue()).isEqualByComparingTo("267800.00");
+        }
+
+        @Test
+        @DisplayName("turning the changed terms down ends the application and lends nothing")
+        void turningDownEndsIt() throws Exception {
+            SignUpFlow.Session admin = owner();
+            SignUpFlow.Session customer = fundedCustomer(admin);
+
+            BigDecimal before = balanceOf(customer);
+            String id = borrowing.apply(customer, "200000", 3, "Stock").get("id").asText();
+            offer(admin, id, "{\"interestRatePct\": 40}");
+
+            JsonNode turned = read(mvc.perform(post("/api/v1/loans/applications/{id}/turn-down", id)
+                            .header("Authorization", customer.bearer()))
+                    .andExpect(status().isOk())
+                    .andReturn());
+            assertThat(turned.get("status").asText()).isEqualTo("TERMS_DECLINED");
+            assertThat(balanceOf(customer)).isEqualByComparingTo(before);
+            assertThat(getJson("/api/v1/loans", customer)).isEmpty();
+
+            // It is closed: neither side can move it on, and a new application is welcome.
+            mvc.perform(post("/api/v1/admin/loan-applications/{id}/approve", id)
+                            .header("Authorization", admin.bearer())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isBadRequest());
+            assertThat(borrowing.apply(customer, "200000", 3, "Stock").get("status").asText()).isEqualTo("PENDING");
+        }
+
+        @Test
+        @DisplayName("an offer that changes nothing is refused")
+        void offerMustChangeSomething() throws Exception {
+            SignUpFlow.Session admin = owner();
+            SignUpFlow.Session customer = fundedCustomer(admin);
+
+            String id = borrowing.apply(customer, "200000", 3, "Stock").get("id").asText();
+            mvc.perform(post("/api/v1/admin/loan-applications/{id}/offer", id)
+                            .header("Authorization", admin.bearer())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"months\": 3}"))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
     @DisplayName("The admin's view")
     class AdminView {
 

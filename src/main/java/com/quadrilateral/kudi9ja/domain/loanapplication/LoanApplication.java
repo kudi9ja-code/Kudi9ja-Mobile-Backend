@@ -219,12 +219,62 @@ public class LoanApplication {
     @Column(name = "loan_id")
     private UUID loanId;
 
+    // -- Terms the admin changed --------------------------------------------
+    //
+    // Set together when a reviewing admin changes the rate, the management fee,
+    // the transaction fee or the months. The whole set is kept, changed or not,
+    // so the loan is priced from one place. Lent on only once the customer has
+    // agreed (termsAgreedAt); null on an application priced as asked.
+
+    @Column(name = "proposed_months")
+    private Integer proposedMonths;
+
+    /** Flat interest for the whole loan, as a fraction: 0.25 for 25%. */
+    @Column(name = "proposed_flat_rate", precision = 12, scale = 6)
+    private BigDecimal proposedFlatRate;
+
+    /** In naira, taken from the payout. */
+    @Column(name = "proposed_management_fee", precision = 19, scale = 2)
+    private BigDecimal proposedManagementFee;
+
+    /** On each repayment, as a fraction of the instalment: 0.02 for 2%. */
+    @Column(name = "proposed_repayment_fee_rate", precision = 12, scale = 6)
+    private BigDecimal proposedRepaymentFeeRate;
+
+    /** What the admin told the customer about the change. */
+    @Column(name = "proposal_note", length = 1000)
+    private String proposalNote;
+
+    @Column(name = "proposed_at")
+    private Instant proposedAt;
+
+    @Column(name = "proposed_by", length = 200)
+    private String proposedBy;
+
+    /** When the customer agreed to the changed terms. */
+    @Column(name = "terms_agreed_at")
+    private Instant termsAgreedAt;
+
     @Version
     @Column(name = "row_version", nullable = false)
     private long rowVersion;
 
     public boolean isPending() {
         return status == LoanApplicationStatus.PENDING;
+    }
+
+    public boolean hasProposal() {
+        return proposedAt != null;
+    }
+
+    /** Changed terms the customer has agreed to, which the loan is lent on. */
+    public boolean hasAgreedTerms() {
+        return hasProposal() && termsAgreedAt != null;
+    }
+
+    /** The months the loan runs for if approved now. */
+    public int lendingMonths() {
+        return hasAgreedTerms() ? proposedMonths : tenureMonths;
     }
 
     /** Every uploaded document on this application, the statement first. */

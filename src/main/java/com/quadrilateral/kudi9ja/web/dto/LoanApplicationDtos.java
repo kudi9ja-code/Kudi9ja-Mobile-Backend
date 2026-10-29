@@ -197,7 +197,8 @@ public final class LoanApplicationDtos {
             Instant submittedAt,
             Instant reviewedAt,
             String rejectionReason,
-            UUID loanId) {
+            UUID loanId,
+            TermsOffer offer) {
 
         public static LoanApplicationResponse from(LoanApplication application) {
             return new LoanApplicationResponse(
@@ -216,7 +217,49 @@ public final class LoanApplicationDtos {
                     application.getSubmittedAt(),
                     application.getReviewedAt(),
                     application.getRejectionReason(),
-                    application.getLoanId());
+                    application.getLoanId(),
+                    TermsOffer.forCustomer(application));
+        }
+    }
+
+    /**
+     * Terms the reviewing admin changed, as a whole set. Null on an
+     * application priced as asked.
+     *
+     * @param flatRate         flat interest for the whole loan, as a fraction
+     * @param repaymentFeeRate on each repayment, as a fraction of the instalment
+     * @param agreedAt         when the customer agreed; null while they have not
+     */
+    public record TermsOffer(
+            int months,
+            BigDecimal flatRate,
+            BigDecimal managementFee,
+            BigDecimal repaymentFeeRate,
+            String note,
+            Instant offeredAt,
+            String offeredBy,
+            Instant agreedAt) {
+
+        public static TermsOffer of(LoanApplication application) {
+            if (!application.hasProposal()) {
+                return null;
+            }
+            return new TermsOffer(
+                    application.getProposedMonths(),
+                    application.getProposedFlatRate(),
+                    application.getProposedManagementFee(),
+                    application.getProposedRepaymentFeeRate(),
+                    application.getProposalNote(),
+                    application.getProposedAt(),
+                    application.getProposedBy(),
+                    application.getTermsAgreedAt());
+        }
+
+        /** The same, without which admin sent it: the customer is told by the team, not a person's email. */
+        public static TermsOffer forCustomer(LoanApplication application) {
+            TermsOffer offer = of(application);
+            return offer == null ? null : new TermsOffer(offer.months(), offer.flatRate(), offer.managementFee(),
+                    offer.repaymentFeeRate(), offer.note(), offer.offeredAt(), null, offer.agreedAt());
         }
     }
 
@@ -235,7 +278,9 @@ public final class LoanApplicationDtos {
             String statusLabel,
             Instant submittedAt,
             Instant reviewedAt,
-            String reviewedBy) {
+            String reviewedBy,
+            boolean termsChanged,
+            boolean termsAgreed) {
 
         public static AdminApplicationRow from(LoanApplication application) {
             return new AdminApplicationRow(
@@ -252,7 +297,9 @@ public final class LoanApplicationDtos {
                     application.getStatus().label(),
                     application.getSubmittedAt(),
                     application.getReviewedAt(),
-                    application.getReviewedBy());
+                    application.getReviewedBy(),
+                    application.hasProposal(),
+                    application.hasAgreedTerms());
         }
     }
 
@@ -288,7 +335,8 @@ public final class LoanApplicationDtos {
             String rejectionReason,
             UUID loanId,
             /** True when the applicant borrows on the loan-group terms. */
-            boolean groupPricing) {
+            boolean groupPricing,
+            TermsOffer offer) {
 
         public static AdminApplicationDetail from(
                 LoanApplication application, Function<String, String> urlFor, boolean groupPricing) {
@@ -330,7 +378,8 @@ public final class LoanApplicationDtos {
                     application.getReviewedBy(),
                     application.getRejectionReason(),
                     application.getLoanId(),
-                    groupPricing);
+                    groupPricing,
+                    TermsOffer.of(application));
         }
     }
 
@@ -346,6 +395,35 @@ public final class LoanApplicationDtos {
      * <p>The reason is required and is shown to the customer verbatim. Write it
      * for them.
      */
+    /**
+     * Changed terms to send back to the customer. Rates are percentages here,
+     * as an admin types them: 30 for 30%. Any left out keep what it has now.
+     */
+    public record OfferTermsRequest(
+            @Min(value = 1, message = "A loan runs for at least a month.")
+            @Max(value = 60, message = "That tenure is not offered.")
+            Integer months,
+
+            @DecimalMin(value = "0", message = "The interest rate cannot be negative.")
+            @jakarta.validation.constraints.DecimalMax(value = "100", message = "The interest rate cannot be above 100%.")
+            BigDecimal interestRatePct,
+
+            @DecimalMin(value = "0", message = "The management fee cannot be negative.")
+            BigDecimal managementFee,
+
+            @DecimalMin(value = "0", message = "The transaction fee cannot be negative.")
+            @jakarta.validation.constraints.DecimalMax(value = "20", message = "The transaction fee cannot be above 20%.")
+            BigDecimal transactionFeePct,
+
+            @Size(max = 1000, message = "That note is too long.")
+            String note) {
+    }
+
+    public record AgreeTermsRequest(
+            @NotBlank(message = "Enter your PIN.")
+            String pin) {
+    }
+
     public record RejectApplicationRequest(
             @NotBlank(message = "Say why this was declined. The customer is shown what you write.")
             @Size(min = 10, max = 1000,

@@ -106,6 +106,28 @@ public class AdminLoanApplicationController {
                 request == null ? null : request.note()));
     }
 
+    @PostMapping("/{applicationId}/offer")
+    @Operation(summary = "Change the rate, fees or months and send them to the customer to agree or turn down")
+    public LoanApplicationDtos.AdminApplicationDetail offer(
+            @PathVariable UUID applicationId,
+            @Valid @RequestBody LoanApplicationDtos.OfferTermsRequest request) {
+
+        AdminUser actor = access.requireCanActOnLoans();
+        return detailOf(applications.offerTerms(
+                applicationId,
+                actorOf(actor),
+                new LoanApplicationService.Offer(
+                        request.months(),
+                        fraction(request.interestRatePct()),
+                        request.managementFee(),
+                        fraction(request.transactionFeePct()),
+                        request.note())));
+    }
+
+    private static java.math.BigDecimal fraction(java.math.BigDecimal pct) {
+        return pct == null ? null : pct.movePointLeft(2);
+    }
+
     @PostMapping("/{applicationId}/reject")
     @Operation(summary = "Decline, with a reason the customer is shown word for word")
     public LoanApplicationDtos.AdminApplicationDetail reject(

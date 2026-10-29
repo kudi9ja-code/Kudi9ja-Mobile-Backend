@@ -11,6 +11,7 @@ import com.quadrilateral.kudi9ja.domain.loan.Loan;
 import com.quadrilateral.kudi9ja.domain.loan.LoanService;
 import com.quadrilateral.kudi9ja.domain.notification.NotificationService;
 import com.quadrilateral.kudi9ja.domain.notification.NotifyKind;
+import com.quadrilateral.kudi9ja.domain.settings.LendingTerms;
 import com.quadrilateral.kudi9ja.domain.user.AuthService;
 import com.quadrilateral.kudi9ja.domain.user.User;
 import com.quadrilateral.kudi9ja.domain.user.UserRepository;
@@ -143,7 +144,8 @@ public class LoanApplicationService {
         User user = users.findById(userId)
                 .orElseThrow(() -> ApiException.notFound("That account"));
 
-        if (applications.existsByUserIdAndStatus(userId, LoanApplicationStatus.PENDING)) {
+        if (applications.existsByUserIdAndStatusIn(
+                userId, List.of(LoanApplicationStatus.PENDING, LoanApplicationStatus.OFFERED))) {
             throw new ApiException(
                     ErrorCode.VALIDATION_FAILED,
                     "You already have an application with us. We will come back to you on that one "
@@ -295,17 +297,19 @@ public class LoanApplicationService {
     @Transactional
     public LoanApplication approve(UUID applicationId, AuditService.Actor actor, String note) {
         LoanApplication application = requirePending(applicationId);
+        boolean agreed = application.hasAgreedTerms();
 
         LoanService.Assessed assessed = loans.assess(
-                application.getUserId(), application.getAmount(), application.getTenureMonths(),
-                application.getRepaymentFrequency());
+                application.getUserId(), application.getAmount(), application.lendingMonths(),
+                application.getRepaymentFrequency(), agreed);
 
         Loan loan = loans.disburse(
                 application.getUserId(),
                 assessed,
                 application.getRepaymentFrequency(),
                 application.getPurpose(),
-                actor.name());
+                actor.name(),
+                agreed ? agreedPricing(application) : null);
 
         application.setStatus(LoanApplicationStatus.APPROVED);
         application.setReviewedAt(Instant.now());
@@ -326,8 +330,9 @@ public class LoanApplicationService {
                 AuditCategory.LOAN,
                 "Loan application approved",
                 actor.name() + " approved " + Money.naira(application.getAmount()) + " for "
-                        + application.getCustomerName() + " over " + application.getTenureMonths()
+                        + application.getCustomerName() + " over " + application.lendingMonths()
                         + " months"
+                        + (agreed ? " on the changed terms the customer agreed to (" + termsSummary(application) + ")" : "")
                         + (note == null || note.isBlank() ? "." : ". Note: " + note.trim()),
                 application.getUserId(),
                 application.getCustomerRef());
@@ -347,7 +352,11 @@ public class LoanApplicationService {
      */
     @Transactional
     public LoanApplication reject(UUID applicationId, AuditService.Actor actor, String reason) {
-        LoanApplication application = requirePending(applicationId);
+        // Open either way: under review, or with the customer on new terms.
+        LoanApplication application = get(applicationId);
+        if (!application.getStatus().isOpen()) {
+            requirePending(applicationId);
+        }
 
         String written = reason == null ? "" : reason.trim();
         if (written.length() < 10) {
@@ -384,10 +393,211 @@ public class LoanApplicationService {
         return saved;
     }
 
+    // -- Changing the terms -------------------------------------------------
+
+    /**
+     * The terms an admin offers instead of the ones the application is priced
+     * on. Each is optional; one left out keeps what the application has now.
+     *
+     * @param flatRate         flat interest for the whole loan, as a fraction
+     * @param managementFee    in naira, taken from the payout
+     * @param repaymentFeeRate on each repayment, as a fraction of the instalment
+     */
+    public record Offer(
+            Integer months, BigDecimal flatRate, BigDecimal managementFee, BigDecimal repaymentFeeRate, String note) {
+    }
+
+    /**
+     * Sends changed terms back to the customer.
+     *
+     * <p>Nothing is lent on them until the customer agrees: the application
+     * waits on them, not on the team. Offering terms identical to what it is
+     * priced on now is refused, because that is an approval, not an offer. An
+     * offer on an application whose customer already agreed to earlier terms
+     * replaces them and asks again.
+     */
+    @Transactional
+    public LoanApplication offerTerms(UUID applicationId, AuditService.Actor actor, Offer offer) {
+        LoanApplication application = get(applicationId);
+        if (!application.getStatus().isOpen()) {
+            requirePending(applicationId);
+        }
+
+        LendingTerms t = loans.termsFor(application.getUserId());
+        LoanService.Pricing current = currentPricing(application, t);
+        int currentMonths = application.lendingMonths();
+
+        int months = offer.months() == null ? currentMonths : offer.months();
+        if (months < 1 || months > t.maxTenureMonths()) {
+            throw ApiException.validation("Loans run from 1 to " + t.maxTenureMonths() + " months.");
+        }
+        // A new length with no rate given is priced on the rate card for it.
+        BigDecimal rate = offer.flatRate() != null
+                ? offer.flatRate()
+                : months == currentMonths ? current.flatRate() : t.rateFor(months);
+        BigDecimal fee = offer.managementFee() == null ? current.managementFee() : Money.of(offer.managementFee());
+        BigDecimal feeRate = offer.repaymentFeeRate() == null ? current.repaymentFeeRate() : offer.repaymentFeeRate();
+
+        if (rate.signum() < 0 || rate.compareTo(BigDecimal.ONE) > 0) {
+            throw ApiException.validation("The interest rate has to be between 0% and 100%.");
+        }
+        if (fee.signum() < 0 || !Money.lt(fee, application.getAmount())) {
+            throw ApiException.validation("The management fee has to be less than the amount lent.");
+        }
+        if (feeRate.signum() < 0 || feeRate.compareTo(new BigDecimal("0.2")) > 0) {
+            throw ApiException.validation("The transaction fee has to be between 0% and 20% of each repayment.");
+        }
+        boolean changed = months != currentMonths
+                || rate.compareTo(current.flatRate()) != 0
+                || fee.compareTo(current.managementFee()) != 0
+                || feeRate.compareTo(current.repaymentFeeRate()) != 0;
+        if (!changed) {
+            throw ApiException.validation(
+                    "Nothing has changed from the terms it is priced on now. Approve it as it is instead.");
+        }
+
+        String note = offer.note() == null || offer.note().isBlank() ? null : offer.note().trim();
+        application.setProposedMonths(months);
+        application.setProposedFlatRate(rate);
+        application.setProposedManagementFee(fee);
+        application.setProposedRepaymentFeeRate(feeRate);
+        application.setProposalNote(note);
+        application.setProposedAt(Instant.now());
+        application.setProposedBy(actor.describe());
+        application.setTermsAgreedAt(null);
+        application.setStatus(LoanApplicationStatus.OFFERED);
+        LoanApplication saved = applications.save(application);
+
+        notifications.push(
+                application.getUserId(),
+                NotifyKind.GENERAL,
+                "New terms for your loan application",
+                "We have reviewed your application to borrow " + Money.naira(application.getAmount())
+                        + " and can offer it on changed terms: " + termsSummary(saved) + "."
+                        + (note == null ? "" : " " + note)
+                        + " Open Loans to agree to them or turn them down. Nothing is lent until you agree.");
+
+        audit.record(
+                actor,
+                AuditCategory.LOAN,
+                "Loan application terms changed",
+                actor.name() + " offered " + application.getCustomerName() + " "
+                        + Money.naira(application.getAmount()) + " on changed terms: " + termsSummary(saved)
+                        + (note == null ? "." : ". Note: " + note),
+                application.getUserId(),
+                application.getCustomerRef());
+
+        log.info("New terms offered on loan application {} by {}", saved.getId(), actor.name());
+        return saved;
+    }
+
+    /**
+     * The customer agrees to the changed terms. The application goes back to
+     * the team for a decision, now priced on them.
+     */
+    @Transactional
+    public LoanApplication agreeToTerms(UUID userId, UUID applicationId, String pin) {
+        auth.verifyPin(userId, pin);
+        LoanApplication application = requireOffered(userId, applicationId);
+
+        application.setTermsAgreedAt(Instant.now());
+        application.setStatus(LoanApplicationStatus.PENDING);
+        LoanApplication saved = applications.save(application);
+
+        audit.record(
+                customerActor(userId),
+                AuditCategory.LOAN,
+                "Changed loan terms agreed",
+                application.getCustomerName() + " agreed to borrow " + Money.naira(application.getAmount())
+                        + " on the changed terms: " + termsSummary(saved) + ". Back with the team for a decision.",
+                userId,
+                application.getCustomerRef());
+
+        log.info("Customer {} agreed to the new terms on loan application {}", userId, applicationId);
+        return saved;
+    }
+
+    /** The customer turns the changed terms down. That ends the application. */
+    @Transactional
+    public LoanApplication declineTerms(UUID userId, UUID applicationId) {
+        LoanApplication application = requireOffered(userId, applicationId);
+
+        application.setStatus(LoanApplicationStatus.TERMS_DECLINED);
+        application.setReviewedAt(Instant.now());
+        LoanApplication saved = applications.save(application);
+
+        notifications.push(
+                userId,
+                NotifyKind.GENERAL,
+                "Loan application closed",
+                "You turned down the new terms for " + Money.naira(application.getAmount())
+                        + ", so nothing was lent. You are welcome to apply again.");
+
+        audit.record(
+                customerActor(userId),
+                AuditCategory.LOAN,
+                "Changed loan terms turned down",
+                application.getCustomerName() + " turned down the changed terms on "
+                        + Money.naira(application.getAmount()) + " (" + termsSummary(saved)
+                        + "). The application is closed.",
+                userId,
+                application.getCustomerRef());
+
+        log.info("Customer {} turned down the new terms on loan application {}", userId, applicationId);
+        return saved;
+    }
+
+    private LoanApplication requireOffered(UUID userId, UUID applicationId) {
+        LoanApplication application = applications.findByIdAndUserId(applicationId, userId)
+                .orElseThrow(() -> ApiException.notFound("That application"));
+        if (application.getStatus() != LoanApplicationStatus.OFFERED) {
+            throw new ApiException(
+                    ErrorCode.VALIDATION_FAILED,
+                    "There are no new terms waiting for your answer on that application.");
+        }
+        return application;
+    }
+
+    /** What an application is priced on now: agreed changed terms, or the settings. */
+    private static LoanService.Pricing currentPricing(LoanApplication application, LendingTerms t) {
+        return application.hasAgreedTerms()
+                ? agreedPricing(application)
+                : LoanService.standardPricing(t, application.getAmount(), application.getTenureMonths());
+    }
+
+    private static LoanService.Pricing agreedPricing(LoanApplication application) {
+        return new LoanService.Pricing(
+                application.getProposedFlatRate(),
+                application.getProposedManagementFee(),
+                application.getProposedRepaymentFeeRate());
+    }
+
+    /** "6 months, 30% interest, ₦5,000.00 management fee, 2% transaction fee on each repayment". */
+    private static String termsSummary(LoanApplication application) {
+        return application.getProposedMonths() + (application.getProposedMonths() == 1 ? " month, " : " months, ")
+                + pct(application.getProposedFlatRate()) + " interest, "
+                + Money.naira(application.getProposedManagementFee()) + " management fee, "
+                + pct(application.getProposedRepaymentFeeRate()) + " transaction fee on each repayment";
+    }
+
+    private static String pct(BigDecimal fraction) {
+        return fraction.movePointRight(2).stripTrailingZeros().toPlainString() + "%";
+    }
+
+    private AuditService.Actor customerActor(UUID userId) {
+        User user = users.findById(userId).orElseThrow(() -> ApiException.notFound("That account"));
+        return new AuditService.Actor(userId, user.getFullName(), user.getEmail());
+    }
+
     // -- Plumbing -----------------------------------------------------------
 
     private LoanApplication requirePending(UUID applicationId) {
         LoanApplication application = get(applicationId);
+        if (application.getStatus() == LoanApplicationStatus.OFFERED) {
+            throw new ApiException(
+                    ErrorCode.VALIDATION_FAILED,
+                    "The customer has not answered the new terms yet. It comes back here once they agree.");
+        }
         if (!application.isPending()) {
             throw new ApiException(
                     ErrorCode.VALIDATION_FAILED,

@@ -28,5 +28,7 @@ public interface LoanApplicationRepository extends JpaRepository<LoanApplication
      */
     boolean existsByUserIdAndStatus(UUID userId, LoanApplicationStatus status);
 
+    boolean existsByUserIdAndStatusIn(UUID userId, java.util.Collection<LoanApplicationStatus> statuses);
+
     long countByStatus(LoanApplicationStatus status);
 }

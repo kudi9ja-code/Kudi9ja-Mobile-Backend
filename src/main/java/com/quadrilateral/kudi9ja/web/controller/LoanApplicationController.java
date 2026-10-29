@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -128,6 +129,22 @@ public class LoanApplicationController {
      * an empty part is a client bug, and saying so plainly beats a validation
      * message about file types for a file that is not there.
      */
+    @PostMapping("/{applicationId}/agree")
+    @Operation(summary = "Agree to the changed terms; the application goes back to the team for a decision")
+    public LoanApplicationDtos.LoanApplicationResponse agree(
+            @PathVariable UUID applicationId,
+            @Valid @RequestBody LoanApplicationDtos.AgreeTermsRequest request) {
+        return LoanApplicationDtos.LoanApplicationResponse.from(
+                applications.agreeToTerms(currentUser.requireId(), applicationId, request.pin()));
+    }
+
+    @PostMapping("/{applicationId}/turn-down")
+    @Operation(summary = "Turn down the changed terms; the application ends")
+    public LoanApplicationDtos.LoanApplicationResponse turnDown(@PathVariable UUID applicationId) {
+        return LoanApplicationDtos.LoanApplicationResponse.from(
+                applications.declineTerms(currentUser.requireId(), applicationId));
+    }
+
     private static LoanApplicationService.Upload read(MultipartFile file, String what) {
         if (file == null || file.isEmpty()) {
             throw ApiException.validation("Attach your " + what + ".");

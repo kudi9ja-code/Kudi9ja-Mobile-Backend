@@ -6,6 +6,13 @@ public enum LoanApplicationStatus {
     /** Submitted, with its documents, waiting for a person to read it. */
     PENDING("Under review"),
 
+    /**
+     * The reviewing admin changed the terms and sent them back. Waiting for
+     * the customer to agree, which returns it to {@link #PENDING}, or to turn
+     * them down, which ends it.
+     */
+    OFFERED("New terms to answer"),
+
     /** Approved by an admin. The loan exists and the money has been disbursed. */
     APPROVED("Approved"),
 
@@ -17,7 +24,10 @@ public enum LoanApplicationStatus {
     REJECTED("Declined"),
 
     /** Withdrawn by the customer before anybody had reviewed it. */
-    CANCELLED("Withdrawn");
+    CANCELLED("Withdrawn"),
+
+    /** The customer turned down the terms the admin offered. Nothing was lent. */
+    TERMS_DECLINED("Terms turned down");
 
     private final String label;
 
@@ -29,8 +39,8 @@ public enum LoanApplicationStatus {
         return label;
     }
 
-    /** Still waiting on a decision, and so still editable by nobody. */
+    /** Still waiting on someone: the team, or the customer's answer. */
     public boolean isOpen() {
-        return this == PENDING;
+        return this == PENDING || this == OFFERED;
     }
 }

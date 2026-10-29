@@ -223,6 +223,16 @@ public class LoanService {
      */
     @Transactional(readOnly = true)
     public Assessed assess(UUID userId, BigDecimal amount, int months, RepaymentFrequency frequency) {
+        return assess(userId, amount, months, frequency, false);
+    }
+
+    /**
+     * As above. {@code ratePinned}: the rate was set by an admin on this loan,
+     * so the tenure need not have its own entry on the rate card.
+     */
+    @Transactional(readOnly = true)
+    public Assessed assess(
+            UUID userId, BigDecimal amount, int months, RepaymentFrequency frequency, boolean ratePinned) {
         settings.requireNotInMaintenance();
         settings.requireLendingEnabled();
 
@@ -239,7 +249,7 @@ public class LoanService {
                     ErrorCode.TENURE_UNPRICED,
                     "Loans run from 1 to " + t.maxTenureMonths() + " months.");
         }
-        if (!t.prices(months)) {
+        if (!ratePinned && !t.prices(months)) {
             throw new ApiException(
                     ErrorCode.TENURE_UNPRICED, "That tenure is not priced right now.");
         }
@@ -267,6 +277,19 @@ public class LoanService {
 
     /** What {@link #assess} found. Carried to whoever decides. */
     public record Assessed(User user, BigDecimal principal, int months, LendingTerms terms) {
+    }
+
+    /**
+     * The three prices of a loan: flat interest for the whole loan and the
+     * transaction fee on each repayment, both as fractions, and the management
+     * fee in naira.
+     */
+    public record Pricing(BigDecimal flatRate, BigDecimal managementFee, BigDecimal repaymentFeeRate) {
+    }
+
+    /** What these terms charge a loan of this size and length. */
+    public static Pricing standardPricing(LendingTerms t, BigDecimal principal, int months) {
+        return new Pricing(t.rateFor(months), Finance.processingFee(t, Money.of(principal)), Finance.repaymentFeeRate(t));
     }
 
     /**
@@ -304,6 +327,22 @@ public class LoanService {
     @Transactional
     public Loan disburse(
             UUID userId, Assessed assessed, RepaymentFrequency frequency, String purpose, String decidedBy) {
+        return disburse(userId, assessed, frequency, purpose, decidedBy, null);
+    }
+
+    /**
+     * As above, priced on {@code agreed} — terms an admin changed and the
+     * customer agreed to — instead of the settings in force. Null prices it on
+     * the settings.
+     */
+    @Transactional
+    public Loan disburse(
+            UUID userId,
+            Assessed assessed,
+            RepaymentFrequency frequency,
+            String purpose,
+            String decidedBy,
+            Pricing agreed) {
         frequency = RepaymentFrequency.orMonthly(frequency);
         PlatformSettings s = settings.currentReadOnly();
         BigDecimal principal = assessed.principal();
@@ -311,8 +350,9 @@ public class LoanService {
         LendingTerms t = assessed.terms();
 
         Instant now = Instant.now();
-        BigDecimal rate = t.rateFor(months);
-        BigDecimal fee = Finance.processingFee(t, principal);
+        Pricing pricing = agreed != null ? agreed : standardPricing(t, principal, months);
+        BigDecimal rate = pricing.flatRate();
+        BigDecimal fee = Money.of(pricing.managementFee());
 
         Loan loan = new Loan();
         loan.setId(UUID.randomUUID());
@@ -328,7 +368,7 @@ public class LoanService {
         loan.setRequestedAt(now);
         loan.setDisbursedAt(now);
         // The count, the fee on each repayment and the due date.
-        loan.fixRepaymentTerms(now, Finance.repaymentFeeRate(t));
+        loan.fixRepaymentTerms(now, pricing.repaymentFeeRate());
         loan.setAmountRepaid(Money.zero());
         loan.setRebateGranted(Money.zero());
         loan.setStatus(LoanStatus.ACTIVE);
