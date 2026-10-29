@@ -90,7 +90,8 @@ public class AdminWithdrawalController {
                 withdrawalId,
                 actorOf(actor),
                 request == null ? null : request.payoutReference(),
-                request == null ? null : request.note()));
+                request == null ? null : request.note(),
+                request != null && Boolean.TRUE.equals(request.paidByHand())));
     }
 
     /**

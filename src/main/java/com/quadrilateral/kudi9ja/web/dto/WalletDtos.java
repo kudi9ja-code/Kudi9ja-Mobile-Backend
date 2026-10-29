@@ -171,7 +171,11 @@ public final class WalletDtos {
             Instant paidOutAt) {
     }
 
-    public record ApproveWithdrawalRequest(String payoutReference, String note) {
+    /**
+     * {@code paidByHand}: the money was already sent from the company account,
+     * so approval only records it and Paystack is not called.
+     */
+    public record ApproveWithdrawalRequest(String payoutReference, String note, Boolean paidByHand) {
     }
 
     public record DeclineWithdrawalRequest(

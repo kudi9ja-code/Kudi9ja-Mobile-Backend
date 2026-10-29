@@ -207,6 +207,19 @@ public class WithdrawalService {
     @Transactional
     public WithdrawalRequest approve(
             UUID requestId, AuditService.Actor actor, String payoutReference, String note) {
+        return approve(requestId, actor, payoutReference, note, false);
+    }
+
+    /**
+     * As above; {@code paidByHand} records a transfer an admin already made
+     * from the company account. Paystack is not called and the pending debit
+     * settles at once, so the wallet and every report count it like any other
+     * withdrawal. The bank's reference is required, so the record can be
+     * matched to the statement.
+     */
+    @Transactional
+    public WithdrawalRequest approve(
+            UUID requestId, AuditService.Actor actor, String payoutReference, String note, boolean paidByHand) {
 
         WithdrawalRequest request = withdrawals.findById(requestId)
                 .orElseThrow(() -> ApiException.notFound("That withdrawal"));
@@ -217,7 +230,11 @@ public class WithdrawalService {
                             + request.getStatus().label().toLowerCase(Locale.ROOT) + ".");
         }
 
-        PaystackGateway gateway = paystack.getIfAvailable();
+        if (paidByHand && (payoutReference == null || payoutReference.isBlank())) {
+            throw ApiException.validation("Give the reference of the bank transfer that paid it.");
+        }
+
+        PaystackGateway gateway = paidByHand ? null : paystack.getIfAvailable();
         boolean paid;
         if (gateway != null) {
             paid = sendThroughPaystack(gateway, request);
@@ -250,17 +267,18 @@ public class WithdrawalService {
                 request.getUserId(),
                 NotifyKind.GENERAL,
                 "Withdrawal approved",
-                Money.naira(request.getAmount()) + " is on its way to your "
+                Money.naira(request.getAmount()) + (paidByHand ? " has been sent to your " : " is on its way to your ")
                         + request.getBank() + " account.",
                 request.getAmount());
 
         audit.record(
                 actor,
                 AuditCategory.CUSTOMER,
-                "Withdrawal approved",
+                paidByHand ? "Withdrawal approved — paid by hand" : "Withdrawal approved",
                 Money.naira(request.getAmount()) + " to " + request.getBank() + " "
                         + Masks.accountTail(request.getDestinationAccount())
-                        + " for " + request.getCustomerName() + " (" + request.getReference() + ").",
+                        + " for " + request.getCustomerName() + " (" + request.getReference() + ")"
+                        + (paidByHand ? ", bank reference " + request.getPayoutReference() : "") + ".",
                 request.getUserId(),
                 request.getCustomerRef());
 
