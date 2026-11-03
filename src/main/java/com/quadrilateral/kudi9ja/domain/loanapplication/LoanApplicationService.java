@@ -123,8 +123,26 @@ public class LoanApplicationService {
         return loans.termsFor(userId).group();
     }
 
-    /** One file as it arrived, before it has anywhere to live. */
-    public record Upload(String filename, String contentType, byte[] content) {
+    /**
+     * One file as it arrived, before it has anywhere to live.
+     *
+     * <p>The bytes are read only when the file is stored, one file at a time.
+     * An application carries five files, and reading them all up front held
+     * every one in memory at once alongside the copy each upload to storage
+     * makes; on a 512 MB instance that was enough to kill the process
+     * mid-request, which the customer saw as a dropped connection.
+     */
+    public record Upload(String filename, String contentType, long size, Contents contents) {
+
+        /** Where the bytes come from: the request's own temporary file. */
+        @FunctionalInterface
+        public interface Contents {
+            byte[] read() throws java.io.IOException;
+        }
+
+        public static Upload of(String filename, String contentType, byte[] content) {
+            return new Upload(filename, contentType, content.length, () -> content);
+        }
     }
 
     /**
@@ -619,11 +637,11 @@ public class LoanApplicationService {
             throw ApiException.validation(
                     "A guarantor is needed, with their full details.");
         }
-        if (submission.statement() == null || submission.statement().content().length == 0) {
+        if (submission.statement() == null || submission.statement().size() == 0) {
             throw ApiException.validation(
                     "Attach a recent bank statement. We cannot assess an application without one.");
         }
-        if (submission.selfie() == null || submission.selfie().content().length == 0) {
+        if (submission.selfie() == null || submission.selfie().size() == 0) {
             throw ApiException.validation(
                     "Add a clear photograph of yourself. We need to see who we are lending to.");
         }
@@ -655,7 +673,7 @@ public class LoanApplicationService {
      */
     private void validateUpload(Upload upload, String what) {
         Kudi9jaProperties.Storage storage = properties.storage();
-        if (upload.content().length > storage.maxReceiptBytes()) {
+        if (upload.size() > storage.maxReceiptBytes()) {
             throw ApiException.validation(
                     "That " + what + " is too large. Attach one under "
                             + (storage.maxReceiptBytes() / (1024 * 1024)) + "MB.");
@@ -680,18 +698,25 @@ public class LoanApplicationService {
     private StoredDocument store(User user, Upload upload, String what) {
         String key;
         try {
+            byte[] content;
+            try {
+                content = upload.contents().read();
+            } catch (java.io.IOException e) {
+                throw ApiException.validation(
+                        "Your " + what + " could not be read. Try attaching it again.");
+            }
             key = documents.store(
-                    user.getCustomerRef(), upload.filename(), upload.contentType(), upload.content());
+                    user.getCustomerRef(), upload.filename(), upload.contentType(), content);
         } catch (ApiException e) {
             if (e.code() != ErrorCode.INTERNAL) {
                 throw e;
             }
             log.error("Could not store the {} for {}: {} bytes of {} named {}",
-                    what, user.getCustomerRef(), upload.content().length,
+                    what, user.getCustomerRef(), upload.size(),
                     upload.contentType(), upload.filename());
             throw new ApiException(ErrorCode.INTERNAL,
                     "Your " + what + " could not be saved. Try again, or attach a different file.");
         }
-        return new StoredDocument(key, upload.contentType(), (long) upload.content().length);
+        return new StoredDocument(key, upload.contentType(), upload.size());
     }
 }

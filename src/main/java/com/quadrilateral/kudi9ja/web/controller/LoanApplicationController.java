@@ -8,7 +8,6 @@ import com.quadrilateral.kudi9ja.web.dto.LoanApplicationDtos;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -149,12 +148,9 @@ public class LoanApplicationController {
         if (file == null || file.isEmpty()) {
             throw ApiException.validation("Attach your " + what + ".");
         }
-        try {
-            return new LoanApplicationService.Upload(
-                    file.getOriginalFilename(), file.getContentType(), file.getBytes());
-        } catch (IOException e) {
-            throw ApiException.validation(
-                    "That " + what + " could not be read. Try attaching it again.");
-        }
+        // Not read here. The service reads each file when it stores it, so only
+        // one is ever held in memory.
+        return new LoanApplicationService.Upload(
+                file.getOriginalFilename(), file.getContentType(), file.getSize(), file::getBytes);
     }
 }

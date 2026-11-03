@@ -105,7 +105,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                 .body(ApiError.of(
                         ErrorCode.VALIDATION_FAILED,
-                        "That file is too large. Attach a receipt under 10MB.",
+                        "That upload is too large. Each file must be under 12MB, and all of them together under 52MB.",
                         Map.of(),
                         request.getRequestURI()));
     }
