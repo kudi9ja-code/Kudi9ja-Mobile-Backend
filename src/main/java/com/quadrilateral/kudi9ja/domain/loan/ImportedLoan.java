@@ -222,6 +222,11 @@ public class ImportedLoan {
         return disbursedAt == null ? Money.zero() : terms().pastDue(now);
     }
 
+    /** The instalments, paid and unpaid, on the terms it was entered with. */
+    public java.util.List<Installment> schedule(Instant now) {
+        return disbursedAt == null ? java.util.List.of() : terms().schedule(now);
+    }
+
     public boolean isClaimed() {
         return claimedAt != null;
     }

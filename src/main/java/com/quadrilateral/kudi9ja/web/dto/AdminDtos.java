@@ -331,6 +331,63 @@ public final class AdminDtos {
             BigDecimal repaidThisMonth) {
     }
 
+    /**
+     * Every loan behind the Overview figures, one row each, so a tile can open
+     * the list it was added up from: loans on accounts and loans entered by
+     * hand whose borrower has not signed up yet.
+     */
+    public record BookLoanRow(
+            /** ACCOUNT for a loan on a customer's account; OFFLINE for one entered by hand, not yet claimed. */
+            String source,
+            UUID id,
+            UUID customerId,
+            String customerName,
+            String customerRef,
+            String phone,
+            List<String> officers,
+            BigDecimal principal,
+            BigDecimal flatRate,
+            BigDecimal interest,
+            BigDecimal managementFee,
+            /** The flat transaction fee some older loans had; zero since the per-repayment fee. */
+            BigDecimal transactionFee,
+            BigDecimal repaymentFees,
+            BigDecimal fees,
+            BigDecimal totalRepayable,
+            BigDecimal amountRepaid,
+            BigDecimal outstanding,
+            /** Owed on instalments whose day has passed. */
+            BigDecimal pastDue,
+            int missedInstalments,
+            Instant oldestMissedDue,
+            long daysBehind,
+            int installmentCount,
+            int installmentsPaid,
+            Instant nextDue,
+            BigDecimal nextDueAmount,
+            boolean open,
+            String status,
+            String statusLabel,
+            RepaymentFrequency repaymentFrequency,
+            int tenureMonths,
+            String purpose,
+            Instant disbursedAt,
+            Instant dueDate) {
+    }
+
+    public record WalletHolderRow(
+            UUID customerId,
+            String customerName,
+            String customerRef,
+            String phone,
+            String accountStatus,
+            BigDecimal balance,
+            Instant updatedAt) {
+    }
+
+    public record BookDetail(List<BookLoanRow> loans, List<WalletHolderRow> wallets, Instant generatedAt) {
+    }
+
     public record People(
             long customers,
             long activeCustomers,

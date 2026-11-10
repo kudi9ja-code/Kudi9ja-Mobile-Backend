@@ -47,6 +47,13 @@ public class AdminOverviewController {
         return overview.overview();
     }
 
+    /** Every loan and wallet the Overview figures are added up from, so each tile opens its own list. */
+    @GetMapping("/overview/book")
+    @Operation(summary = "The rows behind the Overview figures")
+    public AdminDtos.BookDetail book() {
+        return overview.bookDetail();
+    }
+
     @GetMapping("/audit")
     @Operation(summary = "The audit log. Append-only, readable by every admin.")
     public PageResponse<AdminDtos.AuditRow> audit(
