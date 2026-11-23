@@ -226,9 +226,9 @@ public class ImportedLoan {
         return lateCharges == null ? Money.zero() : Money.of(lateCharges);
     }
 
-    /** Adds {@code days} days of late charges, charged up to and including {@code through}. */
-    public BigDecimal addLateCharges(long days, LocalDate through) {
-        BigDecimal added = Money.multiply(LateCharges.daily(principal), BigDecimal.valueOf(days));
+    /** Adds {@code days} days of late charges at {@code rate}, charged up to and including {@code through}. */
+    public BigDecimal addLateCharges(long days, LocalDate through, BigDecimal rate) {
+        BigDecimal added = Money.multiply(LateCharges.daily(principal, rate), BigDecimal.valueOf(days));
         this.lateCharges = Money.add(lateCharges(), added);
         this.lateChargedThrough = through;
         return added;

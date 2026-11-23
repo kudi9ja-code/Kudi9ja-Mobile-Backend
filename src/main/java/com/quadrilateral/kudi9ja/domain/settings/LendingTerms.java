@@ -19,6 +19,8 @@ import java.util.TreeMap;
  *                               fraction of the whole loan
  * @param repaymentFeeRate       the transaction fee on each repayment, as a
  *                               fraction of the instalment
+ * @param lateChargeDailyRate    added every day after the final due date, as a
+ *                               fraction of the amount borrowed (same for both sets)
  */
 public record LendingTerms(
         boolean group,
@@ -31,7 +33,8 @@ public record LendingTerms(
         BigDecimal processingFeeRate,
         BigDecimal repaymentFeeRate,
         boolean weeklyAllowed,
-        boolean monthlyAllowed) {
+        boolean monthlyAllowed,
+        BigDecimal lateChargeDailyRate) {
 
     public LendingTerms {
         rates = new TreeMap<>(rates == null ? Map.of() : rates);

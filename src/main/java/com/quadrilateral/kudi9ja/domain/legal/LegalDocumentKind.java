@@ -6,7 +6,7 @@ import java.util.Locale;
 /**
  * The three documents a customer accepts when they open an account.
  *
- * <p>All three are binding on Quadrilateral Technologies Limited, and the
+ * <p>All three are binding on Kudi9ja Limited, and the
  * backend has to make what they say true. The id matches the client's, so a
  * deep link into the app and a request to the API name the same thing.
  */

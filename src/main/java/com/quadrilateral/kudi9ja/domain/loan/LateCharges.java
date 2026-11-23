@@ -8,26 +8,31 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
 /**
- * The late charge: 0.18% of the original amount borrowed, added every day from
- * the day after the loan's final due date until it is repaid in full.
+ * The late charge: a share of the original amount borrowed (0.18% by default,
+ * set in Controls), added every day from the day after the loan's final due
+ * date until it is repaid in full.
  *
- * <p>Always on the original principal, never on the balance, so the daily
- * amount is the same every day. Rounded up to the whole naira, like every
- * other amount on a loan (₦100,000 → ₦180 a day).
+ * <p>Always on the original principal, never on the balance. Rounded up to the
+ * whole naira, like every other amount on a loan (₦100,000 at 0.18% → ₦180 a day).
  */
 public final class LateCharges {
 
-    /** 0.18% a day. */
-    public static final BigDecimal DAILY_RATE = new BigDecimal("0.0018");
-
-    public static final String RATE_LABEL = "0.18%";
+    /** 0.18% a day, the starting value of the Controls setting. */
+    public static final BigDecimal DEFAULT_RATE = new BigDecimal("0.0018");
 
     private LateCharges() {
     }
 
-    /** What one overdue day adds. */
-    public static BigDecimal daily(BigDecimal principal) {
-        return principal.multiply(DAILY_RATE).setScale(0, RoundingMode.CEILING).setScale(2);
+    /** What one overdue day adds at {@code rate}. */
+    public static BigDecimal daily(BigDecimal principal, BigDecimal rate) {
+        BigDecimal r = rate == null ? DEFAULT_RATE : rate;
+        return principal.multiply(r).setScale(0, RoundingMode.CEILING).setScale(2);
+    }
+
+    /** The rate as a percentage: "0.18%". */
+    public static String label(BigDecimal rate) {
+        BigDecimal r = rate == null ? DEFAULT_RATE : rate;
+        return r.multiply(BigDecimal.valueOf(100)).stripTrailingZeros().toPlainString() + "%";
     }
 
     /**

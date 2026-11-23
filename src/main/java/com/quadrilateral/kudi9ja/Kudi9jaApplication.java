@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 /**
  * The server behind the Kudi9ja mobile app.
  *
- * <p>Kudi9ja is a product of Quadrilateral Technologies Limited (RC 1657731),
+ * <p>Kudi9ja is a product of Kudi9ja Limited (RC 9405885),
  * Lagos, Nigeria. Every contract, receipt and legal document names the company,
  * not the product.
  *

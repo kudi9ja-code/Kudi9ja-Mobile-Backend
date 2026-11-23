@@ -28,8 +28,8 @@ import lombok.Setter;
  * loan will ever be charged at. A change to the platform rate card cannot reach
  * a running loan because a running loan never reads the rate card again.
  *
- * <p><b>Late charges.</b> From the day after the final due date, 0.18% of the
- * original principal is added to {@link #lateCharges} every day until the loan
+ * <p><b>Late charges.</b> From the day after the final due date, a share of the
+ * original principal (0.18% by default, set in Controls) is added to {@link #lateCharges} every day until the loan
  * is repaid (see {@link LateCharges}). {@link #totalRepayable()} stays the
  * agreed price; {@link #totalOwed()} is that plus the late charges.
  */
@@ -186,9 +186,9 @@ public class Loan {
         return Money.add(totalRepayable(), lateCharges());
     }
 
-    /** Adds {@code days} days of late charges, charged up to and including {@code through}. */
-    public BigDecimal addLateCharges(long days, LocalDate through) {
-        BigDecimal added = Money.multiply(LateCharges.daily(principal), BigDecimal.valueOf(days));
+    /** Adds {@code days} days of late charges at {@code rate}, charged up to and including {@code through}. */
+    public BigDecimal addLateCharges(long days, LocalDate through, BigDecimal rate) {
+        BigDecimal added = Money.multiply(LateCharges.daily(principal, rate), BigDecimal.valueOf(days));
         this.lateCharges = Money.add(lateCharges(), added);
         this.lateChargedThrough = through;
         return added;

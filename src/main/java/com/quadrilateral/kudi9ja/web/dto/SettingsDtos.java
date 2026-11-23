@@ -122,7 +122,9 @@ public final class SettingsDtos {
             /** The transaction fee on every repayment, as a fraction of the instalment: 0.02 for 2%. */
             BigDecimal repaymentFeeRate,
             boolean weeklyAllowed,
-            boolean monthlyAllowed) {
+            boolean monthlyAllowed,
+            /** Added every day after the final due date, as a fraction of the amount borrowed: 0.0018 for 0.18%. */
+            BigDecimal lateChargeDailyRate) {
 
         public static Lending of(com.quadrilateral.kudi9ja.domain.settings.LendingTerms t) {
             return new Lending(
@@ -135,7 +137,8 @@ public final class SettingsDtos {
                     t.processingFeeRate(),
                     t.repaymentFeeRate(),
                     t.weeklyAllowed(),
-                    t.monthlyAllowed());
+                    t.monthlyAllowed(),
+                    t.lateChargeDailyRate());
         }
     }
 

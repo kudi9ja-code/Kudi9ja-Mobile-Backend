@@ -124,10 +124,10 @@ logging:
 
 kudi9ja:
   # Every contract, receipt and legal document names the company, not the
-  # product. Kudi9ja is what Quadrilateral Technologies Limited sells.
+  # product. Kudi9ja is what Kudi9ja Limited sells.
   company:
-    legal-name: Quadrilateral Technologies Limited
-    rc-number: RC 1657731
+    legal-name: Kudi9ja Limited
+    rc-number: RC 9405885
     product-name: Kudi9ja
     registered-address: Lagos, Nigeria
     support-email: support@kudi9ja.com

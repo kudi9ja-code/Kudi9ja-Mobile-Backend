@@ -169,6 +169,14 @@ public class PlatformSettings {
     @Column(name = "loan_repayment_fee_rate", nullable = false, precision = 12, scale = 6)
     private BigDecimal loanRepaymentFeeRate;
 
+    /**
+     * The late charge added every day after a loan's final due date, as a
+     * fraction of the amount borrowed: 0.0018 for 0.18%. One rate for every
+     * loan, standard and group; the daily job always uses the current value.
+     */
+    @Column(name = "late_charge_daily_rate", nullable = false, precision = 12, scale = 6)
+    private BigDecimal lateChargeDailyRate = new BigDecimal("0.0018");
+
     /** Whether weekly repayment is offered on standard loans. */
     @Column(name = "loan_weekly_allowed", nullable = false)
     private boolean loanWeeklyAllowed = true;
@@ -304,7 +312,8 @@ public class PlatformSettings {
                 loanProcessingFeeRate,
                 loanRepaymentFeeRate,
                 loanWeeklyAllowed,
-                loanMonthlyAllowed);
+                loanMonthlyAllowed,
+                lateChargeDailyRate);
     }
 
     /** What prices a loan to a member of a loan group. */
@@ -320,7 +329,8 @@ public class PlatformSettings {
                 groupLoanProcessingFeeRate,
                 groupLoanRepaymentFeeRate,
                 groupLoanWeeklyAllowed,
-                groupLoanMonthlyAllowed);
+                groupLoanMonthlyAllowed,
+                lateChargeDailyRate);
     }
 
     /** The standard terms, or the group terms for a member of a loan group. */

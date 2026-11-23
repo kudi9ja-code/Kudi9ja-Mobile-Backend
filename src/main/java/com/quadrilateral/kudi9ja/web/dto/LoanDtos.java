@@ -158,7 +158,8 @@ public final class LoanDtos {
                 Loan loan,
                 Instant now,
                 BigDecimal rebate,
-                BigDecimal settlementAmount) {
+                BigDecimal settlementAmount,
+                BigDecimal lateChargeRate) {
 
             List<ScheduleRow> schedule = loan.schedule(now).stream()
                     .map(installment -> ScheduleRow.from(installment, now))
@@ -206,7 +207,7 @@ public final class LoanDtos {
                     settlementAmount,
                     loan.getDecisionReasons(),
                     loan.lateCharges(),
-                    LateCharges.daily(loan.getPrincipal()),
+                    LateCharges.daily(loan.getPrincipal(), lateChargeRate),
                     loan.totalOwed());
         }
 

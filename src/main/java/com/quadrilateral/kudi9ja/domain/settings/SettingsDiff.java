@@ -46,6 +46,7 @@ public final class SettingsDiff {
         // Management fee -------------------------------------------------------
         money(changes, "Flat management fee", before.getFlatProcessingFee(), after.getFlatProcessingFee());
         pct(changes, "Transaction fee on each repayment", before.getLoanRepaymentFeeRate(), after.getLoanRepaymentFeeRate());
+        pct(changes, "Late charge per day", before.getLateChargeDailyRate(), after.getLateChargeDailyRate());
         money(changes, "Management fee threshold",
                 before.getProcessingFeeThreshold(), after.getProcessingFeeThreshold());
         pct(changes, "Management fee rate",

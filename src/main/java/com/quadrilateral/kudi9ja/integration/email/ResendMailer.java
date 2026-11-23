@@ -73,8 +73,8 @@ public class ResendMailer implements Mailer {
     /**
      * Renders a template with the company details every message must carry.
      *
-     * <p>Every contract, receipt and legal document names <b>Quadrilateral
-     * Technologies Limited</b>, not the product. The footer is not decoration:
+     * <p>Every contract, receipt and legal document names <b>Kudi9ja
+     * Limited</b>, not the product. The footer is not decoration:
      * it is how a customer can tell a real Kudi9ja email from a convincing one.
      */
     private String render(String template, Map<String, Object> model) {

@@ -15,9 +15,9 @@ class LateChargesTest {
 
     @Test
     void chargesPointEighteenPercentOfThePrincipalADay() {
-        assertThat(LateCharges.daily(new BigDecimal("100000"))).isEqualByComparingTo("180");
+        assertThat(LateCharges.daily(new BigDecimal("100000"), LateCharges.DEFAULT_RATE)).isEqualByComparingTo("180");
         // Rounded up to the naira.
-        assertThat(LateCharges.daily(new BigDecimal("55555"))).isEqualByComparingTo("101");
+        assertThat(LateCharges.daily(new BigDecimal("55556"), LateCharges.DEFAULT_RATE)).isEqualByComparingTo("101");
     }
 
     @Test

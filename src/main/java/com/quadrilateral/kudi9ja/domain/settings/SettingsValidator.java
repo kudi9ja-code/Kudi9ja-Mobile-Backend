@@ -91,6 +91,12 @@ public final class SettingsValidator {
             problems.put("loanRepaymentFeeRate", "The transaction fee is a fraction of each repayment: 0.02 for 2%, at most 0.2.");
         }
 
+        if (s.getLateChargeDailyRate() == null || s.getLateChargeDailyRate().signum() < 0) {
+            problems.put("lateChargeDailyRate", "The late charge cannot be empty or negative.");
+        } else if (s.getLateChargeDailyRate().compareTo(new BigDecimal("0.05")) > 0) {
+            problems.put("lateChargeDailyRate", "The late charge is a fraction of the loan per day: 0.0018 for 0.18%, at most 0.05.");
+        }
+
         if (!s.isLoanWeeklyAllowed() && !s.isLoanMonthlyAllowed()) {
             problems.put("loanWeeklyAllowed", "Offer weekly repayment, monthly repayment, or both.");
         }

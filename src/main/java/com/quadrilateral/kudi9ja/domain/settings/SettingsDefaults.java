@@ -98,6 +98,7 @@ public final class SettingsDefaults {
         s.setProcessingFeeThreshold(Money.of(250_000));
         s.setLoanProcessingFeeRate(rate("0.02"));
         s.setLoanRepaymentFeeRate(rate("0.02"));
+        s.setLateChargeDailyRate(rate("0.0018"));
         s.setLoanWeeklyAllowed(true);
         s.setLoanMonthlyAllowed(true);
 

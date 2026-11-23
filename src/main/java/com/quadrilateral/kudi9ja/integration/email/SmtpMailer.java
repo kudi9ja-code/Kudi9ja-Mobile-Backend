@@ -55,7 +55,7 @@ public class SmtpMailer implements Mailer {
             Context context = new Context();
             Map<String, Object> enriched = new HashMap<>(model);
             // Every message names the company, not the product: it is
-            // Quadrilateral Technologies Limited that contracts with the
+            // Kudi9ja Limited that contracts with the
             // customer, and the footer has to say so.
             enriched.putIfAbsent("company", properties.company().legalName());
             enriched.putIfAbsent("rcNumber", properties.company().rcNumber());

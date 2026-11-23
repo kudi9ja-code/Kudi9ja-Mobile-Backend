@@ -159,8 +159,8 @@ public class LoanService {
                         ? "Only the management fee comes out of what we send you. Each repayment carries a transaction fee of "
                                 + ratePct(feeRate) + " of the instalment, already included in every amount here. "
                                 + "If the loan is not repaid by the final due date, a late charge of "
-                                + LateCharges.RATE_LABEL + " of the amount borrowed ("
-                                + Money.naira(LateCharges.daily(principal))
+                                + LateCharges.label(t.lateChargeDailyRate()) + " of the amount borrowed ("
+                                + Money.naira(LateCharges.daily(principal, t.lateChargeDailyRate()))
                                 + ") is added every day until it is repaid in full."
                         : "We lend from " + Money.naira(t.minAmount())
                                 + " to " + Money.naira(t.maxAmount()) + ".");
@@ -543,6 +543,7 @@ public class LoanService {
     @Transactional
     public int sweepOverdue(Instant now) {
         List<Loan> pastDue = loans.findPastDue(now);
+        BigDecimal lateRate = settings.currentReadOnly().getLateChargeDailyRate();
 
         for (Loan loan : pastDue) {
             loan.setStatus(LoanStatus.OVERDUE);
@@ -553,9 +554,9 @@ public class LoanService {
                     NotifyKind.REPAYMENT_DUE,
                     "Your loan is past its due date",
                     Money.naira(loan.outstanding()) + " is still outstanding. "
-                            + "From the day after the due date, a late charge of " + LateCharges.RATE_LABEL
+                            + "From the day after the due date, a late charge of " + LateCharges.label(lateRate)
                             + " of the amount you borrowed ("
-                            + Money.naira(LateCharges.daily(loan.getPrincipal()))
+                            + Money.naira(LateCharges.daily(loan.getPrincipal(), lateRate))
                             + ") is added every day until the loan is repaid in full. "
                             + "Repay from your wallet as soon as you can, or talk to us.",
                     loan.outstanding());
@@ -634,7 +635,8 @@ public class LoanService {
     public LoanDtos.LoanResponse toResponse(Loan loan) {
         Instant now = Instant.now();
         // Paying off now costs exactly what is outstanding: there is no rebate.
-        return LoanDtos.LoanResponse.from(loan, now, Money.zero(), loan.outstanding());
+        return LoanDtos.LoanResponse.from(loan, now, Money.zero(), loan.outstanding(),
+                settings.currentReadOnly().getLateChargeDailyRate());
     }
 
     // ── Internals ──────────────────────────────────────────────────────────
