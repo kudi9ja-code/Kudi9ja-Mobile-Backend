@@ -44,9 +44,9 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li><b>Never the borrower's contacts, family or employer.</b> There is no
  *       endpoint that could — a reminder goes to the borrower's own
  *       notification feed and nowhere else.
- *   <li><b>The amount owed never grows.</b> No late fee, no penalty interest,
- *       nothing here that adds to a balance. The Lending Agreement says so in
- *       those words.
+ *   <li><b>Nothing here adds to a balance.</b> The only thing that does is
+ *       the daily late charge after the final due date, in
+ *       {@code LateChargeService}.
  * </ul>
  */
 @Service
@@ -250,7 +250,8 @@ public class AdminLoanService {
                 loan.getStatus().label(),
                 loan.getDisbursedAt(),
                 loan.getDueDate(),
-                overdueDays);
+                overdueDays,
+                loan.lateCharges());
     }
 
     private Loan require(UUID loanId) {

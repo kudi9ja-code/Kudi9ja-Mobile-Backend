@@ -13,6 +13,7 @@ import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -27,11 +28,10 @@ import lombok.Setter;
  * loan will ever be charged at. A change to the platform rate card cannot reach
  * a running loan because a running loan never reads the rate card again.
  *
- * <p><b>The amount owed never grows.</b> There is no late fee and no penalty
- * interest anywhere in this product, and the Lending Agreement commits to it in
- * writing: <i>"Even in default, the amount you owe does not increase."</i> An
- * overdue loan is a status, not a surcharge. Nothing here may add to
- * {@link #totalRepayable()}.
+ * <p><b>Late charges.</b> From the day after the final due date, 0.18% of the
+ * original principal is added to {@link #lateCharges} every day until the loan
+ * is repaid (see {@link LateCharges}). {@link #totalRepayable()} stays the
+ * agreed price; {@link #totalOwed()} is that plus the late charges.
  */
 @Entity
 @Table(
@@ -120,6 +120,14 @@ public class Loan {
     @Column(name = "rebate_granted", nullable = false, precision = 19, scale = 2)
     private BigDecimal rebateGranted = Money.zero();
 
+    /** Late charges added so far: 0.18% of the principal for each day past the final due date. */
+    @Column(name = "late_charges", nullable = false, precision = 19, scale = 2)
+    private BigDecimal lateCharges = Money.zero();
+
+    /** The last Lagos day a late charge was added for, so no day is charged twice. */
+    @Column(name = "late_charged_through")
+    private LocalDate lateChargedThrough;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 24)
     private LoanStatus status = LoanStatus.PENDING;
@@ -167,6 +175,23 @@ public class Loan {
     /** Everything the borrower repays: the loan, the interest, and the transaction fee on every instalment. */
     public BigDecimal totalRepayable() {
         return Money.add(loanAndInterest(), repaymentFees());
+    }
+
+    public BigDecimal lateCharges() {
+        return lateCharges == null ? Money.zero() : Money.of(lateCharges);
+    }
+
+    /** What the borrower owes in all: the agreed total plus any late charges. */
+    public BigDecimal totalOwed() {
+        return Money.add(totalRepayable(), lateCharges());
+    }
+
+    /** Adds {@code days} days of late charges, charged up to and including {@code through}. */
+    public BigDecimal addLateCharges(long days, LocalDate through) {
+        BigDecimal added = Money.multiply(LateCharges.daily(principal), BigDecimal.valueOf(days));
+        this.lateCharges = Money.add(lateCharges(), added);
+        this.lateChargedThrough = through;
+        return added;
     }
 
     public BigDecimal repaymentFees() {
@@ -218,10 +243,10 @@ public class Loan {
         this.dueDate = frequency().due(start, this.installmentCount);
     }
 
-    /** What is still owed, after repayments and any rebate. Floored at zero. */
+    /** What is still owed, late charges included, after repayments and any rebate. Floored at zero. */
     public BigDecimal outstanding() {
         BigDecimal left = Money.subtract(
-                totalRepayable(), Money.add(amountRepaid, rebateGranted));
+                totalOwed(), Money.add(amountRepaid, rebateGranted));
         return left.compareTo(new BigDecimal("0.01")) < 0 ? Money.zero() : left;
     }
 
@@ -234,7 +259,7 @@ public class Loan {
     }
 
     public double repaymentProgress() {
-        BigDecimal total = totalRepayable();
+        BigDecimal total = totalOwed();
         if (total.signum() <= 0) {
             return 0;
         }
@@ -291,12 +316,18 @@ public class Loan {
         return schedule;
     }
 
-    /** What is owed on instalments whose day has passed, whether or not the last one has. */
+    /**
+     * What is owed on instalments whose day has passed, plus any late charges
+     * still unpaid. Repayments clear the instalments first, the late charges last.
+     */
     public BigDecimal pastDue(Instant now) {
-        return schedule(now).stream()
+        BigDecimal instalments = schedule(now).stream()
                 .filter(installment -> installment.status() == InstallmentStatus.OVERDUE)
                 .map(Installment::outstanding)
                 .reduce(Money.zero(), Money::add);
+        BigDecimal paidTowardsLate = Money.floorAtZero(
+                Money.subtract(Money.add(amountRepaid, rebateGranted), totalRepayable()));
+        return Money.add(instalments, Money.floorAtZero(Money.subtract(lateCharges(), paidTowardsLate)));
     }
 
     /** The next instalment owed, or empty once the loan is settled. */

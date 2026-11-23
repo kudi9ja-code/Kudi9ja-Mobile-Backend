@@ -41,10 +41,9 @@ import org.springframework.web.multipart.MultipartFile;
  * employer. A write-off closes a loan without payment and carries a mandatory
  * reason, because it is the one admin action that forgives money.
  *
- * <p>What is deliberately absent: any endpoint that increases a balance. There
- * is no late fee and no penalty interest in this product, and the Lending
- * Agreement commits to that in the words <i>"even in default, the amount you
- * owe does not increase"</i>.
+ * <p>What is deliberately absent: any endpoint that increases a balance. The
+ * only thing that does is the daily late charge after the final due date,
+ * added by {@code LateChargeService}.
  */
 @RestController
 @RequestMapping("/api/v1/admin/loans")

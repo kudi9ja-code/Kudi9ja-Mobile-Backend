@@ -13,9 +13,8 @@ public enum LoanStatus {
     REPAID("Fully repaid"),
 
     /**
-     * Past its due date with a balance outstanding. The amount owed does not
-     * grow: there is no late fee and no penalty interest anywhere in this
-     * product, and the Lending Agreement commits to that in writing.
+     * Past its due date with a balance outstanding. After the final due date a
+     * late charge of 0.18% of the principal is added every day until it is repaid.
      */
     OVERDUE("Overdue"),
 

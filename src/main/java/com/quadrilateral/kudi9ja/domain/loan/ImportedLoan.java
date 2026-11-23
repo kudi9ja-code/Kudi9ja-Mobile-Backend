@@ -111,6 +111,13 @@ public class ImportedLoan {
     @Column(name = "amount_repaid", nullable = false, precision = 19, scale = 2)
     private BigDecimal amountRepaid;
 
+    /** Late charges added while it waits for its borrower; carried onto the account loan when claimed. */
+    @Column(name = "late_charges", nullable = false, precision = 19, scale = 2)
+    private BigDecimal lateCharges = Money.zero();
+
+    @Column(name = "late_charged_through")
+    private LocalDate lateChargedThrough;
+
     // The borrower's file -------------------------------------------------------
     //
     // Everything an in-app application would have told us, entered by the
@@ -205,6 +212,7 @@ public class ImportedLoan {
         loan.setDisbursedAt(disbursedAt);
         loan.setAmountRepaid(amountRepaid);
         loan.setRebateGranted(Money.zero());
+        loan.setLateCharges(lateCharges());
         loan.fixRepaymentTerms(disbursedAt, repaymentFeeRate);
         return loan;
     }
@@ -214,8 +222,21 @@ public class ImportedLoan {
         return disbursedAt == null ? null : terms().getDueDate();
     }
 
+    public BigDecimal lateCharges() {
+        return lateCharges == null ? Money.zero() : Money.of(lateCharges);
+    }
+
+    /** Adds {@code days} days of late charges, charged up to and including {@code through}. */
+    public BigDecimal addLateCharges(long days, LocalDate through) {
+        BigDecimal added = Money.multiply(LateCharges.daily(principal), BigDecimal.valueOf(days));
+        this.lateCharges = Money.add(lateCharges(), added);
+        this.lateChargedThrough = through;
+        return added;
+    }
+
+    /** What is still owed, late charges included. */
     public BigDecimal outstanding() {
-        return Money.floorAtZero(Money.subtract(totalRepayable(), amountRepaid));
+        return Money.floorAtZero(Money.subtract(Money.add(totalRepayable(), lateCharges()), amountRepaid));
     }
 
     public BigDecimal pastDue(Instant now) {
@@ -254,6 +275,8 @@ public class ImportedLoan {
         loan.setDisbursedAt(disbursedAt);
         loan.setAmountRepaid(amountRepaid);
         loan.setRebateGranted(Money.zero());
+        loan.setLateCharges(lateCharges());
+        loan.setLateChargedThrough(lateChargedThrough);
         // The count, the fee on each repayment and the due date.
         loan.fixRepaymentTerms(disbursedAt, repaymentFeeRate);
         loan.setDecidedBy("Imported from the paper records by " + importedBy);

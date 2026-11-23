@@ -372,7 +372,9 @@ public final class AdminDtos {
             int tenureMonths,
             String purpose,
             Instant disbursedAt,
-            Instant dueDate) {
+            Instant dueDate,
+            /** Late charges added so far: 0.18% of the loan for each day past the final due date. */
+            BigDecimal lateCharges) {
     }
 
     public record WalletHolderRow(
@@ -467,6 +469,7 @@ public final class AdminDtos {
             String statusLabel,
             Instant disbursedAt,
             Instant dueDate,
-            long daysOverdue) {
+            long daysOverdue,
+            BigDecimal lateCharges) {
     }
 }

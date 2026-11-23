@@ -235,7 +235,7 @@ public class AdminOverviewService {
                     loan.totalRepayable(), loan.getAmountRepaid(),
                     loan.getStatus().isOpen() ? loan.outstanding() : Money.zero(),
                     loan.schedule(now), loan.getStatus(), loan.frequency(), loan.getTenureMonths(),
-                    loan.getPurpose(), loan.getDisbursedAt(), loan.getDueDate(), now));
+                    loan.getPurpose(), loan.getDisbursedAt(), loan.getDueDate(), loan.lateCharges(), now));
         }
         for (ImportedLoan paper : onPaper) {
             BigDecimal outstanding = paper.outstanding();
@@ -251,7 +251,7 @@ public class AdminOverviewService {
                     paper.transactionFee(), paper.repaymentFees(),
                     paper.totalRepayable(), paper.getAmountRepaid(), outstanding,
                     paper.schedule(now), status, RepaymentFrequency.orMonthly(paper.getRepaymentFrequency()),
-                    paper.getTenureMonths(), paper.getPurpose(), paper.getDisbursedAt(), due, now));
+                    paper.getTenureMonths(), paper.getPurpose(), paper.getDisbursedAt(), due, paper.lateCharges(), now));
         }
         return rows;
     }
@@ -261,12 +261,16 @@ public class AdminOverviewService {
             BigDecimal principal, BigDecimal flatRate, BigDecimal management, BigDecimal flat, BigDecimal perRepayment,
             BigDecimal totalRepayable, BigDecimal repaid, BigDecimal outstanding, List<Installment> schedule,
             LoanStatus status, RepaymentFrequency frequency, int tenureMonths,
-            String purpose, Instant disbursedAt, Instant dueDate, Instant now) {
+            String purpose, Instant disbursedAt, Instant dueDate, BigDecimal lateCharges, Instant now) {
         boolean open = status.isOpen();
         List<Installment> missed = open
                 ? schedule.stream().filter(i -> i.status() == InstallmentStatus.OVERDUE).toList()
                 : List.of();
-        BigDecimal pastDue = missed.stream().map(Installment::outstanding).reduce(Money.zero(), Money::add);
+        // Late charges still unpaid are past due too: whatever is owed beyond the agreed total.
+        BigDecimal unpaidLate = Money.floorAtZero(Money.subtract(outstanding,
+                Money.floorAtZero(Money.subtract(totalRepayable, repaid == null ? Money.zero() : repaid))));
+        BigDecimal pastDue = Money.add(
+                missed.stream().map(Installment::outstanding).reduce(Money.zero(), Money::add), unpaidLate);
         Instant oldest = missed.isEmpty() ? null : missed.get(0).dueDate();
         Installment next = open
                 ? schedule.stream().filter(i -> i.status() != InstallmentStatus.PAID).findFirst().orElse(null)
@@ -285,7 +289,8 @@ public class AdminOverviewService {
                 (int) schedule.stream().filter(i -> i.status() == InstallmentStatus.PAID).count(),
                 next == null ? null : next.dueDate(),
                 next == null ? null : next.outstanding(),
-                open, status.name(), status.label(), frequency, tenureMonths, purpose, disbursedAt, dueDate);
+                open, status.name(), status.label(), frequency, tenureMonths, purpose, disbursedAt, dueDate,
+                Money.of(lateCharges));
     }
 
     private AdminDtos.People people(Instant weekAgo) {

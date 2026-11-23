@@ -37,11 +37,9 @@ import org.springframework.web.bind.annotation.RestController;
  * loan is priced at is frozen onto it at disbursement — a later change to the
  * rate card never rewrites a running loan.
  *
- * <p>Three things this controller deliberately has no endpoint for, because
- * they do not exist in the product: a late fee, penalty interest, and any
- * charge for settling early. The Lending Agreement commits to all three in
- * writing — <i>"even in default, the amount you owe does not increase"</i> —
- * and settling early earns a <b>rebate</b> rather than a penalty.
+ * <p>There is no charge for settling early. The one charge after payout is
+ * the daily late charge once the final due date has passed, added by
+ * {@code LateChargeService}, not by any endpoint.
  */
 @RestController
 @RequestMapping("/api/v1")

@@ -39,9 +39,8 @@ import org.springframework.transaction.annotation.Transactional;
  * ledger shows what was lent and what was charged rather than one blended
  * figure.
  *
- * <p>There is <b>no late fee and no penalty interest</b>. The Lending Agreement
- * commits to it: even in default, the amount owed does not increase. Nothing
- * here adds to what a borrower owes after disbursement.
+ * <p>After the final due date, a late charge of 0.18% of the principal is
+ * added every day until the loan is repaid; {@link LateChargeService} does it.
  */
 @Service
 public class LoanService {
@@ -159,8 +158,10 @@ public class LoanService {
                 withinLimits
                         ? "Only the management fee comes out of what we send you. Each repayment carries a transaction fee of "
                                 + ratePct(feeRate) + " of the instalment, already included in every amount here. "
-                                + "There is no late fee and no penalty interest: even in default, "
-                                + "the amount you owe does not increase."
+                                + "If the loan is not repaid by the final due date, a late charge of "
+                                + LateCharges.RATE_LABEL + " of the amount borrowed ("
+                                + Money.naira(LateCharges.daily(principal))
+                                + ") is added every day until it is repaid in full."
                         : "We lend from " + Money.naira(t.minAmount())
                                 + " to " + Money.naira(t.maxAmount()) + ".");
     }
@@ -536,12 +537,8 @@ public class LoanService {
     /**
      * Marks loans that have passed their due date with a balance outstanding.
      *
-     * <p>The status changes and nothing else does. <b>There is no late fee and
-     * no penalty interest anywhere in this product</b> — the Lending Agreement
-     * commits to it in the words "even in default, the amount you owe does not
-     * increase", so going overdue must not touch the balance. What it does
-     * touch is the credit score, which carries a penalty while a loan is
-     * overdue and lifts it the moment the loan is cleared.
+     * <p>The late charge itself is added by {@link LateChargeService}: 0.18%
+     * of the principal for every day after the final due date.
      */
     @Transactional
     public int sweepOverdue(Instant now) {
@@ -556,9 +553,11 @@ public class LoanService {
                     NotifyKind.REPAYMENT_DUE,
                     "Your loan is past its due date",
                     Money.naira(loan.outstanding()) + " is still outstanding. "
-                            + "Nothing has been added to what you owe and nothing will be — "
-                            + "there is no late fee on a Kudi9ja loan. "
-                            + "Repay from your wallet whenever you can, or talk to us.",
+                            + "From the day after the due date, a late charge of " + LateCharges.RATE_LABEL
+                            + " of the amount you borrowed ("
+                            + Money.naira(LateCharges.daily(loan.getPrincipal()))
+                            + ") is added every day until the loan is repaid in full. "
+                            + "Repay from your wallet as soon as you can, or talk to us.",
                     loan.outstanding());
         }
 

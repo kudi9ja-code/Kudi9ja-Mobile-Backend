@@ -225,6 +225,7 @@ public class ExportService {
                             l.totalInterest(),
                             l.repaymentFees(),
                             l.totalRepayable(),
+                            l.lateCharges(),
                             l.getAmountRepaid(),
                             l.outstanding(),
                             l.getStatus().label(),
@@ -238,7 +239,7 @@ public class ExportService {
                 text("Borrower"), text("Account number"), text("Loan group"), text("Purpose"),
                 money("Amount lent"), number("Months"), text("Repaid"), number("Instalments"),
                 text("Flat rate"), money("Management fee"), money("Paid out"), money("Interest"),
-                money("Transaction fees"), money("Total to repay"), money("Repaid so far"),
+                money("Transaction fees"), money("Total to repay"), money("Late charges"), money("Repaid so far"),
                 money("Outstanding"), text("Status"), date("Disbursed"), date("Due"), text("Approved by")), rows);
     }
 

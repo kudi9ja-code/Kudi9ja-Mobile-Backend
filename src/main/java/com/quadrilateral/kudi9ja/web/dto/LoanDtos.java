@@ -2,6 +2,7 @@ package com.quadrilateral.kudi9ja.web.dto;
 
 import com.quadrilateral.kudi9ja.domain.loan.Installment;
 import com.quadrilateral.kudi9ja.domain.loan.InstallmentStatus;
+import com.quadrilateral.kudi9ja.domain.loan.LateCharges;
 import com.quadrilateral.kudi9ja.domain.loan.Loan;
 import com.quadrilateral.kudi9ja.domain.loan.LoanStatus;
 import jakarta.validation.constraints.DecimalMin;
@@ -146,7 +147,12 @@ public final class LoanDtos {
             ScheduleRow nextInstallment,
             BigDecimal earlySettlementRebate,
             BigDecimal earlySettlementAmount,
-            String decisionReasons) {
+            String decisionReasons,
+            /** Late charges added so far, and what each further overdue day adds. */
+            BigDecimal lateCharges,
+            BigDecimal lateChargePerDay,
+            /** What is owed in all: the total repayable plus the late charges. */
+            BigDecimal totalOwed) {
 
         public static LoanResponse from(
                 Loan loan,
@@ -198,7 +204,10 @@ public final class LoanDtos {
                             .orElse(null),
                     rebate,
                     settlementAmount,
-                    loan.getDecisionReasons());
+                    loan.getDecisionReasons(),
+                    loan.lateCharges(),
+                    LateCharges.daily(loan.getPrincipal()),
+                    loan.totalOwed());
         }
 
         private static String ratePct(BigDecimal rate) {
