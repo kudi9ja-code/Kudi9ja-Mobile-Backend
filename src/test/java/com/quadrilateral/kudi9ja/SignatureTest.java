@@ -80,7 +80,7 @@ class SignatureTest {
         JsonNode mine = getJson("/api/v1/me/legal/signatures", customer);
         assertThat(mine).hasSize(1);
         assertThat(mine.get(0).get("typedName").asText()).isEqualTo("chioma grace ADEYEMI");
-        assertThat(mine.get(0).get("documents").asText()).isEqualTo("terms 1.1, privacy 1.1, lending 1.0");
+        assertThat(mine.get(0).get("documents").asText()).isEqualTo("terms 1.4, privacy 1.4, lending 1.3");
         assertThat(mine.get(0).get("image").asText()).isEqualTo(PNG);
         assertThat(mine.get(0).get("device").asText()).isEqualTo("Integration test");
 
