@@ -87,6 +87,7 @@ what that means.
 | `KUDI9JA_PEPPER` | **Required.** The application will not start. |
 | `KUDI9JA_JWT_SECRET` | **Required.** The application will not start. |
 | `KYC_PROVIDER` | **The application will not start.** A simulated BVN check that always passes is worse than no check, because it looks like one. |
+| `DOJAH_APP_ID`, `DOJAH_SECRET_KEY`, `DOJAH_BASE_URL` | Needed only with `KYC_PROVIDER=dojah` (BVN checked with Dojah); without the keys the application will not start. |
 | `KUDI9JA_OWNER_EMAIL` | No owner is ever created; nobody can reach the admin panel. |
 | `PUSH_PROVIDER` | No push. Notifications still appear when the app is opened. |
 | `MAIL_ENABLED` | Mail is logged, not sent. |

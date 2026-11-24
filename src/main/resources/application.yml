@@ -273,6 +273,12 @@ kudi9ja:
   # fall back to something that looks like a check and is not one.
   kyc:
     provider: ${KYC_PROVIDER:}
+    # Used when KYC_PROVIDER=dojah: the BVN is checked with Dojah.
+    # Sandbox base URL https://sandbox.dojah.io; live https://api.dojah.io.
+    dojah:
+      app-id: ${DOJAH_APP_ID:}
+      secret-key: ${DOJAH_SECRET_KEY:}
+      base-url: ${DOJAH_BASE_URL:https://api.dojah.io}
 
   # Paystack: money in by checkout, money out by transfer. Without a secret
   # key, paying in is switched off and approved withdrawals are marked paid by
