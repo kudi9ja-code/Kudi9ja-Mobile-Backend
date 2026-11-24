@@ -22,6 +22,19 @@ import org.springframework.test.web.servlet.MvcResult;
  */
 public final class SignUpFlow {
 
+    /** A JPEG header followed by padding: enough to pass the server's format check. */
+    public static final String TEST_JPEG;
+
+    static {
+        byte[] bytes = new byte[256];
+        bytes[0] = (byte) 0xFF;
+        bytes[1] = (byte) 0xD8;
+        bytes[2] = (byte) 0xFF;
+        bytes[3] = (byte) 0xE0;
+        TEST_JPEG = "data:image/jpeg;base64," + java.util.Base64.getEncoder().encodeToString(bytes);
+    }
+
+
     /** A one-pixel PNG: the smallest real signature image. */
     public static final String SIGNATURE =
             "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
@@ -114,7 +127,7 @@ public final class SignUpFlow {
                                 // The versions in force, the same ones the app
                                 // carries. A stale number here is refused.
                                 "acceptedVersions", Map.of(
-                                        "TERMS", "1.1", "PRIVACY", "1.1", "LENDING", "1.0"),
+                                        "TERMS", "1.4", "PRIVACY", "1.4", "LENDING", "1.3"),
                                 // Every account is signed for, as on the website.
                                 "signature", Map.of("image", SIGNATURE, "typedName", "Chioma Grace Adeyemi")))))
                 .andExpect(status().isCreated())
@@ -138,6 +151,10 @@ public final class SignUpFlow {
                 "nin", nin,
                 "address", "14 Adeola Odeku Street, Victoria Island",
                 "state", "Lagos"));
+
+        // The face check: three JPEGs. The movements are checked on the device.
+        String face = TEST_JPEG;
+        step(draftId, "liveness", Map.of("blink", face, "turn", face, "mouth", face));
 
         // The sandbox refuses an account number ending in 0 and resolves one
         // ending in 9 to somebody else. This one is neither.

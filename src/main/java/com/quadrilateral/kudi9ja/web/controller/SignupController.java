@@ -102,13 +102,22 @@ public class SignupController {
         return describe(signups.submitIdentity(draftId, request), "Identity confirmed.");
     }
 
+    @PostMapping("/{draftId}/liveness")
+    @Operation(summary = "Step 4 — face check: photos of a blink, a head turn and an open mouth")
+    public SignupDtos.DraftResponse liveness(
+            @PathVariable UUID draftId,
+            @Valid @RequestBody SignupDtos.LivenessRequest request) {
+
+        return describe(signups.submitLiveness(draftId, request), "Face check done.");
+    }
+
     /**
-     * Step 4. The account must be in the customer's own name: the server
+     * Step 5. The account must be in the customer's own name: the server
      * resolves the account name with the bank and refuses a mismatch, because
      * the Terms promise payouts only to the customer.
      */
     @PostMapping("/{draftId}/payout")
-    @Operation(summary = "Step 4 — the customer's own bank account, resolved and name-matched")
+    @Operation(summary = "Step 5 — the customer's own bank account, resolved and name-matched")
     public SignupDtos.DraftResponse payout(
             @PathVariable UUID draftId,
             @Valid @RequestBody SignupDtos.PayoutRequest request) {
@@ -118,7 +127,7 @@ public class SignupController {
     }
 
     @PostMapping("/{draftId}/password")
-    @Operation(summary = "Step 5 — password and security question")
+    @Operation(summary = "Step 6 — password and security question")
     public SignupDtos.DraftResponse password(
             @PathVariable UUID draftId,
             @Valid @RequestBody SignupDtos.PasswordRequest request) {
@@ -127,7 +136,7 @@ public class SignupController {
     }
 
     @PostMapping("/{draftId}/passcode")
-    @Operation(summary = "Step 6 — the six-digit sign-in passcode")
+    @Operation(summary = "Step 7 — the six-digit sign-in passcode")
     public SignupDtos.DraftResponse passcode(
             @PathVariable UUID draftId,
             @Valid @RequestBody SignupDtos.SetPasscodeRequest request) {
@@ -136,7 +145,7 @@ public class SignupController {
     }
 
     @PostMapping("/{draftId}/pin")
-    @Operation(summary = "Step 7 — the four-digit transaction PIN")
+    @Operation(summary = "Step 8 — the four-digit transaction PIN")
     public SignupDtos.DraftResponse pin(
             @PathVariable UUID draftId,
             @Valid @RequestBody SignupDtos.SetPinRequest request) {
@@ -145,7 +154,7 @@ public class SignupController {
     }
 
     /**
-     * Step 8, and the account exists.
+     * Step 9, and the account exists.
      *
      * <p>The version of each document accepted is recorded against the account
      * along with the timestamp and the device. The Terms lean on that record as
@@ -156,7 +165,7 @@ public class SignupController {
      * asking for a fourth credential in ninety seconds.
      */
     @PostMapping("/{draftId}/complete")
-    @Operation(summary = "Step 8 — accept the three documents and open the account")
+    @Operation(summary = "Step 9 — accept the three documents and open the account")
     public ResponseEntity<AuthDtos.SessionResponse> complete(
             @PathVariable UUID draftId,
             @Valid @RequestBody SignupDtos.ReviewRequest request,

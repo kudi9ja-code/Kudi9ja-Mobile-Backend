@@ -1,7 +1,7 @@
 package com.quadrilateral.kudi9ja.domain.user;
 
 /**
- * The eight gated steps of signing up, in order.
+ * The nine gated steps of signing up, in order.
  *
  * <p>Each is validated on the server as it is submitted, and a step may only be
  * submitted once the one before it has passed. The client runs the same
@@ -22,6 +22,12 @@ public enum SignupStep {
 
     /** BVN, NIN, address and state, checked against the issuing institutions. */
     IDENTITY,
+
+    /**
+     * Face check: blink, turn the head, open the mouth. The movements are
+     * checked on the device; one photo of each is kept for the admin panel.
+     */
+    LIVENESS,
 
     /** The customer's own bank account, resolved and name-matched. */
     PAYOUT,

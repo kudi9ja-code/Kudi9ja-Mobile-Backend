@@ -5,6 +5,7 @@ import com.quadrilateral.kudi9ja.domain.admin.AdminCustomerService;
 import com.quadrilateral.kudi9ja.domain.loan.LoanService;
 import com.quadrilateral.kudi9ja.domain.loan.OfflineLoanService;
 import com.quadrilateral.kudi9ja.domain.legal.SignatureService;
+import com.quadrilateral.kudi9ja.domain.liveness.LivenessService;
 import com.quadrilateral.kudi9ja.web.dto.SignatureDtos;
 import com.quadrilateral.kudi9ja.domain.payin.PayInService;
 import com.quadrilateral.kudi9ja.domain.payout.WithdrawalService;
@@ -63,6 +64,7 @@ public class AdminCustomerController {
     private final LoanService loans;
     private final OfflineLoanService offline;
     private final SignatureService signatures;
+    private final LivenessService liveness;
 
     public AdminCustomerController(
             AdminCustomerService customers,
@@ -70,13 +72,28 @@ public class AdminCustomerController {
             WithdrawalService withdrawals,
             LoanService loans,
             OfflineLoanService offline,
-            SignatureService signatures) {
+            SignatureService signatures,
+            LivenessService liveness) {
         this.customers = customers;
         this.payIns = payIns;
         this.withdrawals = withdrawals;
         this.loans = loans;
         this.offline = offline;
         this.signatures = signatures;
+        this.liveness = liveness;
+    }
+
+    /** The three face-check photos taken at sign-up: blink, head turn, open mouth. */
+    @GetMapping("/{customerId}/face-photos")
+    @Operation(summary = "A customer's sign-up face-check photos, with signed links")
+    public List<FacePhoto> facePhotos(@PathVariable UUID customerId) {
+        customers.detail(customerId);
+        return liveness.forUser(customerId).stream()
+                .map(p -> new FacePhoto(p.getId(), p.getPose().name(), p.getCapturedAt(), liveness.signedUrl(p)))
+                .toList();
+    }
+
+    public record FacePhoto(UUID id, String pose, Instant capturedAt, String url) {
     }
 
     /** The signatures the customer gave when accepting their agreements. */

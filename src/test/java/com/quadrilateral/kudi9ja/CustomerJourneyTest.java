@@ -747,9 +747,9 @@ class CustomerJourneyTest {
 
         // Accepting the version in force again is harmless and idempotent.
         JsonNode accepted = postJson("/api/v1/me/legal/accept", customer, """
-                {"document": "privacy", "version": "1.1"}
+                {"document": "privacy", "version": "1.4"}
                 """);
-        assertThat(accepted.get("version").asText()).isEqualTo("1.1");
+        assertThat(accepted.get("version").asText()).isEqualTo("1.4");
 
         // A version that is not the one in force is refused with the current
         // number, so the app can fetch and show that instead.
@@ -760,7 +760,7 @@ class CustomerJourneyTest {
                                 {"document": "privacy", "version": "1.0"}
                                 """))
                 .andExpect(status().is4xxClientError())
-                .andExpect(jsonPath("$.details.currentVersion").value("1.1"));
+                .andExpect(jsonPath("$.details.currentVersion").value("1.4"));
     }
 
     private JsonNode getJson(String path, SignUpFlow.Session session) throws Exception {

@@ -134,6 +134,23 @@ public final class SignupDtos {
      * An electronic signature: a PNG of what the customer drew, as a data URL,
      * and the name they typed. The time is the server's, not this one's.
      */
+    /**
+     * Step 4, the face check: one JPEG data URL for each movement.
+     */
+    public record LivenessRequest(
+            @NotBlank(message = "Do the face check first.")
+            @Size(max = 2_100_000, message = "That photo is too large. Do the face check again.")
+            String blink,
+
+            @NotBlank(message = "Do the face check first.")
+            @Size(max = 2_100_000, message = "That photo is too large. Do the face check again.")
+            String turn,
+
+            @NotBlank(message = "Do the face check first.")
+            @Size(max = 2_100_000, message = "That photo is too large. Do the face check again.")
+            String mouth) {
+    }
+
     public record SignatureInput(
             @NotNull(message = "Draw your signature.")
             @jakarta.validation.constraints.Size(max = 600000, message = "That signature is too large. Draw it again.")

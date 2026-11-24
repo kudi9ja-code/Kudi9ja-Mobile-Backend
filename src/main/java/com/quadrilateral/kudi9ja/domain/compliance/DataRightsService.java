@@ -54,7 +54,9 @@ import com.quadrilateral.kudi9ja.domain.group.LoanGroup;
 import com.quadrilateral.kudi9ja.domain.group.LoanGroupMember;
 import com.quadrilateral.kudi9ja.domain.group.LoanGroupMemberRepository;
 import com.quadrilateral.kudi9ja.domain.group.LoanGroupRepository;
+import com.quadrilateral.kudi9ja.domain.credit.CreditCheckRepository;
 import com.quadrilateral.kudi9ja.domain.legal.AgreementSignatureRepository;
+import com.quadrilateral.kudi9ja.domain.liveness.LivenessPhotoRepository;
 import com.quadrilateral.kudi9ja.domain.payin.PaystackPaymentRepository;
 import com.quadrilateral.kudi9ja.domain.support.SupportConversation;
 import com.quadrilateral.kudi9ja.domain.support.SupportConversationRepository;
@@ -177,7 +179,9 @@ public class DataRightsService {
             LoanGroupRepository groups,
             AgreementSignatureRepository signatures,
             PaystackPaymentRepository paystackPayments,
-            ReceiptStorage storage) {
+            ReceiptStorage storage,
+            LivenessPhotoRepository facePhotos,
+            CreditCheckRepository creditChecks) {
         this.users = users;
         this.admins = admins;
         this.ledger = ledger;
@@ -207,6 +211,8 @@ public class DataRightsService {
         this.signatures = signatures;
         this.paystackPayments = paystackPayments;
         this.storage = storage;
+        this.facePhotos = facePhotos;
+        this.creditChecks = creditChecks;
     }
 
     private final SupportConversationRepository supportConversations;
@@ -216,6 +222,8 @@ public class DataRightsService {
     private final AgreementSignatureRepository signatures;
     private final PaystackPaymentRepository paystackPayments;
     private final ReceiptStorage storage;
+    private final LivenessPhotoRepository facePhotos;
+    private final CreditCheckRepository creditChecks;
 
     // ── Access and portability ─────────────────────────────────────────────
 
@@ -264,7 +272,9 @@ public class DataRightsService {
                 conversationsOf(user),
                 groupsOf(user),
                 signaturesOf(user),
-                cardPaymentsOf(user));
+                cardPaymentsOf(user),
+                facePhotosOf(user),
+                creditChecksOf(user));
     }
 
     /** Every conversation with the team, with every message and the files sent in them. */
@@ -315,6 +325,29 @@ public class DataRightsService {
     private List<DataRightsDtos.SignedAgreement> signaturesOf(User user) {
         return signatures.findByUserIdOrderBySignedAtDesc(user.getId()).stream()
                 .map(s -> new DataRightsDtos.SignedAgreement(s.getTypedName(), s.getDocuments(), s.getSignedAt(), s.getDevice()))
+                .toList();
+    }
+
+    /** The three face-check photos from sign-up, with the images themselves. */
+    private List<DataRightsDtos.FaceCheckPhoto> facePhotosOf(User user) {
+        return facePhotos.findByUserIdOrderByCapturedAtDesc(user.getId()).stream()
+                .map(p -> new DataRightsDtos.FaceCheckPhoto(p.getPose().name(), p.getCapturedAt(), imageOf(p.getStorageKey())))
+                .toList();
+    }
+
+    private String imageOf(String key) {
+        try (java.io.InputStream in = storage.open(key)) {
+            return "data:image/jpeg;base64," + java.util.Base64.getEncoder().encodeToString(in.readAllBytes());
+        } catch (java.io.IOException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    private List<DataRightsDtos.CreditCheckExport> creditChecksOf(User user) {
+        return creditChecks.findTop20ByUserIdOrderByCheckedAtDesc(user.getId()).stream()
+                .map(c -> new DataRightsDtos.CreditCheckExport(c.getCheckedAt(), c.getCheckedBy(), c.isFound(),
+                        c.getScore(), c.getRating(), c.getReasons(), c.getHasLoans(), c.getDelinquentFacilities(),
+                        c.getLastReported()))
                 .toList();
     }
 
@@ -770,6 +803,7 @@ public class DataRightsService {
                         "Every transaction on your wallet",
                         "Your savings plans and loans",
                         "Which version of each agreement you accepted, and your signature",
+                        "Your face check photos and any credit checks we made",
                         "Your conversations and complaints with us, and the files you sent in them"),
                 "Your account is closed and you have been signed out everywhere. "
                         + "We have destroyed everything we are free to destroy. The records listed "

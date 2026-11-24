@@ -45,7 +45,7 @@ class SignatureTest {
     private static final String PNG =
             "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
-    private static final Map<String, String> VERSIONS = Map.of("TERMS", "1.1", "PRIVACY", "1.1", "LENDING", "1.0");
+    private static final Map<String, String> VERSIONS = Map.of("TERMS", "1.4", "PRIVACY", "1.4", "LENDING", "1.3");
 
     @Autowired
     private MockMvc mvc;

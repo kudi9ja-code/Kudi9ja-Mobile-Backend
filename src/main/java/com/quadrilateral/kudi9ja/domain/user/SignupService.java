@@ -10,6 +10,7 @@ import com.quadrilateral.kudi9ja.domain.kyc.OtpService;
 import com.quadrilateral.kudi9ja.domain.legal.LegalDocumentKind;
 import com.quadrilateral.kudi9ja.domain.legal.LegalService;
 import com.quadrilateral.kudi9ja.domain.legal.SignatureService;
+import com.quadrilateral.kudi9ja.domain.liveness.LivenessService;
 import com.quadrilateral.kudi9ja.domain.loan.LoanImportService;
 import com.quadrilateral.kudi9ja.domain.notification.NotificationService;
 import com.quadrilateral.kudi9ja.domain.notification.NotifyKind;
@@ -59,6 +60,7 @@ public class SignupService {
     private final AdminBootstrapService adminBootstrap;
     private final LoanImportService loanImports;
     private final SignatureService signatures;
+    private final LivenessService liveness;
     private final Kudi9jaProperties properties;
 
     public SignupService(
@@ -73,6 +75,7 @@ public class SignupService {
             AdminBootstrapService adminBootstrap,
             LoanImportService loanImports,
             SignatureService signatures,
+            LivenessService liveness,
             Kudi9jaProperties properties) {
         this.drafts = drafts;
         this.users = users;
@@ -85,6 +88,7 @@ public class SignupService {
         this.adminBootstrap = adminBootstrap;
         this.loanImports = loanImports;
         this.signatures = signatures;
+        this.liveness = liveness;
         this.properties = properties;
     }
 
@@ -224,7 +228,27 @@ public class SignupService {
         return drafts.save(draft);
     }
 
-    // ── Step 4: payout account ─────────────────────────────────────────────
+    // ── Step 4: face check ─────────────────────────────────────────────────
+
+    /**
+     * Keeps the three face-check photos: blink, head turn, open mouth.
+     *
+     * <p>The movements are checked on the device before the photos are sent;
+     * the server checks they are real JPEGs and keeps them. A second try
+     * replaces the first.
+     */
+    @Transactional
+    public SignupDraft submitLiveness(UUID draftId, SignupDtos.LivenessRequest request) {
+        SignupDraft draft = require(draftId);
+        requireAtLeast(draft, SignupStep.IDENTITY);
+
+        liveness.storeForDraft(draft.getId(), liveness.validate(request.blink(), request.turn(), request.mouth()));
+
+        draft.advanceTo(SignupStep.LIVENESS);
+        return drafts.save(draft);
+    }
+
+    // ── Step 5: payout account ─────────────────────────────────────────────
 
     /**
      * Resolves the nominated account and refuses one held in another name.
@@ -237,7 +261,7 @@ public class SignupService {
     @Transactional
     public SignupDraft submitPayout(UUID draftId, SignupDtos.PayoutRequest request) {
         SignupDraft draft = require(draftId);
-        requireAtLeast(draft, SignupStep.IDENTITY);
+        requireAtLeast(draft, SignupStep.LIVENESS);
 
         String accountName = kyc.verifyPayoutAccount(
                 request.bank(), request.accountNumber(), draft.getFullName());
@@ -397,6 +421,8 @@ public class SignupService {
             signatures.record(saved, request.signature(), signaturePng, accepted, draft.getDevice(), draft.getIpAddress());
         }
 
+        liveness.claimFor(draft.getId(), saved.getId());
+
         draft.setCompletedAt(Instant.now());
         draft.setUserId(saved.getId());
         draft.advanceTo(SignupStep.COMPLETE);
@@ -430,7 +456,10 @@ public class SignupService {
     /** Housekeeping: an abandoned draft holds identity documents. */
     @Transactional
     public int purgeExpiredDrafts(Instant before) {
-        return drafts.deleteExpiredBefore(before);
+        int purged = drafts.deleteExpiredBefore(before);
+        // Their face-check photos go with them.
+        liveness.purgeAbandoned(before);
+        return purged;
     }
 
     @Transactional(readOnly = true)

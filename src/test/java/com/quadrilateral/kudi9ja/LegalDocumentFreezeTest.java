@@ -130,6 +130,16 @@ class LegalDocumentFreezeTest {
     }
 
     @Test
+    @DisplayName("1.4 names Dojah, the face check and the credit check")
+    void faceCheckAndDojah() {
+        LegalDocument terms = documents.findByKindAndVersion(LegalDocumentKind.TERMS, "1.4").orElseThrow();
+        LegalDocument privacy = documents.findByKindAndVersion(LegalDocumentKind.PRIVACY, "1.4").orElseThrow();
+        assertThat(terms.getBodyJson()).contains("Dojah").contains("face check").contains("Credit Reporting Act 2017");
+        assertThat(privacy.getBodyJson()).contains("Dojah").contains("Face check photos").contains("Credit check results")
+                .doesNotContain("There is no credit score in Kudi9ja");
+    }
+
+    @Test
     @DisplayName("versions sort numerically, not as strings")
     void versionsSortNumerically() {
         assertThat(LegalSeeder.compareVersions("1.9", "1.10")).isNegative();

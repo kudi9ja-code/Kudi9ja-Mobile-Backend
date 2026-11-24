@@ -65,7 +65,26 @@ public final class DataRightsDtos {
             List<SupportConversationExport> helpAndComplaints,
             List<GroupMembership> loanGroups,
             List<SignedAgreement> signatures,
-            List<CardPayment> paystackPayments) {
+            List<CardPayment> paystackPayments,
+            List<FaceCheckPhoto> faceCheckPhotos,
+            List<CreditCheckExport> creditChecks) {
+    }
+
+    /** One face-check photo from sign-up (BLINK, TURN or MOUTH), with the JPEG as a data URL. */
+    public record FaceCheckPhoto(String pose, Instant takenAt, String image) {
+    }
+
+    /** A credit check our team ran with the credit bureaux. */
+    public record CreditCheckExport(
+            Instant checkedAt,
+            String checkedBy,
+            boolean recordFound,
+            Integer score,
+            String rating,
+            String reasons,
+            String hasLoans,
+            Integer loansInArrears,
+            String lastReported) {
     }
 
     /** A conversation with the Kudi9ja team — a question or a complaint — and every message in it. */
