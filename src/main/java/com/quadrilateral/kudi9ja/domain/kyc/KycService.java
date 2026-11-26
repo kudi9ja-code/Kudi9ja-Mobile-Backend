@@ -97,7 +97,9 @@ public class KycService {
             return claimedName;
         }
 
-        if (!NameMatcher.matches(claimedName, officialName)) {
+        if (!NameMatcher.matchesAllowingTypo(claimedName, officialName)) {
+            log.warn("Payout account name mismatch: {} {} is held by \"{}\"; customer's name is \"{}\"",
+                    bank.name(), accountNumber, officialName, claimedName);
             throw new ApiException(
                     ErrorCode.NAME_MISMATCH,
                     "That account is not in your name. We only pay out to an account you hold yourself.",

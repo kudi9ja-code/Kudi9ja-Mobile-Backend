@@ -37,6 +37,20 @@ public final class NameMatcher {
      * so a shared surname alone is never enough.
      */
     public static boolean matches(String claimed, String official) {
+        return matches(claimed, official, false);
+    }
+
+    /**
+     * As {@link #matches}, but a name part of five letters or more may differ
+     * from its counterpart by one letter (added, dropped or changed, or two
+     * neighbours swapped), so {@code Micheal} matches {@code Michael}. Every
+     * other rule still holds.
+     */
+    public static boolean matchesAllowingTypo(String claimed, String official) {
+        return matches(claimed, official, true);
+    }
+
+    private static boolean matches(String claimed, String official, boolean allowTypo) {
         Set<String> a = parts(claimed);
         Set<String> b = parts(official);
         if (a.isEmpty() || b.isEmpty()) {
@@ -46,12 +60,55 @@ public final class NameMatcher {
         Set<String> shorter = a.size() <= b.size() ? a : b;
         Set<String> longer = a.size() <= b.size() ? b : a;
 
-        long overlap = shorter.stream().filter(longer::contains).count();
-        if (overlap != shorter.size()) {
-            return false;
+        Set<String> unused = new LinkedHashSet<>(longer);
+        for (String part : shorter) {
+            String hit = unused.contains(part) ? part : null;
+            if (hit == null && allowTypo && part.length() >= 5) {
+                hit = unused.stream()
+                        .filter(other -> other.length() >= 5 && oneEditApart(part, other))
+                        .findFirst()
+                        .orElse(null);
+            }
+            if (hit == null) {
+                return false;
+            }
+            unused.remove(hit);
         }
         // One shared word is a coincidence — half of Lagos shares a surname.
         return shorter.size() >= 2 || (a.size() == 1 && b.size() == 1);
+    }
+
+    /** Whether two words differ by one inserted, dropped or changed letter, or one swap of neighbours. */
+    static boolean oneEditApart(String x, String y) {
+        if (x.equals(y) || Math.abs(x.length() - y.length()) > 1) {
+            return false;
+        }
+        if (x.length() == y.length()) {
+            int first = -1;
+            int diffs = 0;
+            for (int i = 0; i < x.length(); i++) {
+                if (x.charAt(i) != y.charAt(i)) {
+                    if (diffs == 0) {
+                        first = i;
+                    }
+                    diffs++;
+                }
+            }
+            if (diffs == 1) {
+                return true;
+            }
+            // Neighbours swapped: Micheal / Michael
+            return diffs == 2 && first + 1 < x.length()
+                    && x.charAt(first) == y.charAt(first + 1)
+                    && x.charAt(first + 1) == y.charAt(first);
+        }
+        String longer = x.length() > y.length() ? x : y;
+        String shorter = x.length() > y.length() ? y : x;
+        int i = 0;
+        while (i < shorter.length() && shorter.charAt(i) == longer.charAt(i)) {
+            i++;
+        }
+        return shorter.substring(i).equals(longer.substring(i + 1));
     }
 
     /** How much of the shorter name appeared in the longer one, 0 to 1. */
