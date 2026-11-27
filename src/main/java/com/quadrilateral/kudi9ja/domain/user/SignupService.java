@@ -261,7 +261,9 @@ public class SignupService {
     @Transactional
     public SignupDraft submitPayout(UUID draftId, SignupDtos.PayoutRequest request) {
         SignupDraft draft = require(draftId);
-        requireAtLeast(draft, SignupStep.LIVENESS);
+        // Face check switched off for now: payout follows the identity step directly.
+        // requireAtLeast(draft, SignupStep.LIVENESS);
+        requireAtLeast(draft, SignupStep.IDENTITY);
 
         String accountName = kyc.verifyPayoutAccount(
                 request.bank(), request.accountNumber(), draft.getFullName());
