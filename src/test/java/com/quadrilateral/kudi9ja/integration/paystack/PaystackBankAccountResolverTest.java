@@ -29,12 +29,11 @@ class PaystackBankAccountResolverTest {
     }
 
     @Test
-    @DisplayName("an account in somebody else's name is refused")
+    @DisplayName("an account in somebody else's name is accepted (name check switched off), with the bank's name kept")
     void somebodyElses() {
         paystack.accounts.put("0123456789", "TUNDE BAKARE");
-        assertThatThrownBy(() -> kyc.verifyPayoutAccount("Zenith Bank", "0123456789", "Chioma Grace Adeyemi"))
-                .isInstanceOf(ApiException.class)
-                .hasMessageContaining("not in your name");
+        assertThat(kyc.verifyPayoutAccount("Zenith Bank", "0123456789", "Chioma Grace Adeyemi"))
+                .isEqualTo("TUNDE BAKARE");
     }
 
     @Test

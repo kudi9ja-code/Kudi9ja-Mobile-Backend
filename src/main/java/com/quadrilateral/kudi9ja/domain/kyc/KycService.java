@@ -97,13 +97,19 @@ public class KycService {
             return claimedName;
         }
 
+        // Name check switched off (2026-11-27): any account the bank finds is
+        // accepted, whoever holds it. The bank's name is still stored.
+        // if (!NameMatcher.matchesAllowingTypo(claimedName, officialName)) {
+        //     log.warn("Payout account name mismatch: {} {} is held by \"{}\"; customer's name is \"{}\"",
+        //             bank.name(), accountNumber, officialName, claimedName);
+        //     throw new ApiException(
+        //             ErrorCode.NAME_MISMATCH,
+        //             "That account is not in your name. We only pay out to an account you hold yourself.",
+        //             Map.of("bank", bank.name(), "accountNumber", accountNumber));
+        // }
         if (!NameMatcher.matchesAllowingTypo(claimedName, officialName)) {
-            log.warn("Payout account name mismatch: {} {} is held by \"{}\"; customer's name is \"{}\"",
+            log.info("Payout account in another name accepted: {} {} is held by \"{}\"; customer's name is \"{}\"",
                     bank.name(), accountNumber, officialName, claimedName);
-            throw new ApiException(
-                    ErrorCode.NAME_MISMATCH,
-                    "That account is not in your name. We only pay out to an account you hold yourself.",
-                    Map.of("bank", bank.name(), "accountNumber", accountNumber));
         }
         return officialName;
     }
