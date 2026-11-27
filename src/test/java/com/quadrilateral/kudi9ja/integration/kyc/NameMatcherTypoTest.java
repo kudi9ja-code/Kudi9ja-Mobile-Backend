@@ -14,6 +14,16 @@ class NameMatcherTypoTest {
     }
 
     @Test
+    void shortFormOfAnOluwaNameIsAccepted() {
+        assertThat(NameMatcher.matchesAllowingTypo("Francis Segun Micheal", "OLUWASEGUN MICHEAL FRANCIS")).isTrue();
+        assertThat(NameMatcher.matchesAllowingTypo("Femi Adeyemi", "OLUFEMI ADEYEMI")).isTrue();
+        assertThat(NameMatcher.matchesAllowingTypo("Oluwasegun Francis", "SEGUN FRANCIS")).isTrue();
+        // Only the Oluwa/Olu prefix; any other ending is a different name.
+        assertThat(NameMatcher.matchesAllowingTypo("Segun Francis", "ADESEGUN FRANCIS")).isFalse();
+        assertThat(NameMatcher.matches("Francis Segun Micheal", "OLUWASEGUN MICHEAL FRANCIS")).isFalse();
+    }
+
+    @Test
     void strictMatchIsUnchanged() {
         assertThat(NameMatcher.matches("Francis segun micheal", "FRANCIS SEGUN MICHAEL")).isFalse();
     }

@@ -43,8 +43,9 @@ public final class NameMatcher {
     /**
      * As {@link #matches}, but a name part of five letters or more may differ
      * from its counterpart by one letter (added, dropped or changed, or two
-     * neighbours swapped), so {@code Micheal} matches {@code Michael}. Every
-     * other rule still holds.
+     * neighbours swapped), so {@code Micheal} matches {@code Michael}; and a
+     * part may be the short form of an Oluwa-/Olu- name, so {@code Segun}
+     * matches {@code Oluwasegun}. Every other rule still holds.
      */
     public static boolean matchesAllowingTypo(String claimed, String official) {
         return matches(claimed, official, true);
@@ -69,6 +70,12 @@ public final class NameMatcher {
                         .findFirst()
                         .orElse(null);
             }
+            if (hit == null && allowTypo) {
+                hit = unused.stream()
+                        .filter(other -> shortFormOf(part, other))
+                        .findFirst()
+                        .orElse(null);
+            }
             if (hit == null) {
                 return false;
             }
@@ -76,6 +83,19 @@ public final class NameMatcher {
         }
         // One shared word is a coincidence — half of Lagos shares a surname.
         return shorter.size() >= 2 || (a.size() == 1 && b.size() == 1);
+    }
+
+    /**
+     * Whether one word is the other without its Yoruba "Oluwa"/"Olu" prefix:
+     * Segun / Oluwasegun, Femi / Olufemi. The rest must be three letters or more.
+     */
+    static boolean shortFormOf(String x, String y) {
+        String shorter = x.length() <= y.length() ? x : y;
+        String longer = x.length() <= y.length() ? y : x;
+        if (shorter.length() < 3) {
+            return false;
+        }
+        return longer.equals("oluwa" + shorter) || longer.equals("olu" + shorter);
     }
 
     /** Whether two words differ by one inserted, dropped or changed letter, or one swap of neighbours. */
